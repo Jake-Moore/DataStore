@@ -25,7 +25,7 @@ dependencies {
     // Dependencies
     api("org.mongojack:mongojack:5.0.2")
     api("org.json:json:20241224")
-    api("ch.qos.logback:logback-classic:1.5.15")
+    api("ch.qos.logback:logback-classic:1.5.16")
 
     // Lombok
     compileOnly("org.projectlombok:lombok:1.18.36")
