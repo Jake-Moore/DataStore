@@ -1,28 +1,27 @@
-package com.kamikazejam.datastore.example.framework;
-
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-
-import org.bson.UuidRepresentation;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.mongojack.JacksonMongoCollection;
+package com.kamikazejam.datastore.framework;
 
 import com.google.common.base.Preconditions;
-import static com.kamikazejam.datastore.example.Example.BREAK;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.result.UpdateResult;
-
 import lombok.Getter;
+import org.bson.UuidRepresentation;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.mongojack.JacksonMongoCollection;
+
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class DocumentRepository<T extends BaseDocument<T>> {
+    public static boolean BREAK = false; // TODO REMOVE
+
     private static final int MAX_RETRIES = 3;
     private final JacksonMongoCollection<T> collection;
     private final MongoClient mongoClient;

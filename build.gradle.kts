@@ -27,6 +27,9 @@ dependencies {
     api("org.json:json:20241224")
     api("ch.qos.logback:logback-classic:1.5.16")
 
+    // Testing Dependencies
+    testImplementation("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
+
     // Lombok
     compileOnly("org.projectlombok:lombok:1.18.36")
     annotationProcessor("org.projectlombok:lombok:1.18.36")
