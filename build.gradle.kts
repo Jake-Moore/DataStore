@@ -23,7 +23,8 @@ dependencies {
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
     // Dependencies
-    api("org.mongojack:mongojack:5.0.2")
+    api("org.mongodb:mongodb-driver-sync:5.2.1")
+    api("com.fasterxml.jackson.core:jackson-databind:2.16.1")
     api("org.json:json:20241224")
     api("ch.qos.logback:logback-classic:1.5.16")
 

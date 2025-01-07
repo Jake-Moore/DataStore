@@ -1,14 +1,13 @@
 package com.kamikazejam.datastore.framework;
 
-import java.util.*;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.jetbrains.annotations.NotNull;
-import org.mongojack.Id;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import javax.persistence.Id;
+import java.util.*;
 
 @SuppressWarnings({"unchecked", "UnusedReturnValue"})
 public abstract class BaseDocument<T extends BaseDocument<T>> {
@@ -109,10 +108,7 @@ public abstract class BaseDocument<T extends BaseDocument<T>> {
     protected T deepCopy() {
         ensureInitialized();
         try {
-            String json = JacksonUtil.getObjectMapper().writeValueAsString(this);
-            T copy = (T) JacksonUtil.getObjectMapper().readValue(json, this.getClass());
-            copy.initialize();
-            return copy;
+            return JacksonUtil.deepCopy((T) this);
         } catch (Exception e) {
             log.error("Failed to deep copy document: {}", e.getMessage());
             throw new RuntimeException("Failed to deep copy document", e);

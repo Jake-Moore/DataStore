@@ -1,5 +1,14 @@
 package com.kamikazejam.datastore.framework;
 
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+
+import org.bson.Document;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import com.google.common.base.Preconditions;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
@@ -7,37 +16,25 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.result.UpdateResult;
-import lombok.Getter;
-import org.bson.UuidRepresentation;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.mongojack.JacksonMongoCollection;
 
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
+import lombok.Getter;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class DocumentRepository<T extends BaseDocument<T>> {
     public static boolean BREAK = false; // TODO REMOVE
 
     private static final int MAX_RETRIES = 3;
-    private final JacksonMongoCollection<T> collection;
+    private final MongoCollection<Document> collection;
     private final MongoClient mongoClient;
     private final Class<T> entityClass;
     @Getter
     private final DocumentCache<T> cache;
 
-    // TODO easier to use constructor with a registration system like SyncEngine
     public DocumentRepository(MongoClient mongoClient, String database, String collectionName, Class<T> entityClass) {
         this.mongoClient = mongoClient;
         this.entityClass = entityClass;
         MongoDatabase db = mongoClient.getDatabase(database);
-        MongoCollection<T> mongoCollection = db.getCollection(collectionName, entityClass);
-        this.collection = JacksonMongoCollection.builder()
-            .withObjectMapper(JacksonUtil.getObjectMapper())
-            .build(mongoCollection, entityClass, UuidRepresentation.STANDARD);
+        this.collection = db.getCollection(collectionName);
         this.cache = new DocumentCache<>();
     }
 
@@ -51,9 +48,8 @@ public class DocumentRepository<T extends BaseDocument<T>> {
 
         try {
             // Create a new instance in modifiable state
-            // newInstance should use the default FieldWrapper value in id (a random UUID)
             T entity = entityClass.getDeclaredConstructor().newInstance();
-            entity.initialize(); // Ensure all fields have parent reference
+            entity.initialize();
             // Modify the Entity with our defaults
             entity.setReadOnly(false);
             entity.version.set(0L);
@@ -68,7 +64,8 @@ public class DocumentRepository<T extends BaseDocument<T>> {
                 T readOnlyEntity;
                 
                 try {
-                    collection.insertOne(session, entity);
+                    Document doc = JacksonUtil.serializeToDocument(entity);
+                    collection.insertOne(session, doc);
                     session.commitTransaction();
                     committed = true;
                     
@@ -93,7 +90,7 @@ public class DocumentRepository<T extends BaseDocument<T>> {
      */
     @NotNull
     public Optional<T> read(@NotNull String id) {
-        Preconditions.checkNotNull(id, "Initializer cannot be null");
+        Preconditions.checkNotNull(id, "ID cannot be null");
 
         T entity = findById(id);
         if (entity == null) {
@@ -123,7 +120,7 @@ public class DocumentRepository<T extends BaseDocument<T>> {
         while (attempts < MAX_RETRIES) {
             // Clone the base copy for this attempt
             T workingCopy = baseCopy.deepCopy().setModifiable();
-            long currentVersion = workingCopy.version.get(); // fetch before the updateFunction
+            long currentVersion = workingCopy.version.get();
             if (BREAK && attempts == 0) {
                 currentVersion++; // force the update to fail the first time
             }
@@ -139,24 +136,23 @@ public class DocumentRepository<T extends BaseDocument<T>> {
                 T finalEntity;
                 
                 try {
+                    Document doc = JacksonUtil.serializeToDocument(workingCopy);
                     UpdateResult result = collection.replaceOne(
                         session,
                         Filters.and(
-                            Filters.eq("_id.value", id),
-                            Filters.eq("version.value", currentVersion)
+                            Filters.eq("_id", id),
+                            Filters.eq("version", currentVersion)
                         ),
-                        workingCopy
+                        doc
                     );
                     
                     if (result.getModifiedCount() == 0) {
-                        System.out.println("!!!! Update failed for " + id + " - retrying");
                         // If update failed, fetch current version and update our base copy
-                        T tempEntity = collection.find(session).filter(Filters.eq("_id.value", id)).first();
-                        if (tempEntity == null) {
+                        Document currentDoc = collection.find(session).filter(Filters.eq("_id", id)).first();
+                        if (currentDoc == null) {
                             throw new RuntimeException("Entity not found");
                         }
-                        tempEntity.initialize();
-                        baseCopy = tempEntity.deepCopy(); // Update our base copy for next attempt
+                        baseCopy = JacksonUtil.deserializeFromDocument(this.entityClass, currentDoc);
                         attempts++;
                         continue;
                     }
@@ -167,7 +163,6 @@ public class DocumentRepository<T extends BaseDocument<T>> {
                     committed = true;
                     
                     // Update the original entity with the new values and return it
-                    // Make sure this originalEntity is placed in cache, not the workingCopy
                     originalEntity.setModifiable();
                     originalEntity.copyFieldsFrom(finalEntity);
                     cache.put(id, originalEntity);
@@ -199,24 +194,23 @@ public class DocumentRepository<T extends BaseDocument<T>> {
         cache.invalidate(id);
         
         // Delete from database and return whether anything was deleted
-        return collection.deleteOne(Filters.eq("_id.value", id)).getDeletedCount() > 0;
+        return collection.deleteOne(Filters.eq("_id", id)).getDeletedCount() > 0;
     }
 
     @Nullable
     private T findById(String id) {
         Optional<T> cached = cache.get(id);
         if (cached.isPresent()) {
-            // Cached Value seems valid, return it
             System.out.println("!!!! Cache hit for " + id);
             T cachedEntity = cached.get();
             cachedEntity.initialize();
             return cachedEntity;
         }
 
-        T entity = collection.find().filter(Filters.eq("_id.value", id)).first();
-        if (entity != null) {
+        Document doc = collection.find().filter(Filters.eq("_id", id)).first();
+        if (doc != null) {
             System.out.println("!!!! Cache miss for " + id + " - fetched from DB");
-            entity.initialize(); // Ensure entity is initialized after deserialization
+            T entity = JacksonUtil.deserializeFromDocument(this.entityClass, doc);
             cache.put(id, entity.setReadOnly());
             return entity;
         }
@@ -229,16 +223,12 @@ public class DocumentRepository<T extends BaseDocument<T>> {
         public void put(@NotNull String id, @NotNull T entity) {
             Preconditions.checkNotNull(id, "ID cannot be null");
             Preconditions.checkNotNull(entity, "Entity cannot be null");
-
             cache.put(id, new CachedEntity<>(entity));
         }
 
-        // Will only return T if it's not stale
-        // Automatically manages the internal cache
         @NotNull
         public Optional<T> get(@NotNull String id) {
             Preconditions.checkNotNull(id, "ID cannot be null");
-
             @Nullable CachedEntity<T> cached = cache.get(id);
             if (cached != null && cached.isStale()) {
                 cache.remove(id);
