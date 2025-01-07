@@ -1,22 +1,25 @@
 package com.kamikazejam.datastore.example.framework;
 
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+
+import org.bson.UuidRepresentation;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.mongojack.JacksonMongoCollection;
+
+import com.google.common.base.Preconditions;
+import static com.kamikazejam.datastore.example.Example.BREAK;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.result.UpdateResult;
+
 import lombok.Getter;
-import org.bson.UuidRepresentation;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.mongojack.JacksonMongoCollection;
-
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-
-import static com.kamikazejam.datastore.example.Example.BREAK;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class DocumentRepository<T extends BaseDocument<T>> {
@@ -43,7 +46,10 @@ public class DocumentRepository<T extends BaseDocument<T>> {
      * Creates a new entity with the given initializer
      * Returns a read-only version of the created entity
      */
-    public T create(Consumer<T> initializer) {
+    @NotNull
+    public T create(@NotNull Consumer<T> initializer) {
+        Preconditions.checkNotNull(initializer, "Initializer cannot be null");
+
         try {
             // Create a new instance in modifiable state
             // newInstance should use the default FieldWrapper value in id (a random UUID)
@@ -88,6 +94,8 @@ public class DocumentRepository<T extends BaseDocument<T>> {
      */
     @NotNull
     public Optional<T> read(@NotNull String id) {
+        Preconditions.checkNotNull(id, "Initializer cannot be null");
+
         T entity = findById(id);
         if (entity == null) {
             return Optional.empty();
@@ -98,11 +106,16 @@ public class DocumentRepository<T extends BaseDocument<T>> {
     /**
      * Modifies an entity in a controlled environment where modifications are allowed
      * Returns the updated read-only entity
+     * @throws NoSuchElementException if the entity (by this id) is not found
      */
-    public T update(String id, Consumer<T> updateFunction) {
+    @NotNull
+    public T update(@NotNull String id, @NotNull Consumer<T> updateFunction) throws NoSuchElementException {
+        Preconditions.checkNotNull(id, "ID cannot be null");
+        Preconditions.checkNotNull(updateFunction, "Update function cannot be null");
+
         T originalEntity = findById(id);
         if (originalEntity == null) {
-            throw new RuntimeException("Entity not found: " + id);
+            throw new NoSuchElementException("Entity not found: " + id);
         }
 
         // Create a single base copy that we'll clone for each attempt
@@ -176,6 +189,20 @@ public class DocumentRepository<T extends BaseDocument<T>> {
         throw new RuntimeException("Failed to update after " + MAX_RETRIES + " attempts");
     }
 
+    /**
+     * Deletes an entity by ID
+     * @return true if the entity was deleted, false if it was not found
+     */
+    public boolean delete(@NotNull String id) {
+        Preconditions.checkNotNull(id, "ID cannot be null");
+        
+        // Invalidate cache first
+        cache.invalidate(id);
+        
+        // Delete from database and return whether anything was deleted
+        return collection.deleteOne(Filters.eq("_id.value", id)).getDeletedCount() > 0;
+    }
+
     @Nullable
     private T findById(String id) {
         Optional<T> cached = cache.get(id);
@@ -200,13 +227,19 @@ public class DocumentRepository<T extends BaseDocument<T>> {
     public static class DocumentCache<T extends BaseDocument<T>> {
         private final ConcurrentHashMap<String, CachedEntity<T>> cache = new ConcurrentHashMap<>();
 
-        public void put(String id, T entity) {
+        public void put(@NotNull String id, @NotNull T entity) {
+            Preconditions.checkNotNull(id, "ID cannot be null");
+            Preconditions.checkNotNull(entity, "Entity cannot be null");
+
             cache.put(id, new CachedEntity<>(entity));
         }
 
         // Will only return T if it's not stale
         // Automatically manages the internal cache
-        public Optional<T> get(String id) {
+        @NotNull
+        public Optional<T> get(@NotNull String id) {
+            Preconditions.checkNotNull(id, "ID cannot be null");
+
             @Nullable CachedEntity<T> cached = cache.get(id);
             if (cached != null && cached.isStale()) {
                 cache.remove(id);
@@ -215,7 +248,8 @@ public class DocumentRepository<T extends BaseDocument<T>> {
             return Optional.ofNullable(cached).map(CachedEntity::getEntity);
         }
 
-        public void invalidate(String id) {
+        public void invalidate(@NotNull String id) {
+            Preconditions.checkNotNull(id, "ID cannot be null");
             cache.remove(id);
         }
 
