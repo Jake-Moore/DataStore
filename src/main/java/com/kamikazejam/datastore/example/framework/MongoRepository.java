@@ -1,10 +1,13 @@
 package com.kamikazejam.datastore.example.framework;
 
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import lombok.Getter;
 import org.bson.UuidRepresentation;
 import org.bson.types.ObjectId;
+import org.jetbrains.annotations.Nullable;
 import org.mongojack.JacksonMongoCollection;
 
 import com.mongodb.client.ClientSession;
@@ -22,7 +25,8 @@ public class MongoRepository<T extends BaseDocument<T>> {
     private final JacksonMongoCollection<T> collection;
     private final MongoClient mongoClient;
     private final Class<T> entityClass;
-    private final ConcurrentHashMap<ObjectId, CachedEntity<T>> cache;
+    @Getter
+    private final DocumentCache<T> cache;
     
     public MongoRepository(MongoClient mongoClient, String database, String collectionName, Class<T> entityClass) {
         this.mongoClient = mongoClient;
@@ -32,9 +36,9 @@ public class MongoRepository<T extends BaseDocument<T>> {
         this.collection = JacksonMongoCollection.builder()
             .withObjectMapper(JacksonUtil.getObjectMapper())
             .build(mongoCollection, entityClass, UuidRepresentation.STANDARD);
-        this.cache = new ConcurrentHashMap<>();
+        this.cache = new DocumentCache<>();
     }
-    
+
     /**
      * Creates a new entity with the given initializer
      * Returns a read-only version of the created entity
@@ -65,7 +69,7 @@ public class MongoRepository<T extends BaseDocument<T>> {
                     
                     // Convert to read-only and cache
                     readOnlyEntity = entity.setReadOnly();
-                    cache.put(entity.id.get(), new CachedEntity<>(readOnlyEntity));
+                    cache.put(entity.id.get(), readOnlyEntity);
                 } finally {
                     if (!committed) {
                         session.abortTransaction();
@@ -82,7 +86,7 @@ public class MongoRepository<T extends BaseDocument<T>> {
     /**
      * Gets a read-only version of the entity
      */
-    public T get(ObjectId id) {
+    public T read(ObjectId id) {
         T entity = findById(id);
         if (entity == null) {
             return null;
@@ -94,7 +98,7 @@ public class MongoRepository<T extends BaseDocument<T>> {
      * Modifies an entity in a controlled environment where modifications are allowed
      * Returns the updated read-only entity
      */
-    public T modify(ObjectId id, Consumer<T> updateFunction) {
+    public T update(ObjectId id, Consumer<T> updateFunction) {
         T originalEntity = findById(id);
         if (originalEntity == null) {
             throw new RuntimeException("Entity not found: " + id);
@@ -153,7 +157,7 @@ public class MongoRepository<T extends BaseDocument<T>> {
                     // Make sure this originalEntity is placed in cache, not the workingCopy
                     originalEntity.setModifiable();
                     originalEntity.copyFieldsFrom(finalEntity);
-                    cache.put(id, new CachedEntity<>(originalEntity));
+                    cache.put(id, originalEntity);
                     return originalEntity.setReadOnly();
                     
                 } finally {
@@ -172,10 +176,11 @@ public class MongoRepository<T extends BaseDocument<T>> {
     }
 
     private T findById(ObjectId id) {
-        CachedEntity<T> cached = cache.get(id);
-        if (cached != null && !cached.isStale()) {
+        Optional<T> cached = cache.get(id);
+        if (cached.isPresent()) {
+            // Cached Value seems valid, return it
             System.out.println("!!!! Cache hit for " + id);
-            T cachedEntity = cached.getEntity();
+            T cachedEntity = cached.get();
             cachedEntity.initialize();
             return cachedEntity;
         }
@@ -184,20 +189,39 @@ public class MongoRepository<T extends BaseDocument<T>> {
         if (entity != null) {
             System.out.println("!!!! Cache miss for " + id + " - fetched from DB");
             entity.initialize(); // Ensure entity is initialized after deserialization
-            cache.put(id, new CachedEntity<>(entity.setReadOnly()));
+            cache.put(id, entity.setReadOnly());
             return entity;
         }
         return null;
     }
-    
-    public void invalidateCache(ObjectId id) {
-        cache.remove(id);
+
+    public static class DocumentCache<T extends BaseDocument<T>> {
+        private final ConcurrentHashMap<ObjectId, CachedEntity<T>> cache = new ConcurrentHashMap<>();
+
+        public void put(ObjectId id, T entity) {
+            cache.put(id, new CachedEntity<>(entity));
+        }
+
+        // Will only return T if it's not stale
+        // Automatically manages the internal cache
+        public Optional<T> get(ObjectId id) {
+            @Nullable CachedEntity<T> cached = cache.get(id);
+            if (cached != null && cached.isStale()) {
+                cache.remove(id);
+                return Optional.empty();
+            }
+            return Optional.ofNullable(cached).map(CachedEntity::getEntity);
+        }
+
+        public void invalidate(ObjectId id) {
+            cache.remove(id);
+        }
+
+        public void clear() {
+            cache.clear();
+        }
     }
-    
-    public void clearCache() {
-        cache.clear();
-    }
-    
+
     private static class CachedEntity<T extends BaseDocument<T>> {
         private static final long TTL_MS = 30_000; // 30 seconds TTL
         private final T entity;

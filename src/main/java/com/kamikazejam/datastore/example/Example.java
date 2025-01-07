@@ -6,7 +6,7 @@ import com.mongodb.ServerApi;
 import com.mongodb.ServerApiVersion;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
-import com.kamikazejam.datastore.example.entity.User;
+import com.kamikazejam.datastore.example.framework.entity.User;
 import com.kamikazejam.datastore.example.framework.MongoRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -52,13 +52,13 @@ public class Example {
         // Get a read-only version of the user
         logger.warn(" "); logger.warn(" ");
         logger.warn("GETTING READ-ONLY USER by ID: {}", newUser.id.get());
-        User readOnlyUser = userRepo.get(newUser.id.get());
+        User readOnlyUser = userRepo.read(newUser.id.get());
         logger.warn("\tREAD-ONLY USER DATA: {}, {}, {}, {}", readOnlyUser.name.get(), readOnlyUser.age.get(), readOnlyUser.email.get(), readOnlyUser.version.get());
         logger.warn("\t\tinitialized? {}", readOnlyUser.isInitialized());
 
         // Modify the user in a controlled context
         logger.warn(" "); logger.warn(" "); logger.warn("MODIFYING USER...");
-        User updatedUser = userRepo.modify(newUser.id.get(), user -> {
+        User updatedUser = userRepo.update(newUser.id.get(), user -> {
             // Inside this lambda, the user object is modifiable
             user.name.set("New Name");
             user.age.set(30);
@@ -72,18 +72,18 @@ public class Example {
         // Later, we can fetch the user again (always returns read-only)
         logger.warn(" "); logger.warn(" ");
         logger.warn("GETTING READ-ONLY USER by ID: {}", updatedUser.id.get());
-        User cachedUser = userRepo.get(updatedUser.id.get());
+        User cachedUser = userRepo.read(updatedUser.id.get());
         logger.warn("\tCACHED? USER DATA: {}, {}, {}, {}", cachedUser.name.get(), cachedUser.age.get(), cachedUser.email.get(), cachedUser.version.get());
         logger.warn("\t\tinitialized? {}", cachedUser.isInitialized());
 
         // Can force cache invalidation if needed
         logger.warn(" "); logger.warn(" "); logger.warn("INVALIDATING CACHE...");
-        userRepo.invalidateCache(newUser.id.get());
+        userRepo.getCache().invalidate(newUser.id.get());
         logger.warn("\tCACHE INVALIDATED");
 
         // Example of a more complex update that depends on current state
         logger.warn(" "); logger.warn(" "); logger.warn("MODIFYING USER (COMPLEX UPDATE)...");
-        updatedUser = userRepo.modify(newUser.id.get(), user -> {
+        updatedUser = userRepo.update(newUser.id.get(), user -> {
             // Even complex updates are safe because they're in a modifiable context
             user.name.set(user.name.get() + " (Modified)");
             user.age.set(user.age.get() + 1);
@@ -94,7 +94,7 @@ public class Example {
         // Example of incorrect local version (forced failure)
         logger.warn(" "); logger.warn(" "); logger.warn("MODIFYING USER (FORCED FAILURE)... (first id: {})", updatedUser.uuid);
         BREAK = true;
-        User updatedUser2 = userRepo.modify(updatedUser.id.get(), user -> {
+        User updatedUser2 = userRepo.update(updatedUser.id.get(), user -> {
             user.name.set("New User Name Despite Version Mismatch");
         });
         // TODO the original Java reference does not get updated with the changes after the modify call
