@@ -2,7 +2,6 @@ package com.kamikazejam.datastore.example.framework;
 
 import java.util.*;
 
-import org.bson.types.ObjectId;
 import org.jetbrains.annotations.NotNull;
 import org.mongojack.Id;
 import org.slf4j.Logger;
@@ -19,7 +18,7 @@ public abstract class BaseDocument<T extends BaseDocument<T>> {
 
     @Id
     @JsonProperty("_id")
-    public final FieldWrapper<ObjectId> id = new FieldWrapper<>("_id", null, ObjectId.class);
+    public final FieldWrapper<String> id = new FieldWrapper<>("_id", UUID.randomUUID().toString(), String.class);
     @JsonProperty("version")
     public final FieldWrapper<Long> version = new FieldWrapper<>("version", 0L, Long.class);
     @JsonIgnore
@@ -92,12 +91,14 @@ public abstract class BaseDocument<T extends BaseDocument<T>> {
         return readOnly;
     }
 
+    @NotNull
     T setReadOnly() {
         ensureInitialized();
         setReadOnly(true);
         return (T) this;
     }
 
+    @NotNull
     T setModifiable() {
         ensureInitialized();
         setReadOnly(false);

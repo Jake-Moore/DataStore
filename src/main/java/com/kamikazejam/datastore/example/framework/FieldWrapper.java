@@ -19,15 +19,15 @@ import java.util.Objects;
 @JsonSerialize(using = FieldWrapper.FieldWrapperSerializer.class)
 @JsonDeserialize(using = FieldWrapper.FieldWrapperDeserializer.class)
 public class FieldWrapper<T> {
-    private T value;
+    private @Nullable T value;
     @JsonIgnore
     private @Nullable BaseDocument<?> parent;
     @Getter
-    private final String name;
+    private @NotNull final String name;
     @Getter
-    private final Class<T> valueType;
+    private @NotNull final Class<T> valueType;
 
-    public FieldWrapper(String name, T defaultValue, Class<T> valueType) {
+    public FieldWrapper(@NotNull String name, @Nullable T defaultValue, @NotNull Class<T> valueType) {
         this.name = name;
         this.value = defaultValue;
         this.valueType = valueType;

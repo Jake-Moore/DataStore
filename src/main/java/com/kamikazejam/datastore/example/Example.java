@@ -7,7 +7,7 @@ import com.mongodb.ServerApiVersion;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.kamikazejam.datastore.example.framework.entity.User;
-import com.kamikazejam.datastore.example.framework.MongoRepository;
+import com.kamikazejam.datastore.example.framework.DocumentRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +25,7 @@ public class Example {
                 .serverApi(serverApi)
                 .build();
         MongoClient mongoClient = MongoClients.create(settings);
-        MongoRepository<User> userRepo = new MongoRepository<>(mongoClient, "test", "users", User.class);
+        DocumentRepository<User> userRepo = new DocumentRepository<>(mongoClient, "test", "users", User.class);
 
         Logger logger = LoggerFactory.getLogger("MyApp");
         logger.error("===================================================");
@@ -52,7 +52,7 @@ public class Example {
         // Get a read-only version of the user
         logger.warn(" "); logger.warn(" ");
         logger.warn("GETTING READ-ONLY USER by ID: {}", newUser.id.get());
-        User readOnlyUser = userRepo.read(newUser.id.get());
+        User readOnlyUser = userRepo.read(newUser.id.get()).orElseThrow();
         logger.warn("\tREAD-ONLY USER DATA: {}, {}, {}, {}", readOnlyUser.name.get(), readOnlyUser.age.get(), readOnlyUser.email.get(), readOnlyUser.version.get());
         logger.warn("\t\tinitialized? {}", readOnlyUser.isInitialized());
 
@@ -72,7 +72,7 @@ public class Example {
         // Later, we can fetch the user again (always returns read-only)
         logger.warn(" "); logger.warn(" ");
         logger.warn("GETTING READ-ONLY USER by ID: {}", updatedUser.id.get());
-        User cachedUser = userRepo.read(updatedUser.id.get());
+        User cachedUser = userRepo.read(updatedUser.id.get()).orElseThrow();
         logger.warn("\tCACHED? USER DATA: {}, {}, {}, {}", cachedUser.name.get(), cachedUser.age.get(), cachedUser.email.get(), cachedUser.version.get());
         logger.warn("\t\tinitialized? {}", cachedUser.isInitialized());
 
