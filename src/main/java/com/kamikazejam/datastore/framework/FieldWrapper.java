@@ -1,16 +1,21 @@
 package com.kamikazejam.datastore.framework;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Getter;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
-import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import lombok.Getter;
 
 /**
  * A wrapper for fields that enforces access control based on document state
  */
+@SuppressWarnings("unchecked")
 public class FieldWrapper<T> {
     private final UUID uuid = UUID.randomUUID();
 
@@ -20,13 +25,47 @@ public class FieldWrapper<T> {
     @JsonIgnore
     private @Nullable BaseDocument<?> parent;
     private @NotNull final String name;
-    private @NotNull final Class<T> valueType;
+    private @NotNull final Class<?> valueType;
 
-    public FieldWrapper(@NotNull String name, @Nullable T defaultValue, @NotNull Class<T> valueType) {
+    private FieldWrapper(@NotNull String name, @Nullable T defaultValue, @NotNull Class<T> valueType) {
+        this(name, defaultValue, valueType, null);
+    }
+
+    @SuppressWarnings("unused")
+    private FieldWrapper(@NotNull String name, @Nullable T defaultValue, @NotNull Class<?> valueType, @Nullable Class<?> elementType) {
         this.name = name;
         this.value = defaultValue;
         this.defaultValue = defaultValue;
         this.valueType = valueType;
+        // We don't actually need `elementType` in our implementation yet, but we
+        //  keep it in case it is needed in the future
+    }
+
+
+    // ------------------------------------------------------ //
+    // Static Constructors                                    //
+    // ------------------------------------------------------ //
+
+    public static <T> FieldWrapper<T> of(@NotNull String name, @Nullable T defaultValue, @NotNull Class<T> valueType) {
+        return new FieldWrapper<>(name, defaultValue, valueType);
+    }
+
+    // Generic constructor for any collection type
+    public static <C extends Collection<E>, E> FieldWrapper<C> ofColl(
+            @NotNull String name,
+            @Nullable C defaultValue,
+            @NotNull Class<? super C> collectionType
+    ) {
+        return new FieldWrapper<>(name, defaultValue, collectionType, null);
+    }
+
+    // Generic constructor for any map type
+    public static <K, V, M extends Map<K,V>> FieldWrapper<M> ofMap(
+            @NotNull String name,
+            @Nullable M defaultValue,
+            @NotNull Class<? super M> mapType
+    ) {
+        return new FieldWrapper<>(name, defaultValue, mapType, null);
     }
 
     @NotNull
@@ -36,15 +75,11 @@ public class FieldWrapper<T> {
 
     @NotNull
     public Class<T> getValueType() {
-        return valueType;
+        return (Class<T>) valueType;
     }
 
     void setParent(@NotNull BaseDocument<?> parent) {
         this.parent = parent;
-    }
-
-    public boolean hasParent() { // TODO REMOVE
-        return parent != null;
     }
 
     public T get() {

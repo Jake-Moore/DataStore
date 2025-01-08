@@ -17,9 +17,9 @@ public abstract class BaseDocument<T extends BaseDocument<T>> {
 
     @Id
     @JsonProperty("_id")
-    public final FieldWrapper<String> id = new FieldWrapper<>("_id", UUID.randomUUID().toString(), String.class);
+    public final FieldWrapper<String> id = FieldWrapper.of("_id", UUID.randomUUID().toString(), String.class);
     @JsonProperty("version")
-    public final FieldWrapper<Long> version = new FieldWrapper<>("version", 0L, Long.class);
+    public final FieldWrapper<Long> version = FieldWrapper.of("version", 0L, Long.class);
     @JsonIgnore
     private boolean readOnly;
     @JsonIgnore
@@ -42,20 +42,11 @@ public abstract class BaseDocument<T extends BaseDocument<T>> {
         initialized = true;
     }
 
-    public boolean isInitialized() {
-        for (FieldWrapper<?> field : getAllFields()) {
-            if (!field.hasParent()) {
-                System.out.println("!!! Field " + field.getName() + " has no parent !!!");
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private void ensureInitialized() {
+    private void ensureValid() {
         if (!initialized) {
             throw new IllegalStateException("Document not initialized. Call initialize() after construction.");
         }
+        this.getAllFieldsMap(); // may throw error
     }
 
     @NotNull
@@ -73,6 +64,9 @@ public abstract class BaseDocument<T extends BaseDocument<T>> {
     protected Map<String, FieldWrapper<?>> getAllFieldsMap() {
         Map<String, FieldWrapper<?>> map = new HashMap<>();
         for (FieldWrapper<?> field : getAllFields()) {
+            if (map.containsKey(field.getName())) {
+                throw new IllegalStateException("Duplicate field name: " + field.getName());
+            }
             map.put(field.getName(), field);
         }
         return map;
@@ -80,33 +74,33 @@ public abstract class BaseDocument<T extends BaseDocument<T>> {
 
     @JsonIgnore
     protected void setReadOnly(boolean readOnly) {
-        ensureInitialized();
+        ensureValid();
         this.readOnly = readOnly;
     }
     
     @JsonIgnore
     public boolean isReadOnly() {
-        ensureInitialized();
+        ensureValid();
         return readOnly;
     }
 
     @NotNull
     T setReadOnly() {
-        ensureInitialized();
+        ensureValid();
         setReadOnly(true);
         return (T) this;
     }
 
     @NotNull
     T setModifiable() {
-        ensureInitialized();
+        ensureValid();
         setReadOnly(false);
         return (T) this;
     }
 
     @SuppressWarnings("unchecked")
     protected T deepCopy() {
-        ensureInitialized();
+        ensureValid();
         try {
             return JacksonUtil.deepCopy((T) this);
         } catch (Exception e) {
@@ -121,7 +115,7 @@ public abstract class BaseDocument<T extends BaseDocument<T>> {
      */
     @SuppressWarnings("unchecked")
     protected T copyFieldsFrom(T source) {
-        ensureInitialized();
+        ensureValid();
         if (isReadOnly()) {
             throw new IllegalStateException("Cannot copy fields into a read-only document");
         }
