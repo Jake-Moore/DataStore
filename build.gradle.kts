@@ -18,6 +18,7 @@ repositories {
     maven("https://repo.luxiouslabs.net/repository/maven-public/")
 }
 
+val kcVersion = "4.0.0-beta.8-20250104.095630-1"
 dependencies {
     // Spigot
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
@@ -27,6 +28,7 @@ dependencies {
     api("com.fasterxml.jackson.core:jackson-databind:2.16.1")
     api("org.json:json:20241224")
     api("ch.qos.logback:logback-classic:1.5.16")
+    api("com.kamikazejam.kamicommon:spigot-jar:$kcVersion")
 
     // Testing Dependencies
     testImplementation("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")

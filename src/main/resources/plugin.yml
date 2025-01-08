@@ -1,0 +1,8 @@
+name: DataStore
+main: com.kamikazejam.datastore.DataStorePlugin
+version: ${version}
+authors: [KamikazeJAM]
+website: https://github.com/Jake-Moore/DataStore
+description: ${description}
+api-version: 1.13
+depend: [KamiCommon]
