@@ -1,4 +1,4 @@
-package com.kamikazejam.datastore.framework.entity.obj;
+package com.kamikazejam.datastore.test.entity.obj;
 
 import java.util.Date;
 import java.util.Map;

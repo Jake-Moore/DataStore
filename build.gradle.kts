@@ -39,6 +39,7 @@ dependencies {
 
     // Jetbrains
     compileOnly("org.jetbrains:annotations:26.0.1")
+    testCompileOnly("org.jetbrains:annotations:26.0.1")
 }
 
 tasks {

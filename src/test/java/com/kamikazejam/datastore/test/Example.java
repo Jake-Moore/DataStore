@@ -1,8 +1,8 @@
 package com.kamikazejam.datastore.test;
 
 import com.kamikazejam.datastore.framework.DocumentRepository;
-import com.kamikazejam.datastore.framework.entity.User;
-import com.kamikazejam.datastore.framework.entity.obj.DataClass;
+import com.kamikazejam.datastore.test.entity.User;
+import com.kamikazejam.datastore.test.entity.obj.DataClass;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.ServerApi;

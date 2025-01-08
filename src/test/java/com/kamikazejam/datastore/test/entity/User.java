@@ -1,8 +1,8 @@
-package com.kamikazejam.datastore.framework.entity;
+package com.kamikazejam.datastore.test.entity;
 
 import com.kamikazejam.datastore.framework.BaseDocument;
 import com.kamikazejam.datastore.framework.FieldWrapper;
-import com.kamikazejam.datastore.framework.entity.obj.DataClass;
+import com.kamikazejam.datastore.test.entity.obj.DataClass;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;

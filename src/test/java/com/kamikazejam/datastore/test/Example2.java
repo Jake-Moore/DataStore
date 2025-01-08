@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.kamikazejam.datastore.framework.DocumentRepository;
-import com.kamikazejam.datastore.framework.entity.User;
+import com.kamikazejam.datastore.test.entity.User;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.ServerApi;
