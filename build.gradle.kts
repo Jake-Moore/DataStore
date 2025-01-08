@@ -26,7 +26,6 @@ dependencies {
     // Dependencies
     api("org.mongodb:mongodb-driver-sync:5.2.1")
     api("com.fasterxml.jackson.core:jackson-databind:2.16.1")
-    api("org.json:json:20241224")
     api("ch.qos.logback:logback-classic:1.5.16")
     api("com.kamikazejam.kamicommon:spigot-jar:$kcVersion")
 
@@ -62,12 +61,6 @@ tasks {
     }
 }
 
-// Register a task to delete the jars in the libs folder
-tasks.register<Delete>("cleanLibs") {
-    delete("build/libs")
-}
-tasks.build.get().dependsOn("cleanLibs")
-
 // We want UTF-8 for everything
 tasks.withType<JavaCompile> {
     options.encoding = Charsets.UTF_8.name()
@@ -99,7 +92,7 @@ publishing {
                 password = System.getenv("LUXIOUS_NEXUS_PASS")
             }
             // Select URL based on version (if it's a snapshot or not)
-            url = if (project.version.toString().endsWith("-SNAPSHOT")) {
+            url = if (!project.version.toString().endsWith("-SNAPSHOT")) {
                 uri("https://repo.luxiouslabs.net/repository/maven-releases/")
             } else {
                 uri("https://repo.luxiouslabs.net/repository/maven-snapshots/")
