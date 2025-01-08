@@ -63,17 +63,10 @@ public class JacksonUtil {
         Document doc = new Document();
         for (FieldWrapper<?> field : entity.getAllFields()) {
             Object value = field.get();
-
-            // Special Handling for _id to make it searchable
-            if (field.getName().equals("_id") && value instanceof String s) {
-                doc.put("_id", s);
-                continue;
-            }
-
             if (value != null) {
                 // Convert the value to a MongoDB-compatible format using Jackson
                 Object convertedValue = getObjectMapper().convertValue(value, Object.class);
-                // If the converted value is a Map, convert it to a Document
+                // If the converted value is a Map, convert it to a (sub) Document
                 if (convertedValue instanceof Map<?, ?> map) {
                     convertedValue = new Document((Map<String, Object>) map);
                 }
@@ -85,7 +78,6 @@ public class JacksonUtil {
         return doc;
     }
 
-    @SuppressWarnings("unchecked")
     @NotNull
     public static <T extends BaseDocument<T>> T deserializeFromDocument(@NotNull Class<T> entityClass, @NotNull Document doc) {
         Preconditions.checkNotNull(doc, "Document cannot be null");
@@ -95,29 +87,31 @@ public class JacksonUtil {
             entity.initialize();
             entity.setModifiable();
 
-            // For each field in the document, find the corresponding FieldWrapper and set its value
+            // Deserialize each FieldWrapper from its contents in the BSON document
             for (FieldWrapper<?> field : entity.getAllFields()) {
-                String fieldName = field.getName();
-                FieldWrapper<Object> typedField = (FieldWrapper<Object>) field;
-
-                if (doc.containsKey(fieldName)) {
-                    Object rawValue = doc.get(fieldName);
-                    if (rawValue != null) {
-                        // Convert the MongoDB value to the proper type using Jackson
-                        Object value = getObjectMapper().convertValue(rawValue, field.getValueType());
-                        typedField.set(value);
-                    } else {
-                        typedField.set(null);
-                    }
-                } else {
-                    typedField.set(typedField.getDefaultValue());
-                }
+                deserializeFieldWrapper(field, doc);
             }
 
             entity.setReadOnly();
             return entity;
         } catch (Exception e) {
             throw new RuntimeException("Failed to deserialize document", e);
+        }
+    }
+
+    private static <V> void deserializeFieldWrapper(FieldWrapper<V> field, Document doc) {
+        String fieldName = field.getName();
+        if (doc.containsKey(fieldName)) {
+            Object rawValue = doc.get(fieldName);
+            if (rawValue != null) {
+                // Convert the MongoDB value to the proper type using Jackson
+                V value = getObjectMapper().convertValue(rawValue, field.getValueType());
+                field.set(value);
+            } else {
+                field.set(null);
+            }
+        } else {
+            field.set(field.getDefaultValue());
         }
     }
 
