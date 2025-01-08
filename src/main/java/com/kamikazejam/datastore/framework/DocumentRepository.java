@@ -201,7 +201,6 @@ public class DocumentRepository<T extends BaseDocument<T>> {
     private T findById(String id) {
         Optional<T> cached = cache.get(id);
         if (cached.isPresent()) {
-            System.out.println("!!!! Cache hit for " + id);
             T cachedEntity = cached.get();
             cachedEntity.initialize();
             return cachedEntity;
@@ -209,7 +208,6 @@ public class DocumentRepository<T extends BaseDocument<T>> {
 
         Document doc = collection.find().filter(Filters.eq("_id", id)).first();
         if (doc != null) {
-            System.out.println("!!!! Cache miss for " + id + " - fetched from DB");
             T entity = JacksonUtil.deserializeFromDocument(this.entityClass, doc);
             cache.put(id, entity.setReadOnly());
             return entity;
