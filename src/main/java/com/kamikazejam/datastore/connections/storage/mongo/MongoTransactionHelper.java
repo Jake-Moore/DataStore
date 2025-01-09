@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
+import com.kamikazejam.datastore.connections.storage.exception.TransactionRetryLimitExceededException;
 import com.kamikazejam.datastore.util.DataStoreFileLogger;
 import com.kamikazejam.datastore.util.JacksonUtil;
 import com.mongodb.MongoCommandException;
@@ -15,13 +16,15 @@ import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Random;
 import java.util.function.Consumer;
 
 import static com.mongodb.client.model.Filters.eq;
 
 @SuppressWarnings("UnusedReturnValue")
 class MongoTransactionHelper {
-    private static final int DEFAULT_MAX_RETRIES = 5;
+    private static final Random RANDOM = new Random();
+    private static final int DEFAULT_MAX_RETRIES = 15;
     private static final int BASE_BACKOFF_MS = 50;  // Start with 50ms delay
     private static final int WRITE_CONFLICT_ERROR = 112;
 
@@ -47,12 +50,19 @@ class MongoTransactionHelper {
         Preconditions.checkNotNull(originalStore, "Store cannot be null");
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null");
 
-        // Create working copy that will be updated on each attempt
-        X baseCopy = JacksonUtil.deepCopy(originalStore);
-        return executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, 0);
+        try {
+            // Create working copy that will be updated on each attempt
+            X baseCopy = JacksonUtil.deepCopy(originalStore);
+            executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, 0);
+            return true;
+        }catch (TransactionRetryLimitExceededException e){
+            DataStoreFileLogger.warn("Failed to execute MongoDB update in " + DEFAULT_MAX_RETRIES + " attempts");
+            return false;
+        }
     }
 
-    private static <K, X extends Store<X, K>> boolean executeUpdateInternal(
+    // If no error is thrown, this method succeeded
+    private static <K, X extends Store<X, K>> void executeUpdateInternal(
             @NotNull MongoClient mongoClient,
             @NotNull MongoCollection<Document> collection,
             @NotNull Cache<K, X> cache,
@@ -60,10 +70,10 @@ class MongoTransactionHelper {
             @NotNull X baseCopy,
             @NotNull Consumer<X> updateFunction,
             int currentAttempt
-    ) {
+    ) throws TransactionRetryLimitExceededException {
         // Quit if we've run out of attempts
         if (currentAttempt >= DEFAULT_MAX_RETRIES) {
-            throw new RuntimeException("Failed to execute update after " + DEFAULT_MAX_RETRIES + " attempts.");
+            throw new TransactionRetryLimitExceededException("Failed to execute update after " + DEFAULT_MAX_RETRIES + " attempts.");
         }
 
         // Apply exponential backoff if this isn't our first attempt
@@ -90,7 +100,7 @@ class MongoTransactionHelper {
 
                 final String id = cache.keyToString(workingCopy.getId());
                 Document doc = JacksonUtil.serializeToDocument(workingCopy);
-                
+
                 UpdateResult result = collection.replaceOne(
                         session,
                         Filters.and(
@@ -107,7 +117,7 @@ class MongoTransactionHelper {
                 if (result.getModifiedCount() == 0) {
                     DataStoreSource.get().getColorLogger().debug("Failed to update Store in MongoDB Layer: " + workingCopy.getId());
                     DataStoreSource.get().getColorLogger().debug("\tCould not find document with id: '" + id + "' and version: " + currentVersion);
-                    
+
                     // If update failed, fetch current version
                     Document currentDoc = collection.find(session).filter(eq("_id", id)).first();
                     if (currentDoc == null) {
@@ -116,7 +126,8 @@ class MongoTransactionHelper {
 
                     // Update our working copy with latest version and retry
                     baseCopy = JacksonUtil.deserializeFromDocument(cache.getStoreClass(), currentDoc);
-                    return executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
+                    executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
+                    return;
                 }
 
                 // Success - update the cached store from our working copy
@@ -128,18 +139,21 @@ class MongoTransactionHelper {
 
                 session.commitTransaction();
                 committed = true;
-                return true;
 
+            } catch (TransactionRetryLimitExceededException t) {
+                // re-throw to bubble up
+                throw t;
             } catch (MongoCommandException mE) {
                 if (isWriteConflict(mE)) {
                     logWriteConflict(currentAttempt);
                     // For write conflicts, retry with same working copy
-                    return executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
+                    executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
+                    return;
                 }
                 throw mE;
             } catch (Exception e) {
                 DataStoreFileLogger.warn("Failed to execute MongoDB update", e);
-                return executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
+                executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
             } finally {
                 if (!committed) {
                     session.abortTransaction();
@@ -148,9 +162,16 @@ class MongoTransactionHelper {
         }
     }
 
+    // Applies exponential backoff to the current thread + some random jitter
     private static void applyBackoff(int attempt) {
         try {
-            Thread.sleep((long) (BASE_BACKOFF_MS * Math.pow(2, attempt - 1)));
+            long exponentialBackoff = (long) (BASE_BACKOFF_MS * Math.pow(2, attempt - 1));
+            // add the jitter (+- 25%)
+            long half = exponentialBackoff / 2;
+            long jitter = RANDOM.nextLong(half) - (half / 2);
+
+            long backoff = exponentialBackoff + jitter;
+            Thread.sleep(backoff);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Operation interrupted during backoff", e);
