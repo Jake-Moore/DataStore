@@ -8,6 +8,8 @@ import com.kamikazejam.kamicommon.util.StringUtil;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 // Abstraction layer for adding different storage modes in the future
 public enum StorageMode {
     MONGODB;
@@ -38,7 +40,7 @@ public enum StorageMode {
                 Bukkit.shutdown();
             }
         }
-        return mongoStorage;
+        return Objects.requireNonNull(mongoStorage);
     }
 
     public void disableServices() {

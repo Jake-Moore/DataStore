@@ -77,16 +77,16 @@ public abstract class StoreProfile<T extends StoreProfile<T>> implements Store<T
     @ApiStatus.Internal
     public void initialize() {
         if (initialized) { return; }
+        initialized = true; // Must set before calling getAllFields because it will want it to be true
         // Set parent reference for all fields (including id and version)
         getAllFields().forEach(field -> field.setParent(this));
-        initialized = true;
     }
 
     private void ensureValid() {
         if (!initialized) {
             throw new IllegalStateException("Document not initialized. Call initialize() after construction.");
         }
-        this.getAllFieldsMap(); // may throw error
+        this.validateDuplicateFields(); // may throw error
     }
 
     @Override
@@ -103,7 +103,20 @@ public abstract class StoreProfile<T extends StoreProfile<T>> implements Store<T
         Set<FieldWrapper<?>> fields = new HashSet<>(getCustomFields());
         fields.add(id);
         fields.add(version);
+        fields.add(username);
         return fields;
+    }
+
+    private void validateDuplicateFields() {
+        Set<String> names = new HashSet<>();
+        names.add(id.getName());
+        names.add(version.getName());
+        names.add(username.getName());
+        for (FieldWrapper<?> field : getCustomFields()) {
+            if (!names.add(field.getName())) {
+                throw new IllegalStateException("Duplicate field name: " + field.getName());
+            }
+        }
     }
 
     @Override

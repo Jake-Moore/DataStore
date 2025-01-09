@@ -69,16 +69,16 @@ public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, 
     @ApiStatus.Internal
     public void initialize() {
         if (initialized) { return; }
+        initialized = true; // Must set before calling getAllFields because it will want it to be true
         // Set parent reference for all fields (including id and version)
         getAllFields().forEach(field -> field.setParent(this));
-        initialized = true;
     }
 
     private void ensureValid() {
         if (!initialized) {
             throw new IllegalStateException("Document not initialized. Call initialize() after construction.");
         }
-        this.getAllFieldsMap(); // may throw error
+        this.validateDuplicateFields(); // may throw error
     }
 
     @Override
@@ -96,6 +96,17 @@ public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, 
         fields.add(id);
         fields.add(version);
         return fields;
+    }
+
+    private void validateDuplicateFields() {
+        Set<String> names = new HashSet<>();
+        names.add(id.getName());
+        names.add(version.getName());
+        for (FieldWrapper<?> field : getCustomFields()) {
+            if (!names.add(field.getName())) {
+                throw new IllegalStateException("Duplicate field name: " + field.getName());
+            }
+        }
     }
 
     @Override

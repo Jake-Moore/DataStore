@@ -22,6 +22,13 @@ public class AsyncCachesExecutor<T extends Cache<?,?>> {
     private final long timeoutSec;
 
     public AsyncCachesExecutor(List<T> caches, Execution<T> execution, long timeoutSec) {
+        long size = caches.size();
+        // Filter out null caches
+        caches = caches.stream().filter(Objects::nonNull).toList();
+        if (caches.size() != size) {
+            throw new IllegalArgumentException("We removed null caches from the list!");
+        }
+
         List<T> sorted = caches.stream().sorted().toList();
         sorted.forEach(c -> queue.put(c.getName(), c));
         this.execution = execution;
@@ -69,21 +76,20 @@ public class AsyncCachesExecutor<T extends Cache<?,?>> {
             executed.add(c.getName());
 
             f.whenComplete((cache, t) -> {
+                // If we run into an exception running the Execution, we should complete exceptionally
+                if (t != null) {
+                    future.completeExceptionally(t);
+                    currentExecutions.forEach(cf -> cf.cancel(true));
+                    currentExecutions.clear();
+                    return;
+                }
+
                 try {
                     queue.remove(cache.getName());
                     completed.add(cache.getName());
                     // Bukkit.getLogger().warning("[AsyncCachesExecutor] " + cache.getName() + " completed, isDoneAlr:? " + future.isDone());
                     if (future.isDone()) { return; }
 
-                    // If we run into an exception running the Execution, we should complete exceptionally
-                    if (t != null) {
-                        // Bukkit.getLogger().severe("[AsyncCachesExecutor] FUTURE completed EXCEPTIONALLY");
-
-                        future.completeExceptionally(t);
-                        currentExecutions.forEach(cf -> cf.cancel(true));
-                        currentExecutions.clear();
-                        return;
-                    }
                     tryQueue();
                 }catch (Throwable t2) {
                     t2.printStackTrace();

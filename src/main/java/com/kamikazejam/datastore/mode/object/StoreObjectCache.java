@@ -12,6 +12,7 @@ import com.kamikazejam.datastore.base.store.StoreInstantiator;
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator;
 import com.kamikazejam.datastore.mode.object.store.ObjectStorageDatabase;
 import com.kamikazejam.datastore.mode.object.store.ObjectStorageLocal;
+import com.mongodb.DuplicateKeyException;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
@@ -19,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
@@ -49,7 +51,8 @@ public abstract class StoreObjectCache<X extends StoreObject<X>> extends StoreCa
     // CRUD Methods                                           //
     // ------------------------------------------------------ //
     @Override
-    public final @NotNull X create(@NotNull Consumer<X> initializer) {
+    public final @NotNull X create(@NotNull String key, @NotNull Consumer<X> initializer) throws DuplicateKeyException {
+        Preconditions.checkNotNull(key, "Key cannot be null");
         Preconditions.checkNotNull(initializer, "Initializer cannot be null");
 
         try {
@@ -58,6 +61,8 @@ public abstract class StoreObjectCache<X extends StoreObject<X>> extends StoreCa
             store.initialize();
             store.setReadOnly(false);
 
+            // Set the id first (allowing the initializer to change it if necessary)
+            store.id.set(key);
             // Initialize the store
             initializer.accept(store);
             // Enforce Version 0 for creation
@@ -69,9 +74,17 @@ public abstract class StoreObjectCache<X extends StoreObject<X>> extends StoreCa
             this.cache(store);
             this.getDatabaseStore().save(store);
             return store;
+        } catch (DuplicateKeyException d) {
+            this.getLoggerService().severe("Failed to create Store: Duplicate Key...");
+            throw d;
         } catch (Exception e) {
             throw new RuntimeException("Failed to create Store", e);
         }
+    }
+
+    @Override
+    public final @NotNull X create(@NotNull Consumer<X> initializer) throws DuplicateKeyException {
+        return this.create(UUID.randomUUID().toString(), initializer);
     }
 
     @Override

@@ -26,7 +26,8 @@ public class MongoMonitor implements ServerMonitorListener {
     public void serverHeartbeatSucceeded(@NotNull ServerHeartbeatSucceededEvent event) {
         if (!this.service.isMongoInitConnect()) {
             this.service.setMongoInitConnect(true);
-            this.service.debug("MongoDB initial connection succeeded");
+            this.service.info("&aMongoDB initial connection succeeded.");
+            this.service.info("&aPlayers may now join the server.");
         } else {
             if (!service.isMongoConnected()) {
                 this.service.debug("MongoDB connection restored");

@@ -1,5 +1,7 @@
 package com.kamikazejam.datastore.mode.profile.listener;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.kamikazejam.datastore.DataStoreAPI;
 import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.base.exception.CachingError;
@@ -21,6 +23,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.IllegalPluginAccessException;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +40,7 @@ import java.util.concurrent.TimeUnit;
  * This class manages the synchronization between a bukkit {@link Player} and their {@link StoreProfile} objects.<br>
  * Its primary purpose it to listen to joins/quits and ensure caches are loaded & unloaded as players join and leave.
  */
-@SuppressWarnings({"unused"})
+@SuppressWarnings({"unused", "UnstableApiUsage"})
 public class ProfileListener implements Listener {
 
     public ProfileListener() {}
@@ -67,6 +70,7 @@ public class ProfileListener implements Listener {
         }
     }
 
+    private final Cache<UUID, Long> loginCache = CacheBuilder.newBuilder().expireAfterWrite(100, TimeUnit.MILLISECONDS).build();
     @EventHandler(priority = EventPriority.LOW)
     public void onProfileCachingStart(AsyncPlayerPreLoginEvent event) {
         final long ms = System.currentTimeMillis();
@@ -75,7 +79,8 @@ public class ProfileListener implements Listener {
         final String ip = event.getAddress().getHostAddress();
 
         StorageService storageService = DataStoreSource.getStorageService();
-        if (!storageService.canCache()) {
+        if (!storageService.canCache() || DataStoreSource.getOnEnableTime() <= 0) {
+            DataStoreSource.get().getColorLogger().warn("StorageService is not ready to cache objects, denying join");
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, ChatColor.RED + "Server is starting, please wait.");
             return;
         }
@@ -99,6 +104,7 @@ public class ProfileListener implements Listener {
 
         // Save async to prevent unnecessary blocking on join
         storageService.debug("Player " + username + " (" + uniqueId + ") profiles loaded in " + (System.currentTimeMillis() - ms) + "ms");
+        loginCache.put(uniqueId, System.currentTimeMillis());
     }
 
 
@@ -127,6 +133,15 @@ public class ProfileListener implements Listener {
 
         // Execute the cache list in order
         return executor.executeInOrder();
+    }
+
+    @EventHandler(priority = EventPriority.LOW)
+    public void onProfileCachingInit(PlayerLoginEvent event) {
+        // In rare cases, if a player joins during server startup, the AsyncPlayerPreLoginEvent may not have been called
+        if (loginCache.getIfPresent(event.getPlayer().getUniqueId()) == null) {
+            DataStoreSource.get().getColorLogger().warn("Player (" + event.getPlayer().getName() + ") connected before DataStore was ready, denying join");
+            event.disallow(PlayerLoginEvent.Result.KICK_OTHER, ChatColor.RED + "Server is starting, please wait.");
+        }
     }
 
     @EventHandler(priority = EventPriority.LOW)

@@ -217,11 +217,11 @@ public class MongoStorage extends StorageService {
             } catch (Exception e) {
                 attempts++;
                 if (attempts >= MAX_RETRIES) {
-                    throw new RuntimeException("Failed to update after " + MAX_RETRIES + " attempts", e);
+                    throw new RuntimeException("Failed to update after " + MAX_RETRIES + " attempts:", e);
                 }
             }
         }
-        throw new RuntimeException("Failed to update after " + MAX_RETRIES + " attempts");
+        throw new RuntimeException("Failed to update after " + MAX_RETRIES + " attempts.");
     }
 
     @Override

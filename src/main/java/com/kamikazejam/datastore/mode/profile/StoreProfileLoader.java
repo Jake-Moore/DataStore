@@ -5,6 +5,7 @@ import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.base.cache.StoreLoader;
 import com.kamikazejam.datastore.connections.storage.StorageService;
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener;
+import com.kamikazejam.datastore.util.DataStoreFileLogger;
 import com.kamikazejam.kamicommon.util.StringUtil;
 import lombok.Getter;
 import lombok.Setter;
@@ -52,6 +53,7 @@ public class StoreProfileLoader<X extends StoreProfile<X>> implements StoreLoade
         if (login) {
             StorageService storageService = DataStoreSource.getStorageService();
             if (!storageService.canCache()) {
+                DataStoreSource.get().getColorLogger().warn("StorageService is not ready to cache objects, denying join");
                 denyJoin = true;
                 joinDenyReason = StringUtil.t(DataStoreSource.getConfig().getString("profiles.messages.beforeDbConnection")
                         .replace("{cacheName}", cache.getName()));
@@ -63,6 +65,7 @@ public class StoreProfileLoader<X extends StoreProfile<X>> implements StoreLoade
         try {
             this.store = loadOrCreateStore(cache, uuid, login, username);
         }catch (Throwable t) {
+            DataStoreFileLogger.warn("Failed to load or create StoreProfile from Database, denying join", t);
             this.denyJoin = true;
             this.joinDenyReason = StringUtil.t(DataStoreSource.getConfig().getString("profiles.messages.beforeDbConnection")
                     .replace("{cacheName}", cache.getName()));
@@ -115,7 +118,7 @@ public class StoreProfileLoader<X extends StoreProfile<X>> implements StoreLoade
             // Make a new profile if they are logging in
             if (creative) {
                 cache.getLoggerService().debug("Creating a new StoreProfile for: " + username);
-                return createStore(cache, username, store -> store.setCache(cache));
+                return createStore(cache, uuid, username, store -> store.setCache(cache));
             }
 
             // Assume some other kind of failure:
@@ -138,7 +141,7 @@ public class StoreProfileLoader<X extends StoreProfile<X>> implements StoreLoade
     }
 
     @NotNull
-    private static <X extends StoreProfile<X>> X createStore(ProfileCache<X> cache, @Nullable String username, Consumer<X> initializer) {
+    private static <X extends StoreProfile<X>> X createStore(ProfileCache<X> cache, @NotNull UUID uuid, @Nullable String username, Consumer<X> initializer) {
         try {
             // Create a new instance in modifiable state
             X store = cache.getInstantiator().instantiate();
@@ -148,6 +151,7 @@ public class StoreProfileLoader<X extends StoreProfile<X>> implements StoreLoade
             // Initialize the store
             initializer.accept(store);
             // Enforce Version 0 for creation
+            store.id.set(uuid);
             store.version.set(0L);
             store.username.set(username);
 

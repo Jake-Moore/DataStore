@@ -94,6 +94,7 @@ public abstract class LoggerService {
 
 
     public final void logToConsole(String a, Level level) {
+        a = StringUtil.t(a);
         // Add the logger name to the start of the msg
         String content = "[" + getLoggerName() + "] " + a;
         // Add the plugin name to the VERY start, so it matches existing logging format
