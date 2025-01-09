@@ -239,7 +239,7 @@ public class MongoStorage extends StorageService {
         try {
             MongoClientSettings.Builder settingsBuilder = MongoClientSettings.builder()
                     .uuidRepresentation(UuidRepresentation.STANDARD)
-                    .applyToServerSettings(builder -> builder.addServerMonitorListener(new MongoMonitor(this)));
+                    .applyToClusterSettings(builder -> builder.addClusterListener(new MongoMonitor(this)));
 
             // Using connection URI
             ConnectionString connectionString = new ConnectionString(MongoConfig.get().getUri());
