@@ -5,11 +5,10 @@ plugins {
     id("java")
     id("java-library")
     id("maven-publish")
-    id("com.gradleup.shadow") version "8.3.5"
 }
 
 group = "com.kamikazejam"
-version = "1.0.0-SNAPSHOT"
+version = "1.0.0.beta.1-SNAPSHOT"
 description = "Simple Data Storage Solution using MongoDB"
 
 
@@ -24,10 +23,10 @@ dependencies {
     // Spigot
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
-    // Dependencies TODO undo shadowing
-    shadow("org.mongodb:mongodb-driver-sync:5.2.1")
-    shadow("com.fasterxml.jackson.core:jackson-databind:2.16.1")
-    shadow("ch.qos.logback:logback-classic:1.5.16")
+    // Dependencies
+    api("org.mongodb:mongodb-driver-sync:5.2.1")
+    api("com.fasterxml.jackson.core:jackson-databind:2.16.1")
+    api("ch.qos.logback:logback-classic:1.5.16")
     api("com.kamikazejam.kamicommon:spigot-jar:$kcVersion")
 
     // Testing Dependencies
@@ -46,18 +45,6 @@ dependencies {
 
 tasks {
     publish.get().dependsOn(build)
-    build.get().dependsOn(shadowJar)
-
-    shadowJar {
-        archiveClassifier.set("")
-        configurations = listOf(project.configurations.shadow.get())
-
-        relocate("com.mongodb", "com.kamikazejam.datastore.mongo")
-        relocate("com.fasterxml.jackson", "com.kamikazejam.datastore.jackson")
-        relocate("ch.qos.logback", "com.kamikazejam.datastore.logback")
-        relocate("org.bson", "com.kamikazejam.datastore.bson")
-        relocate("org.slf4j", "com.kamikazejam.datastore.bson")
-    }
 
     processResources {
         filteringCharset = Charsets.UTF_8.name()
