@@ -181,12 +181,14 @@ public class MongoStorage extends StorageService {
                             session,
                             Filters.and(
                                     Filters.eq("_id", id),
-                                    Filters.eq("version", workingCopy.getVersion().get())
+                                    Filters.eq("version", currentVersion)
                             ),
                             doc
                     );
 
                     if (result.getModifiedCount() == 0) {
+                        DataStoreSource.get().getColorLogger().debug("Failed to update Store in MongoDB Layer: " + workingCopy.getId());
+                        DataStoreSource.get().getColorLogger().debug("\tCould not find document with id: '" + id + "' and version: " + currentVersion);
                         // If update failed, fetch current version and update our base copy
                         Document currentDoc = collection.find(session).filter(Filters.eq("_id", id)).first();
                         if (currentDoc == null) {
@@ -215,9 +217,10 @@ public class MongoStorage extends StorageService {
                     }
                 }
             } catch (Exception e) {
+                DataStoreFileLogger.warn("Failed to update Store in MongoDB Layer: " + workingCopy.getId(), e);
                 attempts++;
                 if (attempts >= MAX_RETRIES) {
-                    throw new RuntimeException("Failed to update after " + MAX_RETRIES + " attempts:", e);
+                    throw new RuntimeException("Failed to update after " + MAX_RETRIES + " attempts");
                 }
             }
         }

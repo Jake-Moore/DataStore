@@ -93,7 +93,7 @@ public abstract class StoreObjectCache<X extends StoreObject<X>> extends StoreCa
         Preconditions.checkNotNull(initializer, "Initializer cannot be null");
 
         Optional<X> o = read(key);
-        return o.orElseGet(() -> create(initializer));
+        return o.orElseGet(() -> create(key, initializer));
     }
 
 
