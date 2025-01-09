@@ -1,9 +1,6 @@
 package com.kamikazejam.datastore;
 
-import com.kamikazejam.datastore.base.log.LoggerService;
-import com.kamikazejam.datastore.base.log.PluginLogger;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * This class is nothing more than a loader for all DataStore logic
@@ -13,10 +10,7 @@ import org.jetbrains.annotations.NotNull;
  */
 @SuppressWarnings("unused")
 public class DataStorePlugin extends JavaPlugin {
-    private final LoggerService colorLogger;
-    public DataStorePlugin() {
-        this.colorLogger = new PluginLogger(this);
-    }
+    public DataStorePlugin() {}
 
     @Override
     public void onEnable() {
@@ -26,13 +20,5 @@ public class DataStorePlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         DataStoreSource.onDisable();
-    }
-
-    public @NotNull LoggerService getColorLogger() {
-        return this.colorLogger;
-    }
-
-    public boolean isDebug() {
-        return true;
     }
 }

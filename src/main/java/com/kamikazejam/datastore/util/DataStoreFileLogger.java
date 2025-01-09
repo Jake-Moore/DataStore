@@ -24,7 +24,7 @@ public class DataStoreFileLogger {
     @Nullable
     public static File logToFile(@NotNull String msg, @NotNull Level level, @NotNull File file) {
         if (appendToFile(createStackTrace(msg), file)) {
-            DataStoreSource.get().getColorLogger().logToConsole(msg + " (Logged to " + "/logs/" + file.getName() + ")", level);
+            DataStoreSource.getColorLogger().logToConsole(msg + " (Logged to " + "/logs/" + file.getName() + ")", level);
             return file;
         }
         return null;
@@ -111,7 +111,7 @@ public class DataStoreFileLogger {
             throwable.printStackTrace(printWriter);
             return true;
         } catch (IOException e) {
-            DataStoreSource.get().getColorLogger().severe("Failed to write stack trace to file (" + file.getAbsoluteFile() + "): " + e.getMessage());
+            DataStoreSource.getColorLogger().severe("Failed to write stack trace to file (" + file.getAbsoluteFile() + "): " + e.getMessage());
             return false;
         }
     }
@@ -127,7 +127,7 @@ public class DataStoreFileLogger {
             lines.forEach(printWriter::println);
             return true;
         } catch (IOException e) {
-            DataStoreSource.get().getColorLogger().severe("Failed to write stack trace to file (" + file.getAbsoluteFile() + "): " + e.getMessage());
+            DataStoreSource.getColorLogger().severe("Failed to write stack trace to file (" + file.getAbsoluteFile() + "): " + e.getMessage());
             return false;
         }
     }

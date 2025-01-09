@@ -53,7 +53,7 @@ public class StoreProfileLoader<X extends StoreProfile<X>> implements StoreLoade
         if (login) {
             StorageService storageService = DataStoreSource.getStorageService();
             if (!storageService.canCache()) {
-                DataStoreSource.get().getColorLogger().warn("StorageService is not ready to cache objects, denying join");
+                DataStoreSource.getColorLogger().warn("StorageService is not ready to cache objects, denying join");
                 denyJoin = true;
                 joinDenyReason = Color.t(DataStoreSource.getConfig().getString("profiles.messages.beforeDbConnection")
                         .replace("{cacheName}", cache.getName()));

@@ -115,7 +115,7 @@ class MongoTransactionHelper {
 
                 // If no documents were modified, then the compare-and-swap failed, we must retry
                 if (result.getModifiedCount() == 0) {
-                    DataStoreSource.get().getColorLogger().debug("Failed to update Store in MongoDB Layer (Could not find document with id: '" + id + "' and version: " + currentVersion + ")");
+                    DataStoreSource.getColorLogger().debug("Failed to update Store in MongoDB Layer (Could not find document with id: '" + id + "' and version: " + currentVersion + ")");
 
                     // If update failed, fetch current version
                     Document currentDoc = collection.find(session).filter(eq("_id", id)).first();
@@ -182,7 +182,7 @@ class MongoTransactionHelper {
     }
 
     private static void logWriteConflict(int currentAttempt) {
-        DataStoreSource.get().getColorLogger().debug(
+        DataStoreSource.getColorLogger().debug(
             "Write conflict detected, attempt " + (currentAttempt + 1) + " of " + DEFAULT_MAX_RETRIES
         );
     }

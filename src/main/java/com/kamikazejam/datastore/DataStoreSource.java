@@ -1,5 +1,7 @@
 package com.kamikazejam.datastore;
 
+import com.kamikazejam.datastore.base.log.LoggerService;
+import com.kamikazejam.datastore.base.log.PluginLogger;
 import com.kamikazejam.datastore.base.mode.StorageMode;
 import com.kamikazejam.datastore.command.DataStoreCommand;
 import com.kamikazejam.datastore.connections.storage.StorageService;
@@ -17,7 +19,8 @@ import java.io.File;
 @SuppressWarnings("unused")
 public class DataStoreSource {
     private static final String storeConfigName = "datastore.yml";
-    private static @Nullable DataStorePlugin pluginSource;
+    private static final LoggerService colorLogger = new PluginLogger();
+    private static @Nullable JavaPlugin pluginSource;
     private static boolean enabled = false;
     @Getter
     private static long onEnableTime = 0;
@@ -34,7 +37,7 @@ public class DataStoreSource {
      */
     @SneakyThrows
     @SuppressWarnings("UnusedReturnValue")
-    public static boolean onEnable(@NotNull DataStorePlugin pl) {
+    public static boolean onEnable(@NotNull JavaPlugin pl) {
         if (enabled) {
             return false;
         }
@@ -83,7 +86,7 @@ public class DataStoreSource {
         return prev;
     }
 
-    public static @NotNull DataStorePlugin get() {
+    public static @NotNull JavaPlugin get() {
         if (pluginSource == null) {
             throw new RuntimeException("Plugin source not set");
         }
@@ -135,6 +138,10 @@ public class DataStoreSource {
         FileConfiguration config = new YamlConfiguration();
         config.load(file);
         return config;
+    }
+
+    public static @NotNull LoggerService getColorLogger() {
+        return colorLogger;
     }
 
     /**

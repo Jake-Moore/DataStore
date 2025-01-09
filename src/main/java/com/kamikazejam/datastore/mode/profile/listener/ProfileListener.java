@@ -80,7 +80,7 @@ public class ProfileListener implements Listener {
 
         StorageService storageService = DataStoreSource.getStorageService();
         if (!storageService.canCache() || DataStoreSource.getOnEnableTime() <= 0) {
-            DataStoreSource.get().getColorLogger().warn("StorageService is not ready to cache objects, denying join");
+            DataStoreSource.getColorLogger().warn("StorageService is not ready to cache objects, denying join");
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, ChatColor.RED + "Server is starting, please wait.");
             return;
         }
@@ -139,7 +139,7 @@ public class ProfileListener implements Listener {
     public void onProfileCachingInit(PlayerLoginEvent event) {
         // In rare cases, if a player joins during server startup, the AsyncPlayerPreLoginEvent may not have been called
         if (loginCache.getIfPresent(event.getPlayer().getUniqueId()) == null) {
-            DataStoreSource.get().getColorLogger().warn("Player (" + event.getPlayer().getName() + ") connected before DataStore was ready, denying join");
+            DataStoreSource.getColorLogger().warn("Player (" + event.getPlayer().getName() + ") connected before DataStore was ready, denying join");
             event.disallow(PlayerLoginEvent.Result.KICK_OTHER, ChatColor.RED + "Server is starting, please wait.");
         }
     }

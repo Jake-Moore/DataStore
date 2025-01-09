@@ -1,14 +1,10 @@
 package com.kamikazejam.datastore.base.log;
 
-import com.kamikazejam.datastore.DataStorePlugin;
+import com.kamikazejam.datastore.DataStoreSource;
 import org.bukkit.plugin.Plugin;
-import org.jetbrains.annotations.NotNull;
 
 public class PluginLogger extends LoggerService {
-    private final @NotNull DataStorePlugin plugin;
-    public PluginLogger(@NotNull DataStorePlugin plugin) {
-        this.plugin = plugin;
-    }
+    public PluginLogger() {}
 
     @Override
     public String getLoggerName() {
@@ -17,11 +13,11 @@ public class PluginLogger extends LoggerService {
 
     @Override
     public Plugin getPlugin() {
-        return plugin;
+        return DataStoreSource.get();
     }
 
     @Override
     public boolean isDebug() {
-        return plugin.isDebug();
+        return DataStoreSource.isDebug();
     }
 }

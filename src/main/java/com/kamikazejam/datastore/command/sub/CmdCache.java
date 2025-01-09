@@ -1,10 +1,10 @@
 package com.kamikazejam.datastore.command.sub;
 
+import com.kamikazejam.datastore.DataStoreAPI;
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
 import com.kamikazejam.datastore.command.SubCommand;
-import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
+import com.kamikazejam.datastore.util.Color;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,8 +16,6 @@ public class CmdCache extends SubCommand {
     public CmdCache() {}
 
     @Override
-    public @NotNull List<String> getAliases() { return List.of("cache"); }
-    @Override
     public @NotNull String getName() { return "cache"; }
     @Override
     public @Nullable String getPermission() { return "datastore.command.cache"; }
@@ -25,27 +23,35 @@ public class CmdCache extends SubCommand {
     public @NotNull String getArgsDescription() { return "<cache>"; }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!sender.hasPermission(this.getPermission())) {
-            this.sendNoPerm(sender);
-            return true;
+    public void execute(@NotNull CommandSender sender, @NotNull String[] args) {
+        if (args.length < 1) {
+            this.sendUsage(sender);
+            return;
         }
 
-        // TODO
-        Bukkit.getLogger().info("Provided Sub Args for Cache: " + Arrays.toString(args));
+        String cacheName = args[0];
+        Cache<?,?> cache = DataStoreAPI.getCache(cacheName);
+        if (cache == null) {
+            sender.sendMessage(Color.t("&cNo Cache matching \"" + cacheName + "\". See `/datastore caches` for a list of them."));
+            return;
+        }
 
-        return true;
+        // Perform Command now that we have args
+        List<String> localCacheKeys = getSomeKeyStrings(cache);
+        sender.sendMessage(Color.t("&7***** &6Store Cache: " + cache.getName() + " &7*****"));
+        sender.sendMessage(Color.t("&7" + cache.getLocalCacheSize() + " objects in local cache, first 10: " + Arrays.toString(localCacheKeys.toArray())));
+        sender.sendMessage(Color.t("&7Current State: " + (cache.isRunning() ? "&aRunning" : "&cNot running")));
     }
 
-//    @Override
-//    public void perform() throws KamiCommonException {
-//        Cache<?,?> cache = readArg();
-//        List<String> localCacheKeys = getSomeKeyStrings(cache);
-//
-//        sender.sendMessage(Color.t("&7***** &6Store Cache: " + cache.getName() + " &7*****"));
-//        sender.sendMessage(Color.t("&7" + cache.getLocalCacheSize() + " objects in local cache, first 10: " + Arrays.toString(localCacheKeys.toArray())));
-//        sender.sendMessage(Color.t("&7Current State: " + (cache.isRunning() ? "&aRunning" : "&cNot running")));
-//    }
+    @Override
+    public @NotNull List<String> getTabCompletions(@NotNull CommandSender sender, @NotNull String[] args) {
+        String s = args.length == 0 ? "" : args[args.length - 1];
+        return DataStoreAPI.getCaches().keySet()
+                .stream()
+                .filter(id -> id.toLowerCase().startsWith(s.toLowerCase()))
+                .limit(20)
+                .toList();
+    }
 
     @SuppressWarnings("unchecked")
     private <K, X extends Store<X, K>> List<String> getSomeKeyStrings(Cache<?, ?> c) {
@@ -53,10 +59,5 @@ public class CmdCache extends SubCommand {
         return cache.getLocalStore().getKeyStrings(cache).stream()
                 .limit(10)
                 .toList();
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
-        return List.of();
     }
 }
