@@ -18,7 +18,7 @@ import java.util.logging.Level;
  * For developer warnings, developers need the trace, but don't necessarily need to spam the console
  * We can print helpful stack traces to a log file, and send a reduced warning to the console
  */
-@SuppressWarnings({"UnusedReturnValue", "unused"})
+@SuppressWarnings({"UnusedReturnValue", "unused", "BooleanMethodIsAlwaysInverted"})
 public class DataStoreFileLogger {
 
     @Nullable
@@ -136,12 +136,12 @@ public class DataStoreFileLogger {
     private static File getFileByCache(@NotNull Cache<?, ?> cache) {
         // Print the message + a stack trace to a file
         String fileName = cache.getPlugin().getName() + "_" + cache.getName() + "_" + System.currentTimeMillis() + ".log";
-        return new File(DataStoreSource.get().getDataFolder() + File.separator + "logs", fileName);
+        return new File(DataStoreSource.get().getDataFolder() + File.separator + "logs" + File.separator + "datastore", fileName);
     }
 
     @NotNull
     private static File getRandomFile() {
         String fileName = "log_" + System.currentTimeMillis() + "_" + UUID.randomUUID() + ".log";
-        return new File(DataStoreSource.get().getDataFolder() + File.separator + "logs", fileName);
+        return new File(DataStoreSource.get().getDataFolder() + File.separator + "logs" + File.separator + "datastore", fileName);
     }
 }
