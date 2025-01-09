@@ -25,7 +25,8 @@ import static com.mongodb.client.model.Filters.eq;
 class MongoTransactionHelper {
     private static final Random RANDOM = new Random();
     private static final int DEFAULT_MAX_RETRIES = 15;
-    private static final int BASE_BACKOFF_MS = 50;  // Start with 50ms delay
+    private static final int BASE_BACKOFF_MS = 50;      // Start with 50ms delay
+    private static final int LINEAR_BACKOFF_MS = 20;    // Increase 20ms per attempt
     private static final int WRITE_CONFLICT_ERROR = 112;
 
     /**
@@ -161,15 +162,17 @@ class MongoTransactionHelper {
         }
     }
 
-    // Applies exponential backoff to the current thread + some random jitter
-    private static void applyBackoff(int attempt) {
+    // Applies linear backoff to the current thread + some random jitter
+    // Exponential backoff was way too slow, increasing the milliseconds far too fast
+    // Linear backoff was selected to be more predictable and less extreme
+    private static void applyBackoff(long attempt) {
         try {
-            long exponentialBackoff = (long) (BASE_BACKOFF_MS * Math.pow(2, attempt - 1));
+            long linearBackoff = BASE_BACKOFF_MS + (LINEAR_BACKOFF_MS * attempt);
             // add the jitter (+- 25%)
-            long half = exponentialBackoff / 2;
+            long half = linearBackoff / 2;
             long jitter = RANDOM.nextLong(half) - (half / 2);
 
-            long backoff = exponentialBackoff + jitter;
+            long backoff = linearBackoff + jitter;
             Thread.sleep(backoff);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
