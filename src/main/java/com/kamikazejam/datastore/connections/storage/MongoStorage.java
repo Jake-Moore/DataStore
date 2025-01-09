@@ -10,6 +10,7 @@ import com.kamikazejam.datastore.connections.config.MongoConfig;
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor;
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator;
 import com.kamikazejam.datastore.util.JacksonUtil;
+import com.kamikazejam.datastore.util.DataStoreFileLogger;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
@@ -307,11 +308,11 @@ public class MongoStorage extends StorageService {
             try {
                 DataStoreSource.get().getLogger().info("CONNECTING TO MONGODB (30 second timeout)...");
                 List<String> ignored = StreamSupport.stream(this.mongoClient.listDatabaseNames().spliterator(), false).toList();
-            }catch (MongoTimeoutException ignored) {
-                // Connection failed (invalid?)
+            }catch (MongoTimeoutException timeout) {
+                DataStoreFileLogger.warn("Connection to MongoDB Timed Out!", timeout);
                 return false;
             }catch (Throwable t) {
-                t.printStackTrace();
+                DataStoreFileLogger.warn("Failed to connect to MongoDB!", t);
                 return false;
             }
 

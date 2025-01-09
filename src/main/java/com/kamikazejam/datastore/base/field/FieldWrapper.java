@@ -101,4 +101,9 @@ public class FieldWrapper<T> {
     public int hashCode() {
         return Objects.hash(value, name, valueType);
     }
+
+    @Override
+    public String toString() {
+        return "FieldWrapper{name='" + name + "', value=" + value + ", valueType=" + valueType + "}";
+    }
 }

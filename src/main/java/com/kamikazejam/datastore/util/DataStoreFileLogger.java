@@ -10,6 +10,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 
 /**
@@ -18,7 +19,7 @@ import java.util.logging.Level;
  * We can print helpful stack traces to a log file, and send a reduced warning to the console
  */
 @SuppressWarnings({"UnusedReturnValue", "unused"})
-public class StoreFileLogger {
+public class DataStoreFileLogger {
 
     @Nullable
     public static File logToFile(@NotNull String msg, @NotNull Level level, @NotNull File file) {
@@ -46,6 +47,37 @@ public class StoreFileLogger {
     @Nullable
     public static File warn(@NotNull Cache<?,?> cache, @NotNull String msg, @NotNull Throwable trace) {
         File file = logToFile(msg, Level.WARNING, getFileByCache(cache));
+        if (file == null) { return null; }
+
+        // Add some empty lines for separation
+        if (!appendToFile(List.of("", "", "Extra Trace (if necessary)", ""), file)) {
+            return null;
+        }
+
+        // Save the original trace after
+        if (!appendToFile(trace, file)) {
+            return null;
+        }
+        return file;
+    }
+
+    /**
+     * Logs a warning message to the console, and saves the current stack trace to a log file
+     * @return The file written, if successful
+     */
+    @Nullable
+    public static File warn(@NotNull String msg) {
+        return logToFile(msg, Level.WARNING, getRandomFile());
+    }
+
+    /**
+     * Logs a warning message to the console, and saves the current stack trace to a log file
+     * Also appends the given trace to the file
+     * @return The file written, if successful
+     */
+    @Nullable
+    public static File warn(@NotNull String msg, @NotNull Throwable trace) {
+        File file = logToFile(msg, Level.WARNING, getRandomFile());
         if (file == null) { return null; }
 
         // Add some empty lines for separation
@@ -104,6 +136,12 @@ public class StoreFileLogger {
     private static File getFileByCache(@NotNull Cache<?, ?> cache) {
         // Print the message + a stack trace to a file
         String fileName = cache.getPlugin().getName() + "_" + cache.getName() + "_" + System.currentTimeMillis() + ".log";
+        return new File(DataStoreSource.get().getDataFolder() + File.separator + "logs", fileName);
+    }
+
+    @NotNull
+    private static File getRandomFile() {
+        String fileName = "log_" + System.currentTimeMillis() + "_" + UUID.randomUUID() + ".log";
         return new File(DataStoreSource.get().getDataFolder() + File.separator + "logs", fileName);
     }
 }

@@ -3,7 +3,7 @@ package com.kamikazejam.datastore.base.storage;
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
-import com.kamikazejam.datastore.util.StoreFileLogger;
+import com.kamikazejam.datastore.util.DataStoreFileLogger;
 import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,7 +32,7 @@ public abstract class StorageLocal<K, X extends Store<X, K>> implements StorageM
     public boolean save(@NotNull X store) {
         // Ensure we don't re-cache an invalid Store
         if (!store.isValid()) {
-            StoreFileLogger.warn(store.getCache(), "StoreLocal.save(X) w/ Invalid Store. Cache: " + store.getCache().getName() + ", Id: " + store.getId());
+            DataStoreFileLogger.warn(store.getCache(), "StoreLocal.save(X) w/ Invalid Store. Cache: " + store.getCache().getName() + ", Id: " + store.getId());
             return false;
         }
 
