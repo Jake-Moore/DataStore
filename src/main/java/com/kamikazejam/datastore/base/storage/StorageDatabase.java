@@ -16,7 +16,7 @@ import java.util.function.Consumer;
  *
  * @param <X>
  */
-public abstract class StorageDatabase<K, X extends Store<K>> extends StorageDatabaseAdapter<K, X> {
+public abstract class StorageDatabase<K, X extends Store<X, K>> extends StorageDatabaseAdapter<K, X> {
 
     private final StorageService storageService;
 

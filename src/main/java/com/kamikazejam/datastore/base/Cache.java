@@ -29,7 +29,7 @@ import java.util.function.Consumer;
  * {@link ObjectCache} and {@link ProfileCache}
  */
 @SuppressWarnings({"UnusedReturnValue", "unused"})
-public interface Cache<K, X extends Store<K>> extends Service {
+public interface Cache<K, X extends Store<X, K>> extends Service {
 
 
     // ------------------------------------------------------ //

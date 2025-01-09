@@ -11,7 +11,7 @@ import java.util.Optional;
  * Methods that all storage layers must implement.
  */
 @SuppressWarnings({"UnusedReturnValue", "unused"})
-public interface StorageMethods<K, X extends Store<K>> {
+public interface StorageMethods<K, X extends Store<X, K>> {
 
     /**
      * Retrieve a Store from this store.

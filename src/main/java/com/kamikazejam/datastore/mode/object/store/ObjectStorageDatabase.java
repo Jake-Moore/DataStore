@@ -4,7 +4,7 @@ import com.kamikazejam.datastore.base.storage.StorageDatabase;
 import com.kamikazejam.datastore.mode.object.StoreObject;
 import org.jetbrains.annotations.NotNull;
 
-public class ObjectStorageDatabase<X extends StoreObject> extends StorageDatabase<String, X> {
+public class ObjectStorageDatabase<X extends StoreObject<X>> extends StorageDatabase<String, X> {
 
     public ObjectStorageDatabase(Cache<String, X> cache) {
         super(cache);

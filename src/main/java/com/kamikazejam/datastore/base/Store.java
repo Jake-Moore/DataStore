@@ -6,13 +6,14 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * A Store is an object that can be cached, saved, or loaded within DataStore.
  * Generics: K = Identifier Object Type (i.e. String, UUID)
  */
 @SuppressWarnings({"UnusedReturnValue", "unused"})
-public interface Store<K> {
+public interface Store<T extends Store<T, K>, K> {
 
     // ----------------------------------------------------- //
     //                  User Defined Methods                 //
@@ -22,6 +23,20 @@ public interface Store<K> {
      */
     @NotNull
     Set<FieldWrapper<?>> getCustomFields();
+
+    // ----------------------------------------------------- //
+    //                     CRUD Helpers                      //
+    // ----------------------------------------------------- //
+    /**
+     * Modifies this Store in a controlled environment where modifications are allowed
+     * @return The updated Store object. (READ-ONLY)
+     */
+    T update(@NotNull Consumer<T> updateFunction);
+
+    /**
+     * Deletes this Store object (removes from both cache and database)
+     */
+    void delete();
 
     // ----------------------------------------------------- //
     //                Api / Internal Methods                 //
@@ -57,7 +72,7 @@ public interface Store<K> {
     /**
      * Sets the cache associated with this Store object.
      */
-    void setCache(Cache<K, ?> cache);
+    void setCache(Cache<K, T> cache);
 
     /**
      * @return A hash code based on any identifying fields for this Store.

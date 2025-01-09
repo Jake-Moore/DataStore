@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
-public class ProfileStorageLocal<X extends StoreProfile> extends StorageLocal<UUID, X> {
+public class ProfileStorageLocal<X extends StoreProfile<X>> extends StorageLocal<UUID, X> {
     public ProfileStorageLocal() {}
 
     @Override

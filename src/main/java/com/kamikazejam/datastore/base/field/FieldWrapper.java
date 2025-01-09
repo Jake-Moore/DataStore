@@ -20,7 +20,7 @@ public class FieldWrapper<T> {
     @Getter
     private final @Nullable T defaultValue;
     @JsonIgnore
-    private @Nullable Store<?> parent;
+    private @Nullable Store<?, ?> parent;
     private @NotNull final String name;
     private @NotNull final Class<?> valueType;
 
@@ -76,7 +76,7 @@ public class FieldWrapper<T> {
     }
 
     @ApiStatus.Internal
-    public void setParent(@NotNull Store<?> parent) {
+    public void setParent(@NotNull Store<?, ?> parent) {
         this.parent = parent;
     }
 

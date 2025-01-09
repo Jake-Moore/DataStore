@@ -32,7 +32,7 @@ public class CmdCache extends KamiCommand {
     }
 
     @SuppressWarnings("unchecked")
-    private <K, X extends Store<K>> List<String> getSomeKeyStrings(Cache<?, ?> c) {
+    private <K, X extends Store<X, K>> List<String> getSomeKeyStrings(Cache<?, ?> c) {
         Cache<K, X> cache = (Cache<K, X>) c;
         return cache.getLocalStore().getKeyStrings(cache).stream()
                 .limit(10)

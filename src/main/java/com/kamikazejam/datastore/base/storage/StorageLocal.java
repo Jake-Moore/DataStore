@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 @Getter
-public abstract class StorageLocal<K, X extends Store<K>> implements StorageMethods<K, X> {
+public abstract class StorageLocal<K, X extends Store<X, K>> implements StorageMethods<K, X> {
 
     private final ConcurrentMap<K, X> localCache = new ConcurrentHashMap<>();
 

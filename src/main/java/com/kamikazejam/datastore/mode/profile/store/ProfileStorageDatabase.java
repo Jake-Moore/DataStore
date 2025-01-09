@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
-public class ProfileStorageDatabase<X extends StoreProfile> extends StorageDatabase<UUID, X> {
+public class ProfileStorageDatabase<X extends StoreProfile<X>> extends StorageDatabase<UUID, X> {
 
     public ProfileStorageDatabase(Cache<UUID, X> cache) {
         super(cache);

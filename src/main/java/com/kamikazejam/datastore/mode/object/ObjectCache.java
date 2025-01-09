@@ -9,7 +9,7 @@ import java.util.function.Consumer;
  * Defines Object-specific getters for StoreObjects. They return non-null Optionals.
  */
 @SuppressWarnings("unused")
-public interface ObjectCache<X extends StoreObject> extends Cache<String, X> {
+public interface ObjectCache<X extends StoreObject<X>> extends Cache<String, X> {
 
     // ------------------------------------------------------ //
     // CRUD Methods                                           //

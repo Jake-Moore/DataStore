@@ -24,45 +24,45 @@ public abstract class StorageService extends LoggerService implements Service {
      * Implementations of this class should handle optimistic versioning and throw errors accordingly.
      * @return If the Store was saved.
      */
-    public abstract <K, X extends Store<K>> boolean save(Cache<K, X> cache, X store);
+    public abstract <K, X extends Store<X, K>> boolean save(Cache<K, X> cache, X store);
 
     /**
      * Replace a Store in this database. This requires that we can find the Store in the database.<br>
      * If found, then the document in the database is replaced using a transaction. (providing atomicity)
      * @return If the Store was replaced. (if the db was updated)
      */
-    public abstract <K, X extends Store<K>> boolean replace(Cache<K, X> cache, X store, @NotNull Consumer<X> updateFunction);
+    public abstract <K, X extends Store<X, K>> boolean replace(Cache<K, X> cache, X store, @NotNull Consumer<X> updateFunction);
 
     /**
      * Retrieve a Store from this store. Requires the cache to fetch it from.
      */
     @NotNull
-    public abstract <K, X extends Store<K>> Optional<X> get(Cache<K, X> cache, K key);
+    public abstract <K, X extends Store<X, K>> Optional<X> get(Cache<K, X> cache, K key);
 
     /**
      * @return How many Stores are stored in a cache within this store.
      */
-    public abstract <K, X extends Store<K>> long size(Cache<K, X> cache);
+    public abstract <K, X extends Store<X, K>> long size(Cache<K, X> cache);
 
     /**
      * Check if a Store is stored in a given cache.
      */
-    public abstract <K, X extends Store<K>> boolean has(Cache<K, X> cache, K key);
+    public abstract <K, X extends Store<X, K>> boolean has(Cache<K, X> cache, K key);
 
     /**
      * Remove a Store from a given cache.
      */
-    public abstract <K, X extends Store<K>> boolean remove(Cache<K, X> cache, K key);
+    public abstract <K, X extends Store<X, K>> boolean remove(Cache<K, X> cache, K key);
 
     /**
      * Retrieve all Stores from a specific cache.
      */
-    public abstract <K, X extends Store<K>> Iterable<X> getAll(Cache<K, X> cache);
+    public abstract <K, X extends Store<X, K>> Iterable<X> getAll(Cache<K, X> cache);
 
     /**
      * Retrieve all Store keys from a specific cache.
      */
-    public abstract <K, X extends Store<K>> Iterable<K> getKeys(Cache<K, X> cache);
+    public abstract <K, X extends Store<X, K>> Iterable<K> getKeys(Cache<K, X> cache);
 
     /**
      * @return If the StorageService is ready to be used for a cache.
@@ -72,7 +72,7 @@ public abstract class StorageService extends LoggerService implements Service {
     /**
      * Called when a cache is registered with the StoreEngine -> meant for internal initialization.
      */
-    public abstract <K, X extends Store<K>> void onRegisteredCache(Cache<K, X> cache);
+    public abstract <K, X extends Store<X, K>> void onRegisteredCache(Cache<K, X> cache);
 
     /**
      * Test the ping to the storage service. Will block thread until ping is calculated.
@@ -84,10 +84,10 @@ public abstract class StorageService extends LoggerService implements Service {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    public abstract <K, X extends Store<K>, T> void registerIndex(@NotNull StoreCache<K, X> cache, IndexedField<X, T> index);
-    public abstract <K, X extends Store<K>> void cacheIndexes(@NotNull StoreCache<K, X> cache, @NotNull X store, boolean updateFile);
-    public abstract <K, X extends Store<K>> void saveIndexCache(@NotNull StoreCache<K, X> cache);
-    public abstract <K, X extends Store<K>, T> @Nullable K getStoreIdByIndex(@NotNull StoreCache<K, X> cache, IndexedField<X, T> index, T value);
-    public abstract <K, X extends Store<K>> void invalidateIndexes(@NotNull StoreCache<K, X> cache, @NotNull K key, boolean updateFile);
+    public abstract <K, X extends Store<X, K>, T> void registerIndex(@NotNull StoreCache<K, X> cache, IndexedField<X, T> index);
+    public abstract <K, X extends Store<X, K>> void cacheIndexes(@NotNull StoreCache<K, X> cache, @NotNull X store, boolean updateFile);
+    public abstract <K, X extends Store<X, K>> void saveIndexCache(@NotNull StoreCache<K, X> cache);
+    public abstract <K, X extends Store<X, K>, T> @Nullable K getStoreIdByIndex(@NotNull StoreCache<K, X> cache, IndexedField<X, T> index, T value);
+    public abstract <K, X extends Store<X, K>> void invalidateIndexes(@NotNull StoreCache<K, X> cache, @NotNull K key, boolean updateFile);
 
 }

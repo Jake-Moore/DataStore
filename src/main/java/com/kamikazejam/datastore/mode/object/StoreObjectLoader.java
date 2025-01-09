@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @Getter
 @Setter
-public class StoreObjectLoader<X extends StoreObject> implements StoreLoader<X> {
+public class StoreObjectLoader<X extends StoreObject<X>> implements StoreLoader<X> {
     private final StoreObjectCache<X> cache;
     private final String identifier;
 

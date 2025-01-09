@@ -1,6 +1,7 @@
 package com.kamikazejam.datastore.mode.object;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
@@ -11,10 +12,11 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.persistence.Id;
 import java.util.*;
+import java.util.function.Consumer;
 
 @Getter
-@SuppressWarnings({"rawtypes", "unchecked", "unused"})
-public abstract class StoreObject implements Store<String> {
+@SuppressWarnings({"rawtypes", "unused"})
+public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, String> {
     // ----------------------------------------------------- //
     //                        Fields                         //
     // ----------------------------------------------------- //
@@ -28,7 +30,7 @@ public abstract class StoreObject implements Store<String> {
     //                      Transients                       //
     // ----------------------------------------------------- //
     @JsonIgnore
-    protected transient StoreObjectCache<? extends StoreObject> cache;
+    protected transient StoreObjectCache<T> cache;
     @Getter(AccessLevel.NONE) @JsonIgnore
     protected transient boolean validObject = true;
     @Getter(AccessLevel.NONE) @JsonIgnore
@@ -46,6 +48,18 @@ public abstract class StoreObject implements Store<String> {
     }
     private StoreObject(boolean readOnly) {
         this.readOnly = readOnly;
+    }
+
+    // ----------------------------------------------------- //
+    //                     CRUD Helpers                      //
+    // ----------------------------------------------------- //
+    @Override
+    public T update(@NotNull Consumer<T> updateFunction) {
+        return this.getCache().update(this.getId(), updateFunction);
+    }
+    @Override
+    public void delete() {
+        this.getCache().delete(this.getId());
     }
 
     // ----------------------------------------------------- //
@@ -99,13 +113,17 @@ public abstract class StoreObject implements Store<String> {
 
     @NotNull
     @Override
-    public StoreObjectCache<? extends StoreObject> getCache() {
+    public StoreObjectCache<T> getCache() {
         return cache;
     }
 
     @Override
-    public void setCache(Cache<String, ?> cache) {
-        this.cache = (StoreObjectCache) cache;
+    public void setCache(Cache<String, T> cache) {
+        Preconditions.checkNotNull(cache, "Cache cannot be null");
+        if (!(cache instanceof StoreObjectCache<T> oCache)) {
+            throw new IllegalArgumentException("Cache must be a StoreObjectCache");
+        }
+        this.cache = oCache;
     }
 
     @Override

@@ -72,7 +72,7 @@ public class JacksonUtil {
     @NotNull
     @SneakyThrows
     @SuppressWarnings("unchecked")
-    public static <K, T extends Store<K>> Document serializeToDocument(@NotNull T store) {
+    public static <K, T extends Store<T, K>> Document serializeToDocument(@NotNull T store) {
         Preconditions.checkNotNull(store, "Entity cannot be null");
 
         Document doc = new Document();
@@ -94,7 +94,7 @@ public class JacksonUtil {
     }
 
     @NotNull
-    public static <K, T extends Store<K>> T deserializeFromDocument(@NotNull Class<T> storeClass, @NotNull Document doc) {
+    public static <K, T extends Store<T, K>> T deserializeFromDocument(@NotNull Class<T> storeClass, @NotNull Document doc) {
         Preconditions.checkNotNull(doc, "Document cannot be null");
 
         try {
@@ -132,7 +132,7 @@ public class JacksonUtil {
 
     @SneakyThrows
     @SuppressWarnings("unchecked")
-    public static <K, T extends Store<K>> T deepCopy(@NotNull T store) {
+    public static <K, T extends Store<T, K>> T deepCopy(@NotNull T store) {
         String json = JacksonUtil.serializeToDocument(store).toJson();
         return (T) JacksonUtil.deserializeFromDocument(store.getClass(), Document.parse(json));
     }

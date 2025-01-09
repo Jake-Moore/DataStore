@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  * Player UUID is assumed to have a StoreProfile
  */
 @SuppressWarnings("unused")
-public interface ProfileCache<X extends StoreProfile> extends Cache<UUID, X> {
+public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> {
 
     // ------------------------------------------------------ //
     // CRUD Methods                                           //

@@ -101,7 +101,7 @@ public class MongoStorage extends StorageService {
     // ------------------------------------------------- //
 
     @Override
-    public @NotNull <K, X extends Store<K>> Optional<X> get(Cache<K, X> cache, K key) {
+    public @NotNull <K, X extends Store<X, K>> Optional<X> get(Cache<K, X> cache, K key) {
         Preconditions.checkNotNull(key);
         try {
             MongoCollection<Document> coll = this.getMongoCollection(cache);
@@ -123,7 +123,7 @@ public class MongoStorage extends StorageService {
     }
 
     @Override
-    public <K, X extends Store<K>> boolean save(Cache<K, X> cache, X store) {
+    public <K, X extends Store<X, K>> boolean save(Cache<K, X> cache, X store) {
         // Save to database with a transaction & only 1 attempt
         try (ClientSession session = mongoClient.startSession()) {
             session.startTransaction();
@@ -148,7 +148,7 @@ public class MongoStorage extends StorageService {
     }
 
     @Override
-    public <K, X extends Store<K>> boolean replace(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
+    public <K, X extends Store<X, K>> boolean replace(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
         final int MAX_RETRIES = 5;
 
         // Create a single base copy that we'll clone for each attempt
@@ -224,7 +224,7 @@ public class MongoStorage extends StorageService {
     }
 
     @Override
-    public <K, X extends Store<K>> boolean has(Cache<K, X> cache, K key) {
+    public <K, X extends Store<X, K>> boolean has(Cache<K, X> cache, K key) {
         Preconditions.checkNotNull(key);
         try {
             Bson query = Filters.eq(ID_FIELD, cache.keyToString(key));
@@ -239,12 +239,12 @@ public class MongoStorage extends StorageService {
     }
 
     @Override
-    public <K, X extends Store<K>> long size(Cache<K, X> cache) {
+    public <K, X extends Store<X, K>> long size(Cache<K, X> cache) {
         return getMongoCollection(cache).countDocuments();
     }
 
     @Override
-    public <K, X extends Store<K>> boolean remove(Cache<K, X> cache, K key) {
+    public <K, X extends Store<X, K>> boolean remove(Cache<K, X> cache, K key) {
         Preconditions.checkNotNull(key);
         try {
             Bson query = Filters.eq(ID_FIELD, cache.keyToString(key));
@@ -258,7 +258,7 @@ public class MongoStorage extends StorageService {
     }
 
     @Override
-    public <K, X extends Store<K>> Iterable<X> getAll(Cache<K, X> cache) {
+    public <K, X extends Store<X, K>> Iterable<X> getAll(Cache<K, X> cache) {
         return () -> new TransformingIterator<>(getMongoCollection(cache).find().iterator(), doc -> {
             X store = JacksonUtil.deserializeFromDocument(cache.getStoreClass(), doc);
             // Make sure to cache indexes when a store is loaded from the database
@@ -268,7 +268,7 @@ public class MongoStorage extends StorageService {
     }
 
     @Override
-    public <K, X extends Store<K>> Iterable<K> getKeys(Cache<K, X> cache) {
+    public <K, X extends Store<X, K>> Iterable<K> getKeys(Cache<K, X> cache) {
         // Fetch all documents, but use Projection to only retrieve the ID field
         MongoCursor<Document> docs = getMongoCollection(cache).find().projection(Projections.include(ID_FIELD)).iterator();
         // We know where the id is located, and we can fetch it as a string, there is no need to deserialize the entire object
@@ -282,7 +282,7 @@ public class MongoStorage extends StorageService {
     }
 
     @Override
-    public <K, X extends Store<K>> void onRegisteredCache(Cache<K, X> cache) {
+    public <K, X extends Store<X, K>> void onRegisteredCache(Cache<K, X> cache) {
         // do nothing -> MongoDB handles it
     }
 
@@ -339,7 +339,7 @@ public class MongoStorage extends StorageService {
     // ------------------------------------------------- //
     private final Map<String, MongoDatabase> dbMap = new HashMap<>();               // Map<DatabaseName, MongoDatabase>
     private final Map<String, MongoCollection<Document>> collMap = new HashMap<>(); // Map<DatabaseName.CollectionName, MongoCollection<Document>>
-    public <K, X extends Store<K>> @NotNull MongoCollection<Document> getMongoCollection(Cache<K, X> cache) {
+    public <K, X extends Store<X, K>> @NotNull MongoCollection<Document> getMongoCollection(Cache<K, X> cache) {
         String collKey = cache.getDatabaseName() + "." + cache.getName();
         if (collMap.containsKey(collKey)) { return collMap.get(collKey); }
 
@@ -376,22 +376,22 @@ public class MongoStorage extends StorageService {
     // ------------------------------------------------- //
 
     @Override
-    public <K, X extends Store<K>, T> void registerIndex(@NotNull StoreCache<K, X> cache, IndexedField<X, T> index) {
+    public <K, X extends Store<X, K>, T> void registerIndex(@NotNull StoreCache<K, X> cache, IndexedField<X, T> index) {
         getMongoCollection(cache).createIndex(
                 new Document(index.getName(), 1),
                 new IndexOptions().unique(true)
         );
     }
     @Override
-    public <K, X extends Store<K>> void cacheIndexes(@NotNull StoreCache<K, X> cache, @NotNull X store, boolean updateFile) {
+    public <K, X extends Store<X, K>> void cacheIndexes(@NotNull StoreCache<K, X> cache, @NotNull X store, boolean updateFile) {
         // do nothing -> MongoDB handles this
     }
     @Override
-    public <K, X extends Store<K>> void saveIndexCache(@NotNull StoreCache<K, X> cache) {
+    public <K, X extends Store<X, K>> void saveIndexCache(@NotNull StoreCache<K, X> cache) {
         // do nothing -> MongoDB handles this
     }
     @Override
-    public <K, X extends Store<K>, T> @Nullable K getStoreIdByIndex(@NotNull StoreCache<K, X> cache, IndexedField<X, T> index, T value) {
+    public <K, X extends Store<X, K>, T> @Nullable K getStoreIdByIndex(@NotNull StoreCache<K, X> cache, IndexedField<X, T> index, T value) {
         // Fetch an object with the given index value, projecting only the ID and the index field
         Bson query = Filters.eq(index.getName(), value);
         @Nullable Document doc = getMongoCollection(cache).find(query).projection(Projections.include(ID_FIELD, index.getName())).first();
@@ -405,7 +405,7 @@ public class MongoStorage extends StorageService {
     }
 
     @Override
-    public <K, X extends Store<K>> void invalidateIndexes(@NotNull StoreCache<K, X> cache, @NotNull K key, boolean updateFile) {
+    public <K, X extends Store<X, K>> void invalidateIndexes(@NotNull StoreCache<K, X> cache, @NotNull K key, boolean updateFile) {
         // do nothing -> MongoDB handles this
     }
 

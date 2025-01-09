@@ -25,7 +25,7 @@ import java.util.function.Consumer;
 
 @Getter
 @SuppressWarnings("unused")
-public abstract class StoreObjectCache<X extends StoreObject> extends StoreCache<String, X> implements ObjectCache<X> {
+public abstract class StoreObjectCache<X extends StoreObject<X>> extends StoreCache<String, X> implements ObjectCache<X> {
     private final ConcurrentMap<String, StoreObjectLoader<X>> loaders = new ConcurrentHashMap<>();
     private final ObjectStorageLocal<X> localStore = new ObjectStorageLocal<>();
     private final ObjectStorageDatabase<X> databaseStore = new ObjectStorageDatabase<>(this);

@@ -42,7 +42,7 @@ public class ProfileListener implements Listener {
 
     public ProfileListener() {}
 
-    public static <X extends StoreProfile> void quit(@NotNull Player player, ProfileCache<X> cache, boolean isEnabled) {
+    public static <X extends StoreProfile<X>> void quit(@NotNull Player player, ProfileCache<X> cache, boolean isEnabled) {
         cache.getLoggerService().debug("Player " + player.getName() + " quitting, saving profile...");
         try {
             quitHelper(player, cache, isEnabled);
@@ -52,7 +52,7 @@ public class ProfileListener implements Listener {
         }
     }
 
-    private static <X extends StoreProfile> void quitHelper(@NotNull Player player, ProfileCache<X> cache, boolean saveAsync) {
+    private static <X extends StoreProfile<X>> void quitHelper(@NotNull Player player, ProfileCache<X> cache, boolean saveAsync) {
         // save on quit in standalone mode
         Optional<X> o = cache.getFromCache(player.getUniqueId());
         if (o.isPresent()) {
@@ -103,7 +103,7 @@ public class ProfileListener implements Listener {
 
 
     @SuppressWarnings("unchecked")
-    private <X extends StoreProfile> CompletableFuture<Void> cachePlayerProfiles(String username, UUID uniqueId, String ip, long timeoutSec) {
+    private <X extends StoreProfile<X>> CompletableFuture<Void> cachePlayerProfiles(String username, UUID uniqueId, String ip, long timeoutSec) {
         // Compile all the ProfileCaches
         List<StoreProfileCache<X>> caches = new ArrayList<>();
         DataStoreAPI.getCaches().values().forEach(c -> {

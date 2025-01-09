@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
  */
 @Getter
 @SuppressWarnings("unused")
-public class StoreProfileCacheQuitEvent<X extends StoreProfile> extends Event {
+public class StoreProfileCacheQuitEvent<X extends StoreProfile<X>> extends Event {
 
     private final Player player;
     private final StoreProfileCache<X> cache;

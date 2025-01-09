@@ -17,10 +17,11 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.persistence.Id;
 import java.util.*;
+import java.util.function.Consumer;
 
 @Getter
-@SuppressWarnings({"unchecked", "rawtypes", "unused"})
-public abstract class StoreProfile implements Store<UUID> {
+@SuppressWarnings({"rawtypes", "unused"})
+public abstract class StoreProfile<T extends StoreProfile<T>> implements Store<T, UUID> {
     // ----------------------------------------------------- //
     //                        Fields                         //
     // ----------------------------------------------------- //
@@ -35,7 +36,7 @@ public abstract class StoreProfile implements Store<UUID> {
     //                      Transients                       //
     // ----------------------------------------------------- //
     @JsonIgnore
-    protected transient StoreProfileCache<? extends StoreProfile> cache;
+    protected transient StoreProfileCache<T> cache;
     protected transient @Nullable Player player = null;
 
     @Getter(AccessLevel.NONE) @JsonIgnore
@@ -55,6 +56,18 @@ public abstract class StoreProfile implements Store<UUID> {
     }
     private StoreProfile(boolean readOnly) {
         this.readOnly = readOnly;
+    }
+
+    // ----------------------------------------------------- //
+    //                     CRUD Helpers                      //
+    // ----------------------------------------------------- //
+    @Override
+    public T update(@NotNull Consumer<T> updateFunction) {
+        return this.getCache().update(this.getId(), updateFunction);
+    }
+    @Override
+    public void delete() {
+        this.getCache().delete(this.getId());
     }
 
     // ----------------------------------------------------- //
@@ -108,13 +121,19 @@ public abstract class StoreProfile implements Store<UUID> {
 
     @NotNull
     @Override
-    public StoreProfileCache<? extends StoreProfile> getCache() {
+    public StoreProfileCache<T> getCache() {
+        Preconditions.checkNotNull(cache, "Cache cannot be null");
+
         return cache;
     }
 
     @Override
-    public void setCache(Cache<UUID, ?> cache) {
-        this.cache = (StoreProfileCache) cache;
+    public void setCache(Cache<UUID, T> cache) {
+        Preconditions.checkNotNull(cache, "Cache cannot be null");
+        if (!(cache instanceof StoreProfileCache<T> oCache)) {
+            throw new IllegalArgumentException("Cache must be a StoreProfileCache");
+        }
+        this.cache = oCache;
     }
 
     @Override

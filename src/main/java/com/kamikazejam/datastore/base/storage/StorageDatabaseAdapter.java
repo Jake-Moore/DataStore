@@ -12,7 +12,7 @@ import java.util.function.Consumer;
  * Adapts the cache-based api in {@link StorageMethods} to produce the simple api of {@link StorageDatabase}.
  */
 @Getter
-public abstract class StorageDatabaseAdapter<K, X extends Store<K>> implements StorageMethods<K, X> {
+public abstract class StorageDatabaseAdapter<K, X extends Store<X, K>> implements StorageMethods<K, X> {
 
     protected final Cache<K, X> cache;
 

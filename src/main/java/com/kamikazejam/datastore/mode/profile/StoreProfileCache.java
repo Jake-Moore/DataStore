@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 @Getter
 @SuppressWarnings("unused")
-public abstract class StoreProfileCache<X extends StoreProfile> extends StoreCache<UUID, X> implements ProfileCache<X> {
+public abstract class StoreProfileCache<X extends StoreProfile<X>> extends StoreCache<UUID, X> implements ProfileCache<X> {
 
     private final ConcurrentMap<UUID, StoreProfileLoader<X>> loaders = new ConcurrentHashMap<>();
     private final ProfileStorageLocal<X> localStore = new ProfileStorageLocal<>();

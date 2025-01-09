@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 
 @Getter
 @Setter @SuppressWarnings("unused")
-public class StoreProfileLoader<X extends StoreProfile> implements StoreLoader<X> {
+public class StoreProfileLoader<X extends StoreProfile<X>> implements StoreLoader<X> {
 
     protected final @NotNull StoreProfileCache<X> cache;
     protected final @NotNull UUID uuid;
@@ -102,7 +102,7 @@ public class StoreProfileLoader<X extends StoreProfile> implements StoreLoader<X
     }
 
     @NotNull
-    public static <X extends StoreProfile> X loadOrCreateStore(StoreProfileCache<X> cache, UUID uuid, boolean creative, String username) {
+    public static <X extends StoreProfile<X>> X loadOrCreateStore(StoreProfileCache<X> cache, UUID uuid, boolean creative, String username) {
         // Try loading from local
         Optional<X> localStore = cache.getLocalStore().get(uuid);
         if (localStore.isPresent()) {
@@ -138,7 +138,7 @@ public class StoreProfileLoader<X extends StoreProfile> implements StoreLoader<X
     }
 
     @NotNull
-    private static <X extends StoreProfile> X createStore(ProfileCache<X> cache, @Nullable String username, Consumer<X> initializer) {
+    private static <X extends StoreProfile<X>> X createStore(ProfileCache<X> cache, @Nullable String username, Consumer<X> initializer) {
         try {
             // Create a new instance in modifiable state
             X store = cache.getInstantiator().instantiate();

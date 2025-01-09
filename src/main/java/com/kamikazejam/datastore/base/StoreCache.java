@@ -28,7 +28,7 @@ import java.util.function.Consumer;
  * All Caching modes (profile, object, simple) extend this class.
  */
 @Getter
-public abstract class StoreCache<K, X extends Store<K>> implements Comparable<StoreCache<?, ?>>, Cache<K, X> {
+public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable<StoreCache<?, ?>>, Cache<K, X> {
 
     protected final Set<String> dependingCaches = new HashSet<>();
     protected final Class<K> keyClass;

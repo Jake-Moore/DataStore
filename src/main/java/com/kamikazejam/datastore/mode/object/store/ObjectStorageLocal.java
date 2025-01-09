@@ -5,7 +5,7 @@ import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
-public class ObjectStorageLocal<X extends StoreObject> extends StorageLocal<String, X> {
+public class ObjectStorageLocal<X extends StoreObject<X>> extends StorageLocal<String, X> {
     public ObjectStorageLocal() {}
 
     @Override
