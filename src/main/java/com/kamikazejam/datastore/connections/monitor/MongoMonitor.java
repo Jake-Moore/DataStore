@@ -2,9 +2,9 @@ package com.kamikazejam.datastore.connections.monitor;
 
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.connections.storage.mongo.MongoStorage;
-import com.mongodb.event.ClusterListener;
-import com.mongodb.event.ClusterDescriptionChangedEvent;
 import com.mongodb.event.ClusterClosedEvent;
+import com.mongodb.event.ClusterDescriptionChangedEvent;
+import com.mongodb.event.ClusterListener;
 import org.jetbrains.annotations.NotNull;
 
 // Previously this class had used heartbeat events, but the first heartbeat was sent 10 seconds after initial connection.

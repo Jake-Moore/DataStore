@@ -5,8 +5,8 @@ import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.base.cache.StoreLoader;
 import com.kamikazejam.datastore.connections.storage.StorageService;
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener;
+import com.kamikazejam.datastore.util.Color;
 import com.kamikazejam.datastore.util.DataStoreFileLogger;
-import com.kamikazejam.kamicommon.util.StringUtil;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;
@@ -55,7 +55,7 @@ public class StoreProfileLoader<X extends StoreProfile<X>> implements StoreLoade
             if (!storageService.canCache()) {
                 DataStoreSource.get().getColorLogger().warn("StorageService is not ready to cache objects, denying join");
                 denyJoin = true;
-                joinDenyReason = StringUtil.t(DataStoreSource.getConfig().getString("profiles.messages.beforeDbConnection")
+                joinDenyReason = Color.t(DataStoreSource.getConfig().getString("profiles.messages.beforeDbConnection")
                         .replace("{cacheName}", cache.getName()));
                 return Optional.empty();
             }
@@ -67,7 +67,7 @@ public class StoreProfileLoader<X extends StoreProfile<X>> implements StoreLoade
         }catch (Throwable t) {
             DataStoreFileLogger.warn("Failed to load or create StoreProfile from Database, denying join", t);
             this.denyJoin = true;
-            this.joinDenyReason = StringUtil.t(DataStoreSource.getConfig().getString("profiles.messages.beforeDbConnection")
+            this.joinDenyReason = Color.t(DataStoreSource.getConfig().getString("profiles.messages.beforeDbConnection")
                     .replace("{cacheName}", cache.getName()));
         }
 

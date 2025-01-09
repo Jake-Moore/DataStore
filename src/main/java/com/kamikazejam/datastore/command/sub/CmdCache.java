@@ -3,11 +3,7 @@ package com.kamikazejam.datastore.command.sub;
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
 import com.kamikazejam.datastore.command.type.TypeCache;
-import com.kamikazejam.kamicommon.command.KamiCommand;
-import com.kamikazejam.kamicommon.command.Parameter;
-import com.kamikazejam.kamicommon.command.requirement.RequirementHasPerm;
-import com.kamikazejam.kamicommon.util.StringUtil;
-import com.kamikazejam.kamicommon.util.exception.KamiCommonException;
+import com.kamikazejam.datastore.util.Color;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,9 +22,9 @@ public class CmdCache extends KamiCommand {
         Cache<?,?> cache = readArg();
         List<String> localCacheKeys = getSomeKeyStrings(cache);
 
-        sender.sendMessage(StringUtil.t("&7***** &6Store Cache: " + cache.getName() + " &7*****"));
-        sender.sendMessage(StringUtil.t("&7" + cache.getLocalCacheSize() + " objects in local cache, first 10: " + Arrays.toString(localCacheKeys.toArray())));
-        sender.sendMessage(StringUtil.t("&7Current State: " + (cache.isRunning() ? "&aRunning" : "&cNot running")));
+        sender.sendMessage(Color.t("&7***** &6Store Cache: " + cache.getName() + " &7*****"));
+        sender.sendMessage(Color.t("&7" + cache.getLocalCacheSize() + " objects in local cache, first 10: " + Arrays.toString(localCacheKeys.toArray())));
+        sender.sendMessage(Color.t("&7Current State: " + (cache.isRunning() ? "&aRunning" : "&cNot running")));
     }
 
     @SuppressWarnings("unchecked")

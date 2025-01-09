@@ -2,8 +2,6 @@ package com.kamikazejam.datastore.command.type;
 
 import com.kamikazejam.datastore.DataStoreAPI;
 import com.kamikazejam.datastore.base.Cache;
-import com.kamikazejam.kamicommon.command.type.TypeAbstract;
-import com.kamikazejam.kamicommon.util.exception.KamiCommonException;
 import org.bukkit.command.CommandSender;
 
 import java.util.Collection;

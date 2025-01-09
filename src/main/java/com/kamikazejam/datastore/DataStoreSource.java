@@ -4,10 +4,10 @@ import com.kamikazejam.datastore.base.mode.StorageMode;
 import com.kamikazejam.datastore.command.DataStoreCommand;
 import com.kamikazejam.datastore.connections.storage.StorageService;
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener;
-import com.kamikazejam.kamicommon.KamiPlugin;
-import com.kamikazejam.kamicommon.SpigotUtilsSource;
-import com.kamikazejam.kamicommon.configuration.spigot.KamiConfig;
 import lombok.Getter;
+import lombok.SneakyThrows;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -16,22 +16,29 @@ import java.io.File;
 
 @SuppressWarnings("unused")
 public class DataStoreSource {
-    private static @Nullable KamiPlugin pluginSource;
+    private static final String storeConfigName = "datastore.yml";
+    private static @Nullable DataStorePlugin pluginSource;
     private static boolean enabled = false;
-    @Getter private static long onEnableTime = 0;
+    @Getter
+    private static long onEnableTime = 0;
     private static DataStoreCommand command;
 
     // Modes
-    @Getter private static StorageMode storageMode;
+    @Getter
+    private static StorageMode storageMode;
     // Server Identification
-    @Getter private static String storeDbPrefix;
+    @Getter
+    private static String storeDbPrefix;
 
     /**
      * @return true IFF a plugin source was NEEDED and used for registration
      */
+    @SneakyThrows
     @SuppressWarnings("UnusedReturnValue")
-    public static boolean onEnable(@NotNull KamiPlugin plugin) {
-        if (enabled) { return false; }
+    public static boolean onEnable(@NotNull DataStorePlugin plugin) {
+        if (enabled) {
+            return false;
+        }
         pluginSource = plugin;
         enabled = true;
 
@@ -43,8 +50,8 @@ public class DataStoreSource {
         info("Running in " + storageMode + " storage mode.");
 
         // Load DataStore prefix
-        KamiConfig storeConfig = new KamiConfig(plugin, new File(plugin.getDataFolder(), "datastore.yml"), true);
-        storeDbPrefix = storeConfig.getString("datastore-database-prefix", "global");
+        FileConfiguration config = getConfig();
+        storeDbPrefix = config.getString("datastore-database-prefix", "global");
 
         // Enable Services
         storageMode.enableServices();
@@ -65,7 +72,9 @@ public class DataStoreSource {
      */
     @SuppressWarnings("UnusedReturnValue")
     public static boolean onDisable() {
-        if (!enabled) { return false; }
+        if (!enabled) {
+            return false;
+        }
 
         // Unload Commands
         if (command != null) {
@@ -75,15 +84,13 @@ public class DataStoreSource {
         // Shutdown Services
         storageMode.disableServices();
 
-        SpigotUtilsSource.onDisable();
-
         // Set to disabled
         boolean prev = enabled;
         enabled = false;
         return prev;
     }
 
-    public static @NotNull KamiPlugin get() {
+    public static @NotNull DataStorePlugin get() {
         if (pluginSource == null) {
             throw new RuntimeException("Plugin source not set");
         }
@@ -93,33 +100,48 @@ public class DataStoreSource {
     public static void info(@NotNull String msg) {
         if (pluginSource == null) {
             System.out.println("[INFO] " + msg);
-        }else {
+        } else {
             pluginSource.getLogger().info(msg);
         }
     }
+
     public static void warning(@NotNull String msg) {
         if (pluginSource == null) {
             System.out.println("[WARNING] " + msg);
-        }else {
+        } else {
             pluginSource.getLogger().warning(msg);
         }
     }
+
     public static void error(@NotNull String msg) {
         if (pluginSource == null) {
             System.out.println("[ERROR] " + msg);
-        }else {
+        } else {
             pluginSource.getLogger().severe(msg);
         }
     }
 
-    // KamiConfig access of datastore.yml
-    private static KamiConfig kamiConfig = null;
-    public static @NotNull KamiConfig getConfig() {
+    // KamiConfig access of
+    private static FileConfiguration storeCfg = null;
+    public static @NotNull FileConfiguration getConfig() {
         final JavaPlugin plugin = get();
-        if (kamiConfig == null) {
-            kamiConfig = new KamiConfig(plugin, new File(plugin.getDataFolder(), "datastore.yml"), true, true);
+        if (storeCfg == null) {
+            storeCfg = createConfig(plugin);
         }
-        return kamiConfig;
+        return storeCfg;
+    }
+
+    @NotNull
+    @SneakyThrows
+    private static FileConfiguration createConfig(@NotNull JavaPlugin plugin) {
+        File file = new File(plugin.getDataFolder(), storeConfigName);
+        if (!file.exists()) {
+            boolean ignored = file.getParentFile().mkdirs();
+            plugin.saveResource(storeConfigName, false);
+        }
+        FileConfiguration config = new YamlConfiguration();
+        config.load(file);
+        return config;
     }
 
     /**

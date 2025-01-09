@@ -27,7 +27,6 @@ dependencies {
     api("org.mongodb:mongodb-driver-sync:5.2.1")
     api("com.fasterxml.jackson.core:jackson-databind:2.16.1")
     api("ch.qos.logback:logback-classic:1.5.16")
-    api("com.kamikazejam.kamicommon:spigot-jar:$kcVersion")
 
     // Testing Dependencies
     testImplementation("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")

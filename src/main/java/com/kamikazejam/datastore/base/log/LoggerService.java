@@ -1,12 +1,11 @@
 package com.kamikazejam.datastore.base.log;
 
-import com.kamikazejam.kamicommon.util.StringUtil;
+import com.kamikazejam.datastore.util.Color;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 @SuppressWarnings("unused")
 public abstract class LoggerService {
@@ -92,19 +91,16 @@ public abstract class LoggerService {
         this.severe(throwable, msg);
     }
 
-
-    public final void logToConsole(String a, Level level) {
-        a = StringUtil.t(a);
-        // Add the logger name to the start of the msg
-        String content = "[" + getLoggerName() + "] " + a;
-        // Add the plugin name to the VERY start, so it matches existing logging format
-        String plPrefix = "[" + getPlugin().getName() + "] ";
-        if (level == Level.INFO) {
-            Bukkit.getConsoleSender().sendMessage(StringUtil.t(plPrefix + content));
-        } else if (level == Level.FINE) {
-            Bukkit.getConsoleSender().sendMessage(StringUtil.t("&7[DEBUG] " + plPrefix + content));
-        } else {
-            Logger.getLogger("Minecraft").log(level, StringUtil.t(plPrefix + content));
+    public void logToConsole(String msg, Level level) {
+        String plPrefix = "[" + this.getPlugin().getName() + "] ";
+        if (level == Level.FINE) {
+            Bukkit.getConsoleSender().sendMessage(Color.t("&7[DEBUG] " + plPrefix + msg));
+        } else if (level == Level.INFO) {
+            Bukkit.getConsoleSender().sendMessage(Color.t(plPrefix + msg));
+        } else if (level == Level.WARNING) {
+            Bukkit.getConsoleSender().sendMessage(Color.t("&e[WARNING] " + plPrefix + msg));
+        } else if (level == Level.SEVERE) {
+            Bukkit.getConsoleSender().sendMessage(Color.t("&c[SEVERE] " + plPrefix + msg));
         }
     }
 }

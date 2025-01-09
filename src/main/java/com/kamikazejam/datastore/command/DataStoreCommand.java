@@ -4,8 +4,6 @@ import com.kamikazejam.datastore.command.sub.CmdCache;
 import com.kamikazejam.datastore.command.sub.CmdCaches;
 import com.kamikazejam.datastore.command.sub.CmdDatabases;
 import com.kamikazejam.datastore.command.sub.CmdInfo;
-import com.kamikazejam.kamicommon.command.KamiCommand;
-import com.kamikazejam.kamicommon.command.requirement.RequirementHasPerm;
 
 public class DataStoreCommand extends KamiCommand {
     public DataStoreCommand() {

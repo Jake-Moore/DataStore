@@ -14,7 +14,7 @@ import com.kamikazejam.datastore.mode.profile.StoreProfile;
 import com.kamikazejam.datastore.mode.profile.StoreProfileCache;
 import com.kamikazejam.datastore.mode.profile.StoreProfileLoader;
 import com.kamikazejam.datastore.util.AsyncCachesExecutor;
-import com.kamikazejam.kamicommon.util.StringUtil;
+import com.kamikazejam.datastore.util.Color;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -123,7 +123,7 @@ public class ProfileListener implements Listener {
             if (loader.isDenyJoin()) {
                 // For the first 100 seconds, don't give the nasty loader reason, but a pretty server start error
                 String message = (System.currentTimeMillis() - DataStoreSource.getOnEnableTime() < 100_000L)
-                        ? StringUtil.t("&cServer is starting, please wait.")
+                        ? Color.t("&cServer is starting, please wait.")
                         : loader.getJoinDenyReason();
 
                 // If denied, throw an exception (will be caught by original join event)

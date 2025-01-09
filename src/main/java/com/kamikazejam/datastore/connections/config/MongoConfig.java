@@ -1,8 +1,8 @@
 package com.kamikazejam.datastore.connections.config;
 
 import com.kamikazejam.datastore.DataStoreSource;
-import com.kamikazejam.kamicommon.configuration.spigot.KamiConfig;
 import lombok.Getter;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.jetbrains.annotations.Nullable;
 
 @Getter
@@ -22,8 +22,8 @@ public class MongoConfig {
         }
 
         // Load Config Values
-        KamiConfig config = DataStoreSource.getConfig();
-        String uri = config.getString("connections.MONGODB.uri", null);
+        FileConfiguration config = DataStoreSource.getConfig();
+        String uri = config.getString("connections.MONGODB.uri", "mongodb://localhost:27017");
         return conf = new MongoConfig(uri);
     }
 }

@@ -4,9 +4,7 @@ import com.kamikazejam.datastore.DataStoreAPI;
 import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.connections.storage.StorageService;
 import com.kamikazejam.datastore.database.DatabaseRegistration;
-import com.kamikazejam.kamicommon.command.KamiCommand;
-import com.kamikazejam.kamicommon.command.requirement.RequirementHasPerm;
-import com.kamikazejam.kamicommon.util.StringUtil;
+import com.kamikazejam.datastore.util.Color;
 
 import java.util.Objects;
 
@@ -19,13 +17,13 @@ public class CmdDatabases extends KamiCommand {
 
     @Override
     public void perform() {
-        sender.sendMessage(StringUtil.t("&7***** &6Store Database &7*****"));
+        sender.sendMessage(Color.t("&7***** &6Store Database &7*****"));
         StorageService store = DataStoreSource.getStorageService();
-        sender.sendMessage(StringUtil.t("&7Storage Service: " + ((store.canCache()) ? "&aConnected" : "&cDisconnected")));
-        sender.sendMessage(StringUtil.t("&7Databases:"));
+        sender.sendMessage(Color.t("&7Storage Service: " + ((store.canCache()) ? "&aConnected" : "&cDisconnected")));
+        sender.sendMessage(Color.t("&7Databases:"));
         DataStoreAPI.getDatabases().values().stream()
                 .filter(Objects::nonNull)
                 .map(DatabaseRegistration::getDatabaseName)
-                .forEach((n) -> sender.sendMessage(StringUtil.t("&7 - " + n)));
+                .forEach((n) -> sender.sendMessage(Color.t("&7 - " + n)));
     }
 }

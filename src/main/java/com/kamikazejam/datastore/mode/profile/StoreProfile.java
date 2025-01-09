@@ -1,15 +1,15 @@
 package com.kamikazejam.datastore.mode.profile;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
-import com.kamikazejam.kamicommon.util.PlayerUtil;
-import com.kamikazejam.kamicommon.util.Preconditions;
-import com.kamikazejam.kamicommon.util.id.IdUtilLocal;
+import com.kamikazejam.datastore.util.PlayerUtil;
 import lombok.AccessLevel;
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -136,7 +136,6 @@ public abstract class StoreProfile<T extends StoreProfile<T>> implements Store<T
     @Override
     public StoreProfileCache<T> getCache() {
         Preconditions.checkNotNull(cache, "Cache cannot be null");
-
         return cache;
     }
 
@@ -214,11 +213,11 @@ public abstract class StoreProfile<T extends StoreProfile<T>> implements Store<T
     public @NotNull Optional<String> getUsername() {
         if (this.username.get() == null) {
             // Try to get the name from our IdUtil, and update the object if possible
-            Optional<String> idName = IdUtilLocal.getName(this.getUniqueId());
-            idName.ifPresent(name ->
-                    this.cache.update(this.getId(), profile -> profile.username.set(name))
-            );
-            return idName;
+            OfflinePlayer oPlayer = Bukkit.getOfflinePlayer(this.getUniqueId());
+            if (oPlayer != null && oPlayer.getName() != null) {
+                this.cache.update(this.getId(), profile -> profile.username.set(oPlayer.getName()));
+                return Optional.of(oPlayer.getName());
+            }
         }
         return Optional.ofNullable(this.username.get());
     }
