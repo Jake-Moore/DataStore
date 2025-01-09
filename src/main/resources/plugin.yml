@@ -5,6 +5,8 @@ authors: [KamikazeJAM]
 website: https://github.com/Jake-Moore/DataStore
 description: ${description}
 api-version: 1.13
-softdepend:
-  - SolenxiaCommon
-  - KamiCommon
+commands:
+  datastore:
+    description: Core DataStore Command
+    usage: /datastore <subcommand>
+    permission: datastore.command

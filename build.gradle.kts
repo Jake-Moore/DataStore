@@ -5,10 +5,11 @@ plugins {
     id("java")
     id("java-library")
     id("maven-publish")
+    id("com.gradleup.shadow") version "8.3.5"
 }
 
 group = "com.kamikazejam"
-version = "1.0.0.beta.1-SNAPSHOT"
+version = "1.0.0.beta.2-SNAPSHOT"
 description = "Simple Data Storage Solution using MongoDB"
 
 
@@ -24,9 +25,9 @@ dependencies {
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
     // Dependencies
-    api("org.mongodb:mongodb-driver-sync:5.2.1")
-    api("com.fasterxml.jackson.core:jackson-databind:2.16.1")
-    api("ch.qos.logback:logback-classic:1.5.16")
+    implementation("org.mongodb:mongodb-driver-sync:5.2.1")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
+    implementation("ch.qos.logback:logback-classic:1.5.16")
 
     // Testing Dependencies
     testImplementation("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
@@ -42,8 +43,24 @@ dependencies {
     testCompileOnly("org.jetbrains:annotations:26.0.1")
 }
 
+// Register a task to delete the jars in the libs folder
+tasks.register<Delete>("cleanLibs") {
+    delete("build/libs")
+}
+
 tasks {
     publish.get().dependsOn(build)
+    build.get().dependsOn(shadowJar)
+    shadowJar.get().dependsOn("cleanLibs")
+
+    shadowJar {
+        archiveClassifier.set("")
+        relocate("ch.qos.logback", "com.kamikazejam.datastore.internal.logback")
+        relocate("com.fasterxml.jackson", "com.kamikazejam.datastore.internal.jackson")
+        relocate("com.mongodb", "com.kamikazejam.datastore.internal.mongodb")
+        relocate("org.bson", "com.kamikazejam.datastore.internal.bson")
+        relocate("org.slf4j", "com.kamikazejam.datastore.internal.slf4j")
+    }
 
     processResources {
         filteringCharset = Charsets.UTF_8.name()

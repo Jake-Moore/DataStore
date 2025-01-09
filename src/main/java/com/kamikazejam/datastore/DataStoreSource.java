@@ -21,7 +21,6 @@ public class DataStoreSource {
     private static boolean enabled = false;
     @Getter
     private static long onEnableTime = 0;
-    private static DataStoreCommand command;
 
     // Modes
     @Getter
@@ -35,11 +34,11 @@ public class DataStoreSource {
      */
     @SneakyThrows
     @SuppressWarnings("UnusedReturnValue")
-    public static boolean onEnable(@NotNull DataStorePlugin plugin) {
+    public static boolean onEnable(@NotNull DataStorePlugin pl) {
         if (enabled) {
             return false;
         }
-        pluginSource = plugin;
+        pluginSource = pl;
         enabled = true;
 
         // ----------------------------- //
@@ -57,11 +56,10 @@ public class DataStoreSource {
         storageMode.enableServices();
 
         // Load Commands
-        command = new DataStoreCommand();
-        command.registerCommand(plugin);
+        pluginSource.getCommand("datastore").setExecutor(new DataStoreCommand());
 
         // Register ProfileListener
-        plugin.getServer().getPluginManager().registerEvents(new ProfileListener(), plugin);
+        pl.getServer().getPluginManager().registerEvents(new ProfileListener(), pl);
 
         onEnableTime = System.currentTimeMillis();
         return true;
@@ -74,11 +72,6 @@ public class DataStoreSource {
     public static boolean onDisable() {
         if (!enabled) {
             return false;
-        }
-
-        // Unload Commands
-        if (command != null) {
-            command.unregisterCommand();
         }
 
         // Shutdown Services
