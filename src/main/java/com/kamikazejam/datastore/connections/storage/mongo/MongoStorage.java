@@ -1,18 +1,4 @@
-package com.kamikazejam.datastore.connections.storage;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.stream.StreamSupport;
-
-import org.bson.Document;
-import org.bson.UuidRepresentation;
-import org.bson.conversions.Bson;
-import org.bukkit.plugin.Plugin;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+package com.kamikazejam.datastore.connections.storage.mongo;
 
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.DataStoreSource;
@@ -22,29 +8,33 @@ import com.kamikazejam.datastore.base.StoreCache;
 import com.kamikazejam.datastore.base.index.IndexedField;
 import com.kamikazejam.datastore.connections.config.MongoConfig;
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor;
+import com.kamikazejam.datastore.connections.storage.StorageService;
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator;
 import com.kamikazejam.datastore.util.DataStoreFileLogger;
 import com.kamikazejam.datastore.util.JacksonUtil;
-import static com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD;
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoException;
-import com.mongodb.MongoTimeoutException;
-import com.mongodb.WriteConcern;
-import com.mongodb.client.ClientSession;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoCursor;
-import com.mongodb.client.MongoDatabase;
+import com.mongodb.*;
+import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Projections;
-import com.mongodb.client.result.UpdateResult;
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import org.bson.Document;
+import org.bson.UuidRepresentation;
+import org.bson.conversions.Bson;
+import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.stream.StreamSupport;
+
+import static com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD;
 
 @Getter
 @SuppressWarnings({"unused"})
@@ -162,96 +152,18 @@ public class MongoStorage extends StorageService {
     // (MongoDB provides the document-level locking already)
     @Override
     public <K, X extends Store<X, K>> boolean update(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
-        final int MAX_RETRIES = 5;
-        final int BASE_BACKOFF_MS = 50;  // Start with 50ms delay
-
         // Create a single base copy that we'll clone for each attempt
-        X baseCopy = JacksonUtil.deepCopy(originalStore);
-        int attempts = 0;
-        while (attempts < MAX_RETRIES) {
-            // Exponential backoff if this isn't our first attempt
-            if (attempts > 0) {
-                try {
-                    Thread.sleep((long) (BASE_BACKOFF_MS * Math.pow(2, attempts - 1)));
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException("Update interrupted during backoff", e);
-                }
-            }
+        final X baseCopyFinal = JacksonUtil.deepCopy(originalStore);
 
-            // Clone the base copy for this attempt
-            X workingCopy = JacksonUtil.deepCopy(baseCopy);
-            workingCopy.setReadOnly(false);
-
-            // Fetch version before applying updates
-            long currentVersion = workingCopy.getVersion().get();
-
-            // Apply updates to the copy
-            updateFunction.accept(workingCopy);
-            // Increment version (Optimistic Versioning)
-            workingCopy.getVersion().set(currentVersion + 1);
-
+        try {
             final MongoCollection<Document> collection = this.getMongoCollection(cache)
                     .withWriteConcern(WriteConcern.MAJORITY);  // Ensure replication
-            try (ClientSession session = mongoClient.startSession()) {
-                session.startTransaction();
-                boolean committed = false;
 
-                try {
-                    final String id = cache.keyToString(workingCopy.getId());
-
-                    Document doc = JacksonUtil.serializeToDocument(workingCopy);
-                    UpdateResult result = collection.replaceOne(
-                            session,
-                            Filters.and(
-                                    // These two filters act as a sort of compare-and-swap mechanic
-                                    //  inside of this mongo transaction, if these are not met then
-                                    //  the transaction will fail and we will need to retry.
-                                    Filters.eq("_id", id),
-                                    Filters.eq("version", currentVersion)
-                            ),
-                            doc
-                    );
-
-                    if (result.getModifiedCount() == 0) {
-                        DataStoreSource.get().getColorLogger().debug("Failed to update Store in MongoDB Layer: " + workingCopy.getId());
-                        DataStoreSource.get().getColorLogger().debug("\tCould not find document with id: '" + id + "' and version: " + currentVersion);
-                        // If update failed, fetch current version and update our base copy
-                        Document currentDoc = collection.find(session).filter(Filters.eq("_id", id)).first();
-                        if (currentDoc == null) {
-                            throw new RuntimeException("Entity not found");
-                        }
-                        baseCopy = JacksonUtil.deserializeFromDocument(cache.getStoreClass(), currentDoc);
-                        attempts++;
-                        continue;
-                    }
-
-                    // Success - update the cached store from our working copy's data
-                    workingCopy.setReadOnly(true);
-                    session.commitTransaction();
-                    committed = true;
-
-                    // Update the original entity with the new values and return it
-                    originalStore.setReadOnly(false);
-                    cache.updateStoreFromNewer(originalStore, workingCopy);
-                    cache.cache(originalStore);
-                    originalStore.setReadOnly(true);
-                    return true;
-
-                } finally {
-                    if (!committed) {
-                        session.abortTransaction();
-                    }
-                }
-            } catch (Exception e) {
-                DataStoreFileLogger.warn("Failed to update Store in MongoDB Layer: " + workingCopy.getId(), e);
-                attempts++;
-                if (attempts >= MAX_RETRIES) {
-                    throw new RuntimeException("Failed to update after " + MAX_RETRIES + " attempts");
-                }
-            }
+            return MongoTransactionHelper.executeUpdate(mongoClient, collection, cache, originalStore, updateFunction);
+        } catch (Exception e) {
+            DataStoreFileLogger.warn("Failed to update Store in MongoDB Layer after all retries: " + originalStore.getId(), e);
+            return false;
         }
-        throw new RuntimeException("Failed to update after " + MAX_RETRIES + " attempts.");
     }
 
     @Override

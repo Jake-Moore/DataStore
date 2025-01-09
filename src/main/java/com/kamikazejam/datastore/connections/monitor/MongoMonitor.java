@@ -1,6 +1,6 @@
 package com.kamikazejam.datastore.connections.monitor;
 
-import com.kamikazejam.datastore.connections.storage.MongoStorage;
+import com.kamikazejam.datastore.connections.storage.mongo.MongoStorage;
 import com.mongodb.event.ServerHeartbeatFailedEvent;
 import com.mongodb.event.ServerHeartbeatStartedEvent;
 import com.mongodb.event.ServerHeartbeatSucceededEvent;

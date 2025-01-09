@@ -2,7 +2,7 @@ package com.kamikazejam.datastore.base.mode;
 
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.DataStoreSource;
-import com.kamikazejam.datastore.connections.storage.MongoStorage;
+import com.kamikazejam.datastore.connections.storage.mongo.MongoStorage;
 import com.kamikazejam.datastore.connections.storage.StorageService;
 import com.kamikazejam.kamicommon.util.StringUtil;
 import org.bukkit.Bukkit;
