@@ -27,7 +27,7 @@ public abstract class StorageDatabaseAdapter<K, X extends Store<X, K>> implement
 
     protected abstract boolean save(Cache<K, X> cache, @NotNull X store);
 
-    protected abstract boolean replace(Cache<K, X> cache, @NotNull X store, @NotNull Consumer<X> updateFunction);
+    protected abstract boolean update(Cache<K, X> cache, @NotNull X store, @NotNull Consumer<X> updateFunction);
 
     protected abstract boolean has(Cache<K, X> cache, @NotNull K key);
 
@@ -58,8 +58,8 @@ public abstract class StorageDatabaseAdapter<K, X extends Store<X, K>> implement
      * @param updateFunction The function to update the Store with.
      * @return If the Store was replaced. (if the db was updated)
      */
-    public boolean replace(@NotNull X store, @NotNull Consumer<X> updateFunction) {
-        return this.replace(this.cache, store, updateFunction);
+    public boolean update(@NotNull X store, @NotNull Consumer<X> updateFunction) {
+        return this.update(this.cache, store, updateFunction);
     }
 
     @Override

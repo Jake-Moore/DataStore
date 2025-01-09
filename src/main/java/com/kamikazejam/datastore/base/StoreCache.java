@@ -111,7 +111,7 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
             throw new NoSuchElementException("[StoreCache#update] Store not found with key: " + key);
         }
 
-        if (!this.getDatabaseStore().replace(originalEntity, updateFunction)) {
+        if (!this.getDatabaseStore().update(originalEntity, updateFunction)) {
             throw new IllegalStateException("[StoreCache#update] Failed to update store with key: " + key);
         }
         return originalEntity;

@@ -1,5 +1,19 @@
 package com.kamikazejam.datastore.connections.storage;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.stream.StreamSupport;
+
+import org.bson.Document;
+import org.bson.UuidRepresentation;
+import org.bson.conversions.Bson;
+import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.base.Cache;
@@ -9,35 +23,28 @@ import com.kamikazejam.datastore.base.index.IndexedField;
 import com.kamikazejam.datastore.connections.config.MongoConfig;
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor;
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator;
-import com.kamikazejam.datastore.util.JacksonUtil;
 import com.kamikazejam.datastore.util.DataStoreFileLogger;
+import com.kamikazejam.datastore.util.JacksonUtil;
+import static com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
 import com.mongodb.MongoTimeoutException;
-import com.mongodb.client.*;
+import com.mongodb.WriteConcern;
+import com.mongodb.client.ClientSession;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.result.UpdateResult;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import org.bson.Document;
-import org.bson.UuidRepresentation;
-import org.bson.conversions.Bson;
-import org.bukkit.plugin.Plugin;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.stream.StreamSupport;
-
-import static com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD;
 
 @Getter
 @SuppressWarnings({"unused"})
@@ -148,14 +155,30 @@ public class MongoStorage extends StorageService {
         return true;
     }
 
+    // This method needs no additional concurrency safeguards, because of the transactional nature of the update
+    //  and the compare-and-swap design of the mongo query & its filters.
+    // If two threads enter this method for the same object, only one will succeed in updating the object.
+    //  and the other will have its query fail and will automatically retry.
+    // (MongoDB provides the document-level locking already)
     @Override
-    public <K, X extends Store<X, K>> boolean replace(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
+    public <K, X extends Store<X, K>> boolean update(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
         final int MAX_RETRIES = 5;
+        final int BASE_BACKOFF_MS = 50;  // Start with 50ms delay
 
         // Create a single base copy that we'll clone for each attempt
         X baseCopy = JacksonUtil.deepCopy(originalStore);
         int attempts = 0;
-        while (attempts < MAX_RETRIES) { // arbitrary number of retries
+        while (attempts < MAX_RETRIES) {
+            // Exponential backoff if this isn't our first attempt
+            if (attempts > 0) {
+                try {
+                    Thread.sleep((long) (BASE_BACKOFF_MS * Math.pow(2, attempts - 1)));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Update interrupted during backoff", e);
+                }
+            }
+
             // Clone the base copy for this attempt
             X workingCopy = JacksonUtil.deepCopy(baseCopy);
             workingCopy.setReadOnly(false);
@@ -168,7 +191,8 @@ public class MongoStorage extends StorageService {
             // Increment version (Optimistic Versioning)
             workingCopy.getVersion().set(currentVersion + 1);
 
-            final MongoCollection<Document> collection = this.getMongoCollection(cache);
+            final MongoCollection<Document> collection = this.getMongoCollection(cache)
+                    .withWriteConcern(WriteConcern.MAJORITY);  // Ensure replication
             try (ClientSession session = mongoClient.startSession()) {
                 session.startTransaction();
                 boolean committed = false;
@@ -180,6 +204,9 @@ public class MongoStorage extends StorageService {
                     UpdateResult result = collection.replaceOne(
                             session,
                             Filters.and(
+                                    // These two filters act as a sort of compare-and-swap mechanic
+                                    //  inside of this mongo transaction, if these are not met then
+                                    //  the transaction will fail and we will need to retry.
                                     Filters.eq("_id", id),
                                     Filters.eq("version", currentVersion)
                             ),
