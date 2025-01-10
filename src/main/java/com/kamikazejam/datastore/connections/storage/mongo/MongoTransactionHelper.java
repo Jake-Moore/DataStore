@@ -24,14 +24,14 @@ import com.mongodb.client.result.UpdateResult;
 @SuppressWarnings("UnusedReturnValue")
 public class MongoTransactionHelper {
     private static final Random RANDOM = new Random();
-    public static final int DEFAULT_MAX_RETRIES = 20;
+    public static int DEFAULT_MAX_RETRIES = 20;
     private static final int WRITE_CONFLICT_ERROR = 112;
 
     // Minimum and maximum backoff values to prevent extremes
-    private static final long MIN_BACKOFF_MS = 50;
-    private static final long MAX_BACKOFF_MS = 2000;
-    private static final double PING_MULTIPLIER = 2.0;      // Base multiplier for ping time
-    private static final double ATTEMPT_MULTIPLIER = 1.5;   // How much to increase per attempt
+    public static long MIN_BACKOFF_MS = 50;
+    public static long MAX_BACKOFF_MS = 2000;
+    public static double PING_MULTIPLIER = 2.0;      // Base multiplier for ping time
+    public static double ATTEMPT_MULTIPLIER = 1.5;   // How much to increase per attempt
 
     /**
      * Execute a MongoDB document update with retries and version checking
