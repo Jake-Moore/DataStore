@@ -5,6 +5,7 @@ import com.kamikazejam.datastore.DataStoreAPI;
 import com.kamikazejam.datastore.DataStoreRegistration;
 import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.base.exception.DuplicateCacheException;
+import com.kamikazejam.datastore.base.field.FieldProvider;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
 import com.kamikazejam.datastore.base.index.IndexedField;
 import com.kamikazejam.datastore.base.log.LoggerService;
@@ -377,13 +378,13 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
         // This is a simple way to update the store from the update/
         // This is likely impossible to do in a fully type-safe way, but assuming both stores are the same type, this should work
         store.setReadOnly(false);
-        Map<String, FieldWrapper<?>> storeFields = store.getAllFieldsMap();
-        Map<String, FieldWrapper<?>> updateFields = update.getAllFieldsMap();
-        for (Map.Entry<String, FieldWrapper<?>> entry : storeFields.entrySet()) {
-            FieldWrapper<Object> storeField = (FieldWrapper<Object>) entry.getValue();
-            FieldWrapper<Object> updateField = (FieldWrapper<Object>) updateFields.get(entry.getKey());
-            if (updateField != null) {
-                storeField.set(updateField.get());
+        Map<String, FieldProvider> storeFields = store.getAllFieldsMap();
+        Map<String, FieldProvider> updateFields = update.getAllFieldsMap();
+        for (Map.Entry<String, FieldProvider> entry : storeFields.entrySet()) {
+            FieldProvider storeProvider = entry.getValue();
+            FieldProvider updateProvider = updateFields.get(entry.getKey());
+            if (updateProvider != null) {
+                ((FieldWrapper<Object>) storeProvider.getFieldWrapper()).set(updateProvider.getFieldWrapper().get());
             }
         }
 

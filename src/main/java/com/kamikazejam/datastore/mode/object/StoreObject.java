@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
+import com.kamikazejam.datastore.base.field.FieldProvider;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -68,7 +69,7 @@ public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, 
         if (initialized) { return; }
         initialized = true; // Must set before calling getAllFields because it will want it to be true
         // Set parent reference for all fields (including id and version)
-        getAllFields().forEach(field -> field.setParent(this));
+        getAllFields().forEach(provider -> provider.getFieldWrapper().setParent(this));
     }
 
     private void ensureValid() {
@@ -87,9 +88,9 @@ public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, 
 
     @Override
     @ApiStatus.Internal
-    public @NotNull Set<FieldWrapper<?>> getAllFields() {
+    public @NotNull Set<FieldProvider> getAllFields() {
         this.ensureValid();
-        Set<FieldWrapper<?>> fields = new HashSet<>(getCustomFields());
+        Set<FieldProvider> fields = new HashSet<>(getCustomFields());
         fields.add(id);
         fields.add(version);
         return fields;
@@ -99,22 +100,22 @@ public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, 
         Set<String> names = new HashSet<>();
         names.add(id.getName());
         names.add(version.getName());
-        for (FieldWrapper<?> field : getCustomFields()) {
-            if (!names.add(field.getName())) {
-                throw new IllegalStateException("Duplicate field name: " + field.getName());
+        for (FieldProvider provider : getCustomFields()) {
+            if (!names.add(provider.getFieldWrapper().getName())) {
+                throw new IllegalStateException("Duplicate field name: " + provider.getFieldWrapper().getName());
             }
         }
     }
 
     @Override
     @ApiStatus.Internal
-    public @NotNull Map<String, FieldWrapper<?>> getAllFieldsMap() {
-        Map<String, FieldWrapper<?>> map = new HashMap<>();
-        for (FieldWrapper<?> field : getAllFields()) {
-            if (map.containsKey(field.getName())) {
-                throw new IllegalStateException("Duplicate field name: " + field.getName());
+    public @NotNull Map<String, FieldProvider> getAllFieldsMap() {
+        Map<String, FieldProvider> map = new HashMap<>();
+        for (FieldProvider provider : getAllFields()) {
+            if (map.containsKey(provider.getFieldWrapper().getName())) {
+                throw new IllegalStateException("Duplicate field name: " + provider.getFieldWrapper().getName());
             }
-            map.put(field.getName(), field);
+            map.put(provider.getFieldWrapper().getName(), provider);
         }
         return map;
     }

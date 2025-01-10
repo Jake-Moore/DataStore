@@ -6,11 +6,17 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 @SuppressWarnings("unused")
-public class FieldWrapperList<E> implements List<E> {
+public class FieldWrapperList<E> implements List<E>, FieldProvider {
     private final FieldWrapper<List<E>> wrapper;
 
     private FieldWrapperList(@NotNull String name, @Nullable List<E> defaultValue) {
         this.wrapper = FieldWrapper.ofColl(name, defaultValue != null ? new ArrayList<>(defaultValue) : new ArrayList<>(), List.class);
+    }
+
+    @Override
+    @NotNull
+    public FieldWrapper<?> getFieldWrapper() {
+        return wrapper;
     }
 
     public static <E> FieldWrapperList<E> of(@NotNull String name, @Nullable List<E> defaultValue) {

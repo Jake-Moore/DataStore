@@ -6,11 +6,17 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 @SuppressWarnings("unused")
-public class FieldWrapperMap<K, V> implements Map<K, V> {
+public class FieldWrapperMap<K, V> implements Map<K, V>, FieldProvider {
     private final FieldWrapper<Map<K, V>> wrapper;
 
     private FieldWrapperMap(@NotNull String name, @Nullable Map<K, V> defaultValue) {
         this.wrapper = FieldWrapper.ofMap(name, defaultValue != null ? new HashMap<>(defaultValue) : new HashMap<>(), Map.class);
+    }
+
+    @Override
+    @NotNull
+    public FieldWrapper<?> getFieldWrapper() {
+        return wrapper;
     }
 
     public static <K, V> FieldWrapperMap<K, V> of(@NotNull String name, @Nullable Map<K, V> defaultValue) {

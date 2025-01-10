@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.base.Store;
+import com.kamikazejam.datastore.base.field.FieldProvider;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
 import com.kamikazejam.datastore.util.jackson.JacksonSpigotModule;
 import lombok.SneakyThrows;
@@ -76,7 +77,8 @@ public class JacksonUtil {
         Preconditions.checkNotNull(store, "Entity cannot be null");
 
         Document doc = new Document();
-        for (FieldWrapper<?> field : store.getAllFields()) {
+        for (FieldProvider provider : store.getAllFields()) {
+            FieldWrapper<?> field = provider.getFieldWrapper();
             Object value = field.get();
             if (value != null) {
                 // Convert the value to a MongoDB-compatible format using Jackson
@@ -103,7 +105,8 @@ public class JacksonUtil {
             entity.setReadOnly(false);
 
             // Deserialize each FieldWrapper from its contents in the BSON document
-            for (FieldWrapper<?> field : entity.getAllFields()) {
+            for (FieldProvider provider : entity.getAllFields()) {
+                FieldWrapper<?> field = provider.getFieldWrapper();
                 deserializeFieldWrapper(field, doc);
             }
 

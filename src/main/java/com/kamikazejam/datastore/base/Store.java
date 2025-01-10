@@ -1,5 +1,6 @@
 package com.kamikazejam.datastore.base;
 
+import com.kamikazejam.datastore.base.field.FieldProvider;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Blocking;
@@ -25,7 +26,7 @@ public interface Store<T extends Store<T, K>, K> {
      * Get all unique fields the Store object should serialize into its json data.
      */
     @NotNull
-    Set<FieldWrapper<?>> getCustomFields();
+    Set<FieldProvider> getCustomFields();
 
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //
@@ -72,9 +73,9 @@ public interface Store<T extends Store<T, K>, K> {
     @ApiStatus.Internal
     void setReadOnly(boolean readOnly);
     @ApiStatus.Internal
-    @NotNull Set<FieldWrapper<?>> getAllFields();
+    @NotNull Set<FieldProvider> getAllFields();
     @ApiStatus.Internal
-    @NotNull Map<String, FieldWrapper<?>> getAllFieldsMap();
+    @NotNull Map<String, FieldProvider> getAllFieldsMap();
 
     /**
      * Gets the unique identifier of our Store. This can be a String representation of anything (like a UUID).

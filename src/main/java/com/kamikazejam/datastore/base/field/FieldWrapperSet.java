@@ -9,11 +9,17 @@ import java.util.Iterator;
 import java.util.Set;
 
 @SuppressWarnings("unused")
-public class FieldWrapperSet<E> implements Set<E> {
+public class FieldWrapperSet<E> implements Set<E>, FieldProvider {
     private final FieldWrapper<Set<E>> wrapper;
 
     private FieldWrapperSet(@NotNull String name, @Nullable Set<E> defaultValue) {
         this.wrapper = FieldWrapper.ofColl(name, defaultValue != null ? new HashSet<>(defaultValue) : new HashSet<>(), Set.class);
+    }
+
+    @Override
+    @NotNull
+    public FieldWrapper<?> getFieldWrapper() {
+        return wrapper;
     }
 
     public static <E> FieldWrapperSet<E> of(@NotNull String name, @Nullable Set<E> defaultValue) {

@@ -11,11 +11,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @SuppressWarnings("unused")
-public class FieldWrapperConcurrentMap<K, V> implements ConcurrentMap<K, V> {
+public class FieldWrapperConcurrentMap<K, V> implements ConcurrentMap<K, V>, FieldProvider {
     private final FieldWrapper<ConcurrentMap<K, V>> wrapper;
 
     private FieldWrapperConcurrentMap(@NotNull String name, @Nullable ConcurrentMap<K, V> defaultValue) {
         this.wrapper = FieldWrapper.ofMap(name, defaultValue != null ? new ConcurrentHashMap<>(defaultValue) : new ConcurrentHashMap<>(), ConcurrentMap.class);
+    }
+
+    @Override
+    @NotNull
+    public FieldWrapper<?> getFieldWrapper() {
+        return wrapper;
     }
 
     public static <K, V> FieldWrapperConcurrentMap<K, V> of(@NotNull String name, @Nullable ConcurrentMap<K, V> defaultValue) {

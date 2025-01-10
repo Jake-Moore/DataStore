@@ -15,7 +15,7 @@ import java.util.Objects;
  * A wrapper for fields that enforces access control based on Store state
  */
 @SuppressWarnings("unchecked")
-public class FieldWrapper<T> {
+public class FieldWrapper<T> implements FieldProvider {
     private @Nullable T value;
     @Getter
     private final @Nullable T defaultValue;
@@ -38,6 +38,11 @@ public class FieldWrapper<T> {
         //  keep it in case it is needed in the future
     }
 
+    @Override
+    @NotNull
+    public FieldWrapper<?> getFieldWrapper() {
+        return this;
+    }
 
     // ------------------------------------------------------ //
     // Static Constructors                                    //
