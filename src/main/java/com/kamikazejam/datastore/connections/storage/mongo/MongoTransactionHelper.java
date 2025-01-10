@@ -24,7 +24,7 @@ import com.mongodb.client.result.UpdateResult;
 @SuppressWarnings("UnusedReturnValue")
 public class MongoTransactionHelper {
     private static final Random RANDOM = new Random();
-    public static int DEFAULT_MAX_RETRIES = 20;
+    public static int DEFAULT_MAX_RETRIES = 50; // very gracious amount of retries (since we have backoff)
     private static final int WRITE_CONFLICT_ERROR = 112;
 
     // Minimum and maximum backoff values to prevent extremes
