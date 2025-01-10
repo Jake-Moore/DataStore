@@ -377,11 +377,13 @@ public class MongoStorage extends StorageService {
     }
 
     public void setMongoPingNS(List<ServerDescription> descriptions) {
+        if (!this.mongoConnected) { return; }
         descriptions.forEach(server -> this.serverPingMap.put(server.getAddress(), server.getRoundTripTimeNanos()));
         this.recalculatePing();
     }
 
     private void recalculatePing() {
+        if (!this.mongoConnected) { return; }
         long pingSumNS = 0;
         for (long ping : this.serverPingMap.values()) {
             pingSumNS += ping;
