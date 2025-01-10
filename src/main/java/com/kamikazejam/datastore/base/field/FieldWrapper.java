@@ -86,9 +86,18 @@ public class FieldWrapper<T> {
     }
 
     public void set(T value) {
-        if (parent == null) { throw new IllegalStateException("[FieldWrapper#set] Field not registered with a parent document"); }
-        if (parent.isReadOnly()) { throw new IllegalStateException("Cannot modify field '" + name + "' in read-only mode");}
+        if (!isWriteable()) {
+            throw new IllegalStateException("Cannot modify field '" + name + "' in read-only mode");
+        }
         this.value = value;
+    }
+
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public boolean isWriteable() {
+        if (parent == null) { 
+            throw new IllegalStateException("[FieldWrapper#isWriteable] Field not registered with a parent document"); 
+        }
+        return !parent.isReadOnly();
     }
 
     @Override
