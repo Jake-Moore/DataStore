@@ -192,6 +192,11 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
             if (!b) {
                 DataStoreFileLogger.warn("Failed to update Store with key: " + key);
             }
+            // try to rollback in the most graceful way I can think of
+            // (set our local copy to reflect the database copy)
+            // We need to do this since we already 'messed' up the originalEntity with the updateFunction
+            //  and if we don't do this, then our local copy is ahead of the database copy
+            this.getDatabaseStore().get(key).ifPresent(store -> this.updateStoreFromNewer(originalEntity, store));
         });
 
         // Return the final future so that if they want to listen to the final update, they can

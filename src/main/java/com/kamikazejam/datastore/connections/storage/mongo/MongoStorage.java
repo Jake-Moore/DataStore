@@ -180,7 +180,15 @@ public class MongoStorage extends StorageService {
         updateFunction.accept(originalStore);
 
         // Step 3: Return a new StorageUpdateTask that can finish the changes later
-        return new StorageUpdateTask<>(cache, baseCopy, originalStore);
+        return new StorageUpdateTask<>(cache, baseCopy, originalStore, () -> {
+            // Try a sync update, but with baseCopy, since this is the only pure copy of the original state
+            if (this.updateSync(cache, baseCopy, updateFunction)) {
+                // If this succeeds, then we need to mirror baseCopy into the originalStore
+                cache.updateStoreFromNewer(originalStore, baseCopy);
+                return originalStore;
+            }
+            throw new IllegalStateException("Failed to update Store in MongoDB Layer: " + originalStore.getId());
+        });
     }
 
     @Override

@@ -16,7 +16,7 @@ import java.util.function.Consumer;
  * A Store is an object that can be cached, saved, or loaded within DataStore.
  * Generics: K = Identifier Object Type (i.e. String, UUID)
  */
-@SuppressWarnings({"UnusedReturnValue", "unused", "BlockingMethodInNonBlockingContext"})
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 public interface Store<T extends Store<T, K>, K> {
 
     // ----------------------------------------------------- //
@@ -31,40 +31,36 @@ public interface Store<T extends Store<T, K>, K> {
     // ----------------------------------------------------- //
     //                 CRUD Helpers (Async)                  //
     // ----------------------------------------------------- //
-    // TODO
-//    /**
-//     * Modifies this Store in a controlled environment where modifications are allowed
-//     * @return The updated Store object. (READ-ONLY)
-//     */
-//    @NonBlocking
-//    default CompletableFuture<T> update(@NotNull Consumer<T> updateFunction) {
-//        return CompletableFuture.supplyAsync(() -> updateSync(updateFunction));
-//    }
-//
-//    /**
-//     * Deletes this Store object (removes from both cache and database)
-//     */
-//    @NonBlocking
-//    default void delete() {
-//        CompletableFuture.runAsync(this::deleteSync);
-//    }
+    /**
+     * Modifies this Store in a controlled environment where modifications are allowed
+     * @return The updated Store object. (READ-ONLY)
+     */
+    @NonBlocking
+    CompletableFuture<T> update(@NotNull Consumer<T> updateFunction);
+
+    /**
+     * Deletes this Store object (removes from both cache and database)
+     */
+    @NonBlocking
+    default void delete() {
+        CompletableFuture.runAsync(this::deleteSync);
+    }
 
     // ----------------------------------------------------- //
     //                  CRUD Helpers (sync)                  //
     // ----------------------------------------------------- //
-    // TODO
-//    /**
-//     * Modifies this Store in a controlled environment where modifications are allowed
-//     * @return The updated Store object. (READ-ONLY)
-//     */
-//    @Blocking
-//    T updateSync(@NotNull Consumer<T> updateFunction);
-//
-//    /**
-//     * Deletes this Store object (removes from both cache and database)
-//     */
-//    @Blocking
-//    void deleteSync();
+    /**
+     * Modifies this Store in a controlled environment where modifications are allowed
+     * @return The updated Store object. (READ-ONLY)
+     */
+    @Blocking
+    T updateSync(@NotNull Consumer<T> updateFunction);
+
+    /**
+     * Deletes this Store object (removes from both cache and database)
+     */
+    @Blocking
+    void deleteSync();
 
     // ----------------------------------------------------- //
     //                Api / Internal Methods                 //
