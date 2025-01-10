@@ -1,17 +1,9 @@
 package com.kamikazejam.datastore.connections.monitor;
 
-import java.util.concurrent.TimeUnit;
-
-import org.jetbrains.annotations.NotNull;
-
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.connections.storage.mongo.MongoStorage;
-import com.mongodb.connection.ServerDescription;
-import com.mongodb.event.ClusterClosedEvent;
-import com.mongodb.event.ClusterDescriptionChangedEvent;
-import com.mongodb.event.ClusterListener;
-import com.mongodb.event.ServerHeartbeatSucceededEvent;
-import com.mongodb.event.ServerMonitorListener;
+import com.mongodb.event.*;
+import org.jetbrains.annotations.NotNull;
 
 // Previously this class had used heartbeat events, but the first heartbeat was sent 10 seconds after initial connection.
 // That was adding 10 seconds to the ttl of the server, which was unacceptable.
@@ -32,14 +24,9 @@ public class MongoMonitor implements ClusterListener, ServerMonitorListener {
 
         // Update the ping value
         if (!event.getNewDescription().getServerDescriptions().isEmpty()) {
-            long pingSumNS = 0;
-            for (ServerDescription server : event.getNewDescription().getServerDescriptions()) {
-                pingSumNS += server.getRoundTripTimeNanos();
-            }
-            long pingAvgNS = pingSumNS / event.getNewDescription().getServerDescriptions().size();
-            this.service.setMongoPingNS(pingAvgNS);
+            this.service.setMongoPingNS(event.getNewDescription().getServerDescriptions());
         }
-        
+
         if (!wasConnected && isConnected) {
             if (!this.service.isMongoInitConnect()) {
                 this.service.setMongoInitConnect(true);
@@ -62,6 +49,7 @@ public class MongoMonitor implements ClusterListener, ServerMonitorListener {
 
     @Override
     public void serverHeartbeatSucceeded(@NotNull ServerHeartbeatSucceededEvent event) {
-        this.service.setMongoPingNS(event.getElapsedTime(TimeUnit.NANOSECONDS));
+        // Attempt to use the current client's cluster description to make sure the ping is accurate
+        this.service.setMongoPingNS(this.service.getMongoClient().getClusterDescription().getServerDescriptions());
     }
 }

@@ -17,7 +17,7 @@ import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Projections;
-import lombok.AccessLevel;
+import com.mongodb.connection.ServerDescription;
 import lombok.Getter;
 import lombok.Setter;
 import org.bson.Document;
@@ -44,10 +44,11 @@ public class MongoStorage extends StorageService {
     private boolean mongoInitConnect = false;
     @Setter
     private boolean mongoConnected = false;
+    private final Map<ServerAddress, Long> serverPingMap = new HashMap<>();
     private long mongoPingNS = 1_000_000; // Default to 1ms (is updated every cluster and heartbeat event)
 
     // MongoDB
-    @Getter(AccessLevel.NONE)
+    @Getter
     private MongoClient mongoClient = null;
 
     public MongoStorage() {
@@ -375,8 +376,17 @@ public class MongoStorage extends StorageService {
         return this.mongoPingNS;
     }
 
-    public void setMongoPingNS(long mongoPingNS) {
-        this.mongoPingNS = mongoPingNS;
+    public void setMongoPingNS(List<ServerDescription> descriptions) {
+        descriptions.forEach(server -> this.serverPingMap.put(server.getAddress(), server.getRoundTripTimeNanos()));
+        this.recalculatePing();
+    }
+
+    private void recalculatePing() {
+        long pingSumNS = 0;
+        for (long ping : this.serverPingMap.values()) {
+            pingSumNS += ping;
+        }
+        this.mongoPingNS = pingSumNS / this.serverPingMap.size();
         this.debug("MongoDB Ping: " + ((this.mongoPingNS / 1_000_000L)) + "ms");
     }
 }
