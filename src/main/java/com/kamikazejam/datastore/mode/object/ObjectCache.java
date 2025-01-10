@@ -15,22 +15,9 @@ import java.util.function.Consumer;
 @SuppressWarnings({"unused", "BlockingMethodInNonBlockingContext"})
 public interface ObjectCache<X extends StoreObject<X>> extends Cache<String, X> {
 
-    // ------------------------------------------------------ //
-    // CRUD Methods                                           //
-    // ------------------------------------------------------ //
-    /**
-     * Create a new Store object with the provided initializer.<br>
-     * If you have a specific key for this Store, set it in the initializer.
-     * @throws DuplicateKeyException If the key already exists in the cache. (failed to create)
-     * @return The created Store object. (READ-ONLY)
-     */
-    @Blocking
-    @NotNull
-    X create(@NotNull Consumer<X> initializer) throws DuplicateKeyException;
-
-    // ------------------------------------------------------ //
-    // CRUD Methods (Async)                                   //
-    // ------------------------------------------------------ //
+    // ----------------------------------------------------- //
+    //                 CRUD Helpers (Async)                  //
+    // ----------------------------------------------------- //
     /**
      * Create a new Store object with the provided initializer.<br>
      * If you have a specific key for this Store, set it in the initializer.
@@ -39,7 +26,20 @@ public interface ObjectCache<X extends StoreObject<X>> extends Cache<String, X> 
      */
     @NonBlocking
     @NotNull
-    default CompletableFuture<X> createAsync(@NotNull Consumer<X> initializer) throws DuplicateKeyException {
-        return CompletableFuture.supplyAsync(() -> create(initializer));
+    default CompletableFuture<X> create(@NotNull Consumer<X> initializer) throws DuplicateKeyException {
+        return CompletableFuture.supplyAsync(() -> createSync(initializer));
     }
+
+    // ----------------------------------------------------- //
+    //                  CRUD Helpers (sync)                  //
+    // ----------------------------------------------------- //
+    /**
+     * Create a new Store object with the provided initializer.<br>
+     * If you have a specific key for this Store, set it in the initializer.
+     * @throws DuplicateKeyException If the key already exists in the cache. (failed to create)
+     * @return The created Store object. (READ-ONLY)
+     */
+    @Blocking
+    @NotNull
+    X createSync(@NotNull Consumer<X> initializer) throws DuplicateKeyException;
 }

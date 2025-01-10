@@ -9,10 +9,12 @@ import com.kamikazejam.datastore.base.field.FieldProvider;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
 import com.kamikazejam.datastore.base.index.IndexedField;
 import com.kamikazejam.datastore.base.log.LoggerService;
+import com.kamikazejam.datastore.base.storage.data.StorageUpdateTask;
 import com.kamikazejam.datastore.base.store.CacheLoggerInstantiator;
 import com.kamikazejam.datastore.base.store.StoreInstantiator;
 import com.kamikazejam.datastore.mode.profile.StoreProfileCache;
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener;
+import com.kamikazejam.datastore.util.DataStoreFileLogger;
 import com.mongodb.DuplicateKeyException;
 import lombok.Getter;
 import org.bukkit.Bukkit;
@@ -23,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
@@ -61,7 +64,7 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
     // Generic CRUD Methods                                   //
     // ------------------------------------------------------ //
     @Override
-    public @NotNull Optional<X> read(@NotNull K key, boolean cacheStore) {
+    public @NotNull Optional<X> readSync(@NotNull K key, boolean cacheStore) {
         Preconditions.checkNotNull(key, "Key cannot be null");
 
         // Try Local Cache First
@@ -85,21 +88,21 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
     }
 
     @Override
-    public final @NotNull Optional<X> read(@NotNull K key) {
-        return this.read(key, true);
+    public final @NotNull Optional<X> readSync(@NotNull K key) {
+        return this.readSync(key, true);
     }
 
     @Override
-    public final @NotNull X readOrCreate(@NotNull K key, @NotNull Consumer<X> initializer) {
+    public final @NotNull X readOrCreateSync(@NotNull K key, @NotNull Consumer<X> initializer) {
         Preconditions.checkNotNull(key, "Key cannot be null");
         Preconditions.checkNotNull(initializer, "Initializer cannot be null");
 
-        Optional<X> o = read(key);
-        return o.orElseGet(() -> create(key, initializer));
+        Optional<X> o = readSync(key);
+        return o.orElseGet(() -> createSync(key, initializer));
     }
 
     @Override
-    public final @NotNull X create(@NotNull K key, @NotNull Consumer<X> initializer) throws DuplicateKeyException {
+    public final @NotNull X createSync(@NotNull K key, @NotNull Consumer<X> initializer) throws DuplicateKeyException {
         Preconditions.checkNotNull(key, "Key cannot be null");
         Preconditions.checkNotNull(initializer, "Initializer cannot be null");
 
@@ -131,7 +134,7 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
     }
 
     @Override
-    public final void delete(@NotNull K key) {
+    public final void deleteSync(@NotNull K key) {
         Preconditions.checkNotNull(key, "Key cannot be null");
         getLocalStore().remove(key);
         getDatabaseStore().remove(key);
@@ -139,30 +142,61 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
     }
 
     @Override
-    public final void delete(@NotNull X store) {
+    public final void deleteSync(@NotNull X store) {
         Preconditions.checkNotNull(store, "Store cannot be null");
         delete(store.getId());
     }
 
     @Override
-    public X update(@NotNull K key, @NotNull Consumer<X> updateFunction) {
+    public X updateSync(@NotNull K key, @NotNull Consumer<X> updateFunction) {
+        // This method is straight forward, we do the updates and block every step until we're done
         Preconditions.checkNotNull(key, "key cannot be null");
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null");
 
-        X originalEntity = read(key).orElse(null);
+        X originalEntity = readSync(key).orElse(null);
         if (originalEntity == null) {
             throw new NoSuchElementException("[StoreCache#update] Store not found with key: " + key);
         }
 
-        if (!this.getDatabaseStore().update(originalEntity, updateFunction)) {
+        if (!this.getDatabaseStore().updateSync(originalEntity, updateFunction)) {
             throw new IllegalStateException("[StoreCache#update] Failed to update store with key: " + key);
         }
         return originalEntity;
     }
 
     @Override
-    public X update(@NotNull X store, @NotNull Consumer<X> updateFunction) {
-        return update(store.getId(), updateFunction);
+    public CompletableFuture<X> update(@NotNull K key, @NotNull Consumer<X> updateFunction) {
+        // This method is less straight forward, because DataStore is an async-first system
+        // The goal is to update the object (in cache) one time before we return control
+        // Then we complete the rest of the operation asynchronously, pushing the final values to
+        //  the cached copy once done (so that any updates from database are reflected)
+        Preconditions.checkNotNull(key, "key cannot be null");
+        Preconditions.checkNotNull(updateFunction, "Update function cannot be null");
+
+        X originalEntity = readSync(key).orElse(null);
+        if (originalEntity == null) {
+            throw new NoSuchElementException("[StoreCache#update] Store not found with key: " + key);
+        }
+
+        // Calling the async update() method will not only just return this future
+        // In the method, it will apply the updateFunction to the originalEntity one time
+        // Such that when we return the originalEntity here, it has already been updated (pending finalization)
+        StorageUpdateTask<K, X> updateTask = this.getDatabaseStore().update(originalEntity, updateFunction);
+
+        // Do the finalization (writing to db with transactions) asynchronously
+        // Listen to this async result just for logging purposes
+        updateTask.completeAsync().whenComplete((b, t) -> {
+            if (t != null) {
+                DataStoreFileLogger.warn("Failed to update Store with key: " + key, t);
+            }
+            if (!b) {
+                DataStoreFileLogger.warn("Failed to update Store with key: " + key);
+            }
+        });
+
+        // Return the final future so that if they want to listen to the final update, they can
+        // But the originalEntity is already updated (pending finalization)
+        return updateTask.getFinalFuture();
     }
 
     // ------------------------------------------------------ //
@@ -440,7 +474,7 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
         }
 
         // 3. -> Obtain the Profile by its ID
-        Optional<X> o = this.read(id);
+        Optional<X> o = this.readSync(id);
         if (o.isPresent() && !field.equals(value, field.getValue(o.get()))) {
             // This can happen if:
             //    The local copy had its field changed

@@ -51,8 +51,8 @@ public abstract class StoreObjectCache<X extends StoreObject<X>> extends StoreCa
     // CRUD Methods                                           //
     // ------------------------------------------------------ //
     @Override
-    public final @NotNull X create(@NotNull Consumer<X> initializer) throws DuplicateKeyException {
-        return this.create(UUID.randomUUID().toString(), initializer);
+    public final @NotNull X createSync(@NotNull Consumer<X> initializer) throws DuplicateKeyException {
+        return this.createSync(UUID.randomUUID().toString(), initializer);
     }
 
     // ------------------------------------------------------ //

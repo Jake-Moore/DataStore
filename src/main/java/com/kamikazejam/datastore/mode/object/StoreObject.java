@@ -52,12 +52,12 @@ public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, 
     //                     CRUD Helpers                      //
     // ----------------------------------------------------- //
     @Override
-    public T update(@NotNull Consumer<T> updateFunction) {
-        return this.getCache().update(this.getId(), updateFunction);
+    public T updateSync(@NotNull Consumer<T> updateFunction) {
+        return this.getCache().updateSync(this.getId(), updateFunction);
     }
     @Override
-    public void delete() {
-        this.getCache().delete(this.getId());
+    public void deleteSync() {
+        this.getCache().deleteSync(this.getId());
     }
 
     // ----------------------------------------------------- //

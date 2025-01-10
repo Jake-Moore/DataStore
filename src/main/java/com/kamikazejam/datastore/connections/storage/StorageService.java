@@ -6,7 +6,9 @@ import com.kamikazejam.datastore.base.Store;
 import com.kamikazejam.datastore.base.StoreCache;
 import com.kamikazejam.datastore.base.index.IndexedField;
 import com.kamikazejam.datastore.base.log.LoggerService;
+import com.kamikazejam.datastore.base.storage.data.StorageUpdateTask;
 import org.jetbrains.annotations.Blocking;
+import org.jetbrains.annotations.NonBlocking;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,7 +33,16 @@ public abstract class StorageService extends LoggerService implements Service {
      * If found, then the document in the database is replaced using a transaction. (providing atomicity)
      * @return If the Store was replaced. (if the db was updated)
      */
-    public abstract <K, X extends Store<X, K>> boolean update(Cache<K, X> cache, X store, @NotNull Consumer<X> updateFunction);
+    @Blocking
+    public abstract <K, X extends Store<X, K>> boolean updateSync(Cache<K, X> cache, X store, @NotNull Consumer<X> updateFunction);
+
+    /**
+     * Replace a Store in this database. This requires that we can find the Store in the database.<br>
+     * If found, then the document in the database is replaced using a transaction. (providing atomicity)
+     * @return If the Store was replaced. (if the db was updated)
+     */
+    @NonBlocking
+    public abstract <K, X extends Store<X, K>> @NotNull StorageUpdateTask<K, X> update(Cache<K, X> cache, X store, @NotNull Consumer<X> updateFunction);
 
     /**
      * Retrieve a Store from this store. Requires the cache to fetch it from.

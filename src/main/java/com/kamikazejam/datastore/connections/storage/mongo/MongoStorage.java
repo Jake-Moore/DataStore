@@ -6,6 +6,7 @@ import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
 import com.kamikazejam.datastore.base.StoreCache;
 import com.kamikazejam.datastore.base.index.IndexedField;
+import com.kamikazejam.datastore.base.storage.data.StorageUpdateTask;
 import com.kamikazejam.datastore.connections.config.MongoConfig;
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor;
 import com.kamikazejam.datastore.connections.storage.StorageService;
@@ -155,7 +156,7 @@ public class MongoStorage extends StorageService {
     //  and the other will have its query fail and will automatically retry.
     // (MongoDB provides the document-level locking already)
     @Override
-    public <K, X extends Store<X, K>> boolean update(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
+    public <K, X extends Store<X, K>> boolean updateSync(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
         // Create a single base copy that we'll clone for each attempt
         final X baseCopyFinal = JacksonUtil.deepCopy(originalStore);
 
@@ -168,6 +169,18 @@ public class MongoStorage extends StorageService {
             DataStoreFileLogger.warn("Failed to update Store in MongoDB Layer after all retries: " + originalStore.getId(), e);
             return false;
         }
+    }
+
+    @Override
+    public <K, X extends Store<X, K>> @NotNull StorageUpdateTask<K, X> update(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
+        // Step 1: Copy the originalStore prior to any applications of the updateFunction
+        final X baseCopy = JacksonUtil.deepCopy(originalStore);
+
+        // Step 2: Update the originalStore with the updateFunction (making the changes available as this method returns)
+        updateFunction.accept(originalStore);
+
+        // Step 3: Return a new StorageUpdateTask that can finish the changes later
+        return new StorageUpdateTask<>(cache, baseCopy, originalStore);
     }
 
     @Override

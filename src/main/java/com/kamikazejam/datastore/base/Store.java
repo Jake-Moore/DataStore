@@ -29,40 +29,42 @@ public interface Store<T extends Store<T, K>, K> {
     Set<FieldProvider> getCustomFields();
 
     // ----------------------------------------------------- //
-    //                     CRUD Helpers                      //
-    // ----------------------------------------------------- //
-    /**
-     * Modifies this Store in a controlled environment where modifications are allowed
-     * @return The updated Store object. (READ-ONLY)
-     */
-    @Blocking
-    T update(@NotNull Consumer<T> updateFunction);
-
-    /**
-     * Deletes this Store object (removes from both cache and database)
-     */
-    @Blocking
-    void delete();
-
-    // ----------------------------------------------------- //
     //                 CRUD Helpers (Async)                  //
     // ----------------------------------------------------- //
-    /**
-     * Modifies this Store in a controlled environment where modifications are allowed
-     * @return The updated Store object. (READ-ONLY)
-     */
-    @NonBlocking
-    default CompletableFuture<T> updateAsync(@NotNull Consumer<T> updateFunction) {
-        return CompletableFuture.supplyAsync(() -> update(updateFunction));
-    }
+    // TODO
+//    /**
+//     * Modifies this Store in a controlled environment where modifications are allowed
+//     * @return The updated Store object. (READ-ONLY)
+//     */
+//    @NonBlocking
+//    default CompletableFuture<T> update(@NotNull Consumer<T> updateFunction) {
+//        return CompletableFuture.supplyAsync(() -> updateSync(updateFunction));
+//    }
+//
+//    /**
+//     * Deletes this Store object (removes from both cache and database)
+//     */
+//    @NonBlocking
+//    default void delete() {
+//        CompletableFuture.runAsync(this::deleteSync);
+//    }
 
-    /**
-     * Deletes this Store object (removes from both cache and database)
-     */
-    @NonBlocking
-    default void deleteAsync() {
-        CompletableFuture.runAsync(this::delete);
-    }
+    // ----------------------------------------------------- //
+    //                  CRUD Helpers (sync)                  //
+    // ----------------------------------------------------- //
+    // TODO
+//    /**
+//     * Modifies this Store in a controlled environment where modifications are allowed
+//     * @return The updated Store object. (READ-ONLY)
+//     */
+//    @Blocking
+//    T updateSync(@NotNull Consumer<T> updateFunction);
+//
+//    /**
+//     * Deletes this Store object (removes from both cache and database)
+//     */
+//    @Blocking
+//    void deleteSync();
 
     // ----------------------------------------------------- //
     //                Api / Internal Methods                 //

@@ -2,7 +2,10 @@ package com.kamikazejam.datastore.base.storage;
 
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
+import com.kamikazejam.datastore.base.storage.data.StorageUpdateTask;
 import lombok.Getter;
+import org.jetbrains.annotations.Blocking;
+import org.jetbrains.annotations.NonBlocking;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
@@ -27,7 +30,11 @@ public abstract class StorageDatabaseAdapter<K, X extends Store<X, K>> implement
 
     protected abstract boolean save(Cache<K, X> cache, @NotNull X store);
 
-    protected abstract boolean update(Cache<K, X> cache, @NotNull X store, @NotNull Consumer<X> updateFunction);
+    @Blocking
+    protected abstract boolean updateSync(Cache<K, X> cache, @NotNull X store, @NotNull Consumer<X> updateFunction);
+
+    @NonBlocking
+    protected abstract @NotNull StorageUpdateTask<K, X> update(Cache<K, X> cache, @NotNull X store, @NotNull Consumer<X> updateFunction);
 
     protected abstract boolean has(Cache<K, X> cache, @NotNull K key);
 
@@ -58,7 +65,17 @@ public abstract class StorageDatabaseAdapter<K, X extends Store<X, K>> implement
      * @param updateFunction The function to update the Store with.
      * @return If the Store was replaced. (if the db was updated)
      */
-    public boolean update(@NotNull X store, @NotNull Consumer<X> updateFunction) {
+    public boolean updateSync(@NotNull X store, @NotNull Consumer<X> updateFunction) {
+        return this.updateSync(this.cache, store, updateFunction);
+    }
+
+    /**
+     * Replace a Store in this database. This requires that we can find the Store in the database.<br>
+     * If found, then the document in the database is replaced using a transaction. (providing atomicity)
+     * @param updateFunction The function to update the Store with.
+     * @return If the Store was replaced. (if the db was updated)
+     */
+    public @NotNull StorageUpdateTask<K, X> update(@NotNull X store, @NotNull Consumer<X> updateFunction) {
         return this.update(this.cache, store, updateFunction);
     }
 
