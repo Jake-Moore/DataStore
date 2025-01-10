@@ -44,7 +44,6 @@ public class MongoStorage extends StorageService {
     private boolean mongoInitConnect = false;
     @Setter
     private boolean mongoConnected = false;
-    @Setter
     private long mongoPingNS = 1_000_000; // Default to 1ms (is updated every cluster and heartbeat event)
 
     // MongoDB
@@ -374,5 +373,10 @@ public class MongoStorage extends StorageService {
     @Override
     public long getAveragePingNanos() {
         return this.mongoPingNS;
+    }
+
+    public void setMongoPingNS(long mongoPingNS) {
+        this.mongoPingNS = mongoPingNS;
+        this.debug("MongoDB Ping: " + ((this.mongoPingNS / 1_000_000L)) + "ms");
     }
 }

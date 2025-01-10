@@ -24,7 +24,7 @@ import com.mongodb.client.result.UpdateResult;
 @SuppressWarnings("UnusedReturnValue")
 public class MongoTransactionHelper {
     private static final Random RANDOM = new Random();
-    public static final int DEFAULT_MAX_RETRIES = 15;
+    public static final int DEFAULT_MAX_RETRIES = 20;
     private static final int WRITE_CONFLICT_ERROR = 112;
 
     // Minimum and maximum backoff values to prevent extremes
@@ -170,7 +170,8 @@ public class MongoTransactionHelper {
     // Exponential backoff was way too slow, increasing the milliseconds far too fast
     // Linear backoff was selected to be more predictable and less extreme
     private static void applyBackoff(long attempt) {
-        long pingNanos = DataStoreSource.getStorageService().getAveragePingNanos();
+        // Divide by 2 since this method fetches the round trip time
+        long pingNanos = DataStoreSource.getStorageService().getAveragePingNanos() / 2;
         try {
             // Convert ping from nanos to ms and apply base multiplier
             long basePingMs = (pingNanos / 1_000_000) * (long)PING_MULTIPLIER;
