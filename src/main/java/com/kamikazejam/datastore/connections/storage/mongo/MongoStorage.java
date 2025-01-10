@@ -177,7 +177,9 @@ public class MongoStorage extends StorageService {
         final X baseCopy = JacksonUtil.deepCopy(originalStore);
 
         // Step 2: Update the originalStore with the updateFunction (making the changes available as this method returns)
+        originalStore.setReadOnly(false);
         updateFunction.accept(originalStore);
+        originalStore.setReadOnly(true);
 
         // Step 3: Return a new StorageUpdateTask that can finish the changes later
         return new StorageUpdateTask<>(cache, baseCopy, originalStore, () -> {
