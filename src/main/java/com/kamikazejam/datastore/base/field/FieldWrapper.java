@@ -53,7 +53,7 @@ public class FieldWrapper<T> implements FieldProvider {
     }
 
     // Generic constructor for any collection type
-    public static <C extends Collection<E>, E> FieldWrapper<C> ofColl(
+    static <C extends Collection<E>, E> FieldWrapper<C> ofColl(
             @NotNull String name,
             @Nullable C defaultValue,
             @NotNull Class<? super C> collectionType
@@ -62,7 +62,7 @@ public class FieldWrapper<T> implements FieldProvider {
     }
 
     // Generic constructor for any map type
-    public static <K, V, M extends Map<K,V>> FieldWrapper<M> ofMap(
+    static <K, V, M extends Map<K,V>> FieldWrapper<M> ofMap(
             @NotNull String name,
             @Nullable M defaultValue,
             @NotNull Class<? super M> mapType
