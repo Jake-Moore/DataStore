@@ -1,18 +1,24 @@
 package com.kamikazejam.datastore.connections.monitor;
 
+import java.util.concurrent.TimeUnit;
+
+import org.jetbrains.annotations.NotNull;
+
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.connections.storage.mongo.MongoStorage;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.event.ClusterClosedEvent;
 import com.mongodb.event.ClusterDescriptionChangedEvent;
 import com.mongodb.event.ClusterListener;
-import org.jetbrains.annotations.NotNull;
+import com.mongodb.event.ServerHeartbeatSucceededEvent;
+import com.mongodb.event.ServerMonitorListener;
 
 // Previously this class had used heartbeat events, but the first heartbeat was sent 10 seconds after initial connection.
 // That was adding 10 seconds to the ttl of the server, which was unacceptable.
 /**
  * Monitors the MongoDB connection status and logs changes, we use cluster listeners to get the current status of the MongoDB connection.
  */
-public class MongoMonitor implements ClusterListener {
+public class MongoMonitor implements ClusterListener, ServerMonitorListener {
     private final @NotNull MongoStorage service;
     public MongoMonitor(@NotNull MongoStorage service) {
         Preconditions.checkNotNull(service, "MongoStorage cannot be null");
@@ -23,6 +29,16 @@ public class MongoMonitor implements ClusterListener {
     public void clusterDescriptionChanged(@NotNull ClusterDescriptionChangedEvent event) {
         boolean wasConnected = event.getPreviousDescription().hasWritableServer();
         boolean isConnected = event.getNewDescription().hasWritableServer();
+
+        // Update the ping value
+        if (!event.getNewDescription().getServerDescriptions().isEmpty()) {
+            long pingSumNS = 0;
+            for (ServerDescription server : event.getNewDescription().getServerDescriptions()) {
+                pingSumNS += server.getRoundTripTimeNanos();
+            }
+            long pingAvgNS = pingSumNS / event.getNewDescription().getServerDescriptions().size();
+            this.service.setMongoPingNS(pingAvgNS);
+        }
         
         if (!wasConnected && isConnected) {
             if (!this.service.isMongoInitConnect()) {
@@ -42,5 +58,10 @@ public class MongoMonitor implements ClusterListener {
     @Override
     public void clusterClosed(@NotNull ClusterClosedEvent event) {
         this.service.setMongoConnected(false);
+    }
+
+    @Override
+    public void serverHeartbeatSucceeded(@NotNull ServerHeartbeatSucceededEvent event) {
+        this.service.setMongoPingNS(event.getElapsedTime(TimeUnit.NANOSECONDS));
     }
 }

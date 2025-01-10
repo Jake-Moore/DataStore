@@ -44,6 +44,8 @@ public class MongoStorage extends StorageService {
     private boolean mongoInitConnect = false;
     @Setter
     private boolean mongoConnected = false;
+    @Setter
+    private long mongoPingNS = 1_000_000; // Default to 1ms (is updated every cluster and heartbeat event)
 
     // MongoDB
     @Getter(AccessLevel.NONE)
@@ -237,9 +239,11 @@ public class MongoStorage extends StorageService {
         Preconditions.checkState(this.mongoClient == null, "[MongoStorage] MongoClient instance already exists!");
 
         try {
+            final MongoMonitor monitor = new MongoMonitor(this);
             MongoClientSettings.Builder settingsBuilder = MongoClientSettings.builder()
                     .uuidRepresentation(UuidRepresentation.STANDARD)
-                    .applyToClusterSettings(builder -> builder.addClusterListener(new MongoMonitor(this)));
+                    .applyToClusterSettings(builder -> builder.addClusterListener(monitor))
+                    .applyToServerSettings(builder -> builder.addServerMonitorListener(monitor));
 
             // Using connection URI
             ConnectionString connectionString = new ConnectionString(MongoConfig.get().getUri());
@@ -365,5 +369,10 @@ public class MongoStorage extends StorageService {
         } catch (Exception ex) {
             return -1;
         }
+    }
+
+    @Override
+    public long getAveragePingNanos() {
+        return this.mongoPingNS;
     }
 }

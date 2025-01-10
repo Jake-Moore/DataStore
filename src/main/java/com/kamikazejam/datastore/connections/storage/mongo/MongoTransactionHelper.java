@@ -1,5 +1,11 @@
 package com.kamikazejam.datastore.connections.storage.mongo;
 
+import java.util.Random;
+import java.util.function.Consumer;
+
+import org.bson.Document;
+import org.jetbrains.annotations.NotNull;
+
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.base.Cache;
@@ -12,22 +18,20 @@ import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
-import com.mongodb.client.result.UpdateResult;
-import org.bson.Document;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.Random;
-import java.util.function.Consumer;
-
 import static com.mongodb.client.model.Filters.eq;
+import com.mongodb.client.result.UpdateResult;
 
 @SuppressWarnings("UnusedReturnValue")
-class MongoTransactionHelper {
+public class MongoTransactionHelper {
     private static final Random RANDOM = new Random();
-    private static final int DEFAULT_MAX_RETRIES = 15;
-    private static final int BASE_BACKOFF_MS = 50;      // Start with 50ms delay
-    private static final int LINEAR_BACKOFF_MS = 20;    // Increase 20ms per attempt
+    public static final int DEFAULT_MAX_RETRIES = 15;
     private static final int WRITE_CONFLICT_ERROR = 112;
+
+    // Minimum and maximum backoff values to prevent extremes
+    private static final long MIN_BACKOFF_MS = 50;
+    private static final long MAX_BACKOFF_MS = 2000;
+    private static final double PING_MULTIPLIER = 2.0;      // Base multiplier for ping time
+    private static final double ATTEMPT_MULTIPLIER = 1.5;   // How much to increase per attempt
 
     /**
      * Execute a MongoDB document update with retries and version checking
@@ -166,14 +170,22 @@ class MongoTransactionHelper {
     // Exponential backoff was way too slow, increasing the milliseconds far too fast
     // Linear backoff was selected to be more predictable and less extreme
     private static void applyBackoff(long attempt) {
+        long pingNanos = DataStoreSource.getStorageService().getAveragePingNanos();
         try {
-            long linearBackoff = BASE_BACKOFF_MS + (LINEAR_BACKOFF_MS * attempt);
-            // add the jitter (+- 25%)
-            long half = linearBackoff / 2;
-            long jitter = RANDOM.nextLong(half) - (half / 2);
-
-            long backoff = linearBackoff + jitter;
-            Thread.sleep(backoff);
+            // Convert ping from nanos to ms and apply base multiplier
+            long basePingMs = (pingNanos / 1_000_000) * (long)PING_MULTIPLIER;
+            
+            // Calculate backoff with attempt scaling
+            long backoffMs = basePingMs + (long)(basePingMs * ATTEMPT_MULTIPLIER * attempt);
+            
+            // Clamp the value between min and max
+            backoffMs = Math.max(MIN_BACKOFF_MS, Math.min(backoffMs, MAX_BACKOFF_MS));
+            
+            // Add jitter (±25%)
+            long half = backoffMs / 4; // 25% of total
+            long jitter = RANDOM.nextLong(-half, half);
+            
+            Thread.sleep(backoffMs + jitter);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Operation interrupted during backoff", e);

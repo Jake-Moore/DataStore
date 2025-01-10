@@ -81,6 +81,11 @@ public abstract class StorageService extends LoggerService implements Service {
     @Blocking
     public abstract long getPingNano();
 
+    /**
+     * Get the average ping to the storage service. (cached value from last heartbeat)
+     */
+    public abstract long getAveragePingNanos();
+
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
