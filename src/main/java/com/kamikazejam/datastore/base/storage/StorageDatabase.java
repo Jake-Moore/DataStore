@@ -61,8 +61,8 @@ public abstract class StorageDatabase<K, X extends Store<X, K>> extends StorageD
     }
 
     @Override
-    protected boolean update(Cache<K, X> cache, @NotNull X store, @NotNull Consumer<X> updateFunction) {
-        return storageService.update(cache, store, updateFunction);
+    protected boolean updateSync(Cache<K, X> cache, @NotNull X store, @NotNull Consumer<X> updateFunction) {
+        return storageService.updateSync(cache, store, updateFunction);
     }
 
     @Override

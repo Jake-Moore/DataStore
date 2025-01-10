@@ -155,7 +155,7 @@ public class MongoStorage extends StorageService {
     //  and the other will have its query fail and will automatically retry.
     // (MongoDB provides the document-level locking already)
     @Override
-    public <K, X extends Store<X, K>> boolean update(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
+    public <K, X extends Store<X, K>> boolean updateSync(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
         // Create a single base copy that we'll clone for each attempt
         final X baseCopyFinal = JacksonUtil.deepCopy(originalStore);
 

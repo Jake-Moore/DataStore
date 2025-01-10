@@ -71,7 +71,7 @@ public abstract class StoreProfileCache<X extends StoreProfile<X>> extends Store
     //                          CRUD                         //
     // ----------------------------------------------------- //
     @Override
-    public @NotNull X read(@NotNull Player player, boolean cacheStore) {
+    public @NotNull X readSync(@NotNull Player player, boolean cacheStore) {
         X store = StoreProfileLoader.loadOrCreateStore(this, player.getUniqueId(), true, player.getName());
         if (cacheStore) { this.cache(store); }
         return store;
@@ -79,7 +79,7 @@ public abstract class StoreProfileCache<X extends StoreProfile<X>> extends Store
 
     @Override
     public @NotNull Iterable<X> readAll(boolean cacheStores) {
-        return () -> new TransformingIterator<>(this.getIDs().iterator(), id -> read(id, cacheStores).orElse(null));
+        return () -> new TransformingIterator<>(this.getIDs().iterator(), id -> readSync(id, cacheStores).orElse(null));
     }
 
     @Override
@@ -165,7 +165,7 @@ public abstract class StoreProfileCache<X extends StoreProfile<X>> extends Store
         // Stream online players and map them to their StoreProfile
         return Bukkit.getOnlinePlayers().stream()
                 .filter(PlayerUtil::isFullyValidPlayer)
-                .map(this::read)
+                .map(this::readSync)
                 .collect(Collectors.toSet());
     }
 

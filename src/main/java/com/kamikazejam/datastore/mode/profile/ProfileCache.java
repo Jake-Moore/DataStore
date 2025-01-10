@@ -23,18 +23,18 @@ import java.util.function.Consumer;
 @SuppressWarnings({"unused", "BlockingMethodInNonBlockingContext"})
 public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> {
 
-    // ------------------------------------------------------ //
-    // CRUD Methods                                           //
-    // ------------------------------------------------------ //
+    // ----------------------------------------------------- //
+    //                 CRUD Helpers (Async)                  //
+    // ----------------------------------------------------- //
 
     /**
      * Read a StoreProfile (by player) from this cache (will fetch from database, will create if necessary)
      * @param player The player owning this store.
      * @return The StoreProfile object. (READ-ONLY)
      */
-    @Blocking
+    @NonBlocking
     @NotNull
-    default X read(@NotNull Player player) {
+    default CompletableFuture<X> read(@NotNull Player player) {
         return this.read(player, true);
     }
 
@@ -44,41 +44,43 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The StoreProfile object. (READ-ONLY)
      */
-    @Blocking
+    @NonBlocking
     @NotNull
-    X read(@NotNull Player player, boolean cacheStore);
+    default CompletableFuture<X> read(@NotNull Player player, boolean cacheStore) {
+        return CompletableFuture.supplyAsync(() -> this.readSync(player, cacheStore));
+    }
 
     /**
      * Modifies a Store in a controlled environment where modifications are allowed
      * @throws NoSuchElementException if the Store (by this key) is not found
      * @return The updated Store object. (READ-ONLY)
      */
-    @Blocking
-    default X update(@NotNull Player player, @NotNull Consumer<X> updateFunction) {
-        return this.update(player.getUniqueId(), updateFunction);
+    @NonBlocking
+    default CompletableFuture<X> update(@NotNull Player player, @NotNull Consumer<X> updateFunction) {
+        return CompletableFuture.supplyAsync(() -> this.updateSync(player, updateFunction));
     }
 
     /**
      * Deletes a Store (removes from both cache and database)
      */
-    @Blocking
+    @NonBlocking
     default void delete(@NotNull Player player) {
-        this.delete(player.getUniqueId());
+        CompletableFuture.runAsync(() -> this.deleteSync(player));
     }
 
 
-    // ------------------------------------------------------ //
-    // CRUD Methods (Async)                                   //
-    // ------------------------------------------------------ //
+    // ----------------------------------------------------- //
+    //                  CRUD Helpers (sync)                  //
+    // ----------------------------------------------------- //
     /**
      * Read a StoreProfile (by player) from this cache (will fetch from database, will create if necessary)
      * @param player The player owning this store.
      * @return The StoreProfile object. (READ-ONLY)
      */
-    @NonBlocking
+    @Blocking
     @NotNull
-    default CompletableFuture<X> readAsync(@NotNull Player player) {
-        return this.readAsync(player, true);
+    default X readSync(@NotNull Player player) {
+        return this.readSync(player, true);
     }
 
     /**
@@ -87,28 +89,26 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The StoreProfile object. (READ-ONLY)
      */
-    @NonBlocking
+    @Blocking
     @NotNull
-    default CompletableFuture<X> readAsync(@NotNull Player player, boolean cacheStore) {
-        return CompletableFuture.supplyAsync(() -> this.read(player, cacheStore));
-    }
+    X readSync(@NotNull Player player, boolean cacheStore);
 
     /**
      * Modifies a Store in a controlled environment where modifications are allowed
      * @throws NoSuchElementException if the Store (by this key) is not found
      * @return The updated Store object. (READ-ONLY)
      */
-    @NonBlocking
-    default CompletableFuture<X> updateAsync(@NotNull Player player, @NotNull Consumer<X> updateFunction) {
-        return this.updateAsync(player.getUniqueId(), updateFunction);
+    @Blocking
+    default X updateSync(@NotNull Player player, @NotNull Consumer<X> updateFunction) {
+        return this.updateSync(player.getUniqueId(), updateFunction);
     }
 
     /**
      * Deletes a Store (removes from both cache and database)
      */
-    @NonBlocking
-    default void deleteAsync(@NotNull Player player) {
-        this.deleteAsync(player.getUniqueId());
+    @Blocking
+    default void deleteSync(@NotNull Player player) {
+        this.deleteSync(player.getUniqueId());
     }
 
     // ------------------------------------------------------ //

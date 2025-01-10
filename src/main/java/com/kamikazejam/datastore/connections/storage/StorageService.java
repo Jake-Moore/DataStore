@@ -31,7 +31,8 @@ public abstract class StorageService extends LoggerService implements Service {
      * If found, then the document in the database is replaced using a transaction. (providing atomicity)
      * @return If the Store was replaced. (if the db was updated)
      */
-    public abstract <K, X extends Store<X, K>> boolean update(Cache<K, X> cache, X store, @NotNull Consumer<X> updateFunction);
+    @Blocking
+    public abstract <K, X extends Store<X, K>> boolean updateSync(Cache<K, X> cache, X store, @NotNull Consumer<X> updateFunction);
 
     /**
      * Retrieve a Store from this store. Requires the cache to fetch it from.
