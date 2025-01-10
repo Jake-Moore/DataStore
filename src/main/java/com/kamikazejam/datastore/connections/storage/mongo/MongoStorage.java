@@ -23,7 +23,9 @@ import lombok.Setter;
 import org.bson.Document;
 import org.bson.UuidRepresentation;
 import org.bson.conversions.Bson;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -382,6 +384,7 @@ public class MongoStorage extends StorageService {
         this.recalculatePing();
     }
 
+    private transient @Nullable BukkitTask pingNotifierTask = null;
     private void recalculatePing() {
         if (!this.mongoConnected) { return; }
         long pingSumNS = 0;
@@ -389,6 +392,14 @@ public class MongoStorage extends StorageService {
             pingSumNS += ping;
         }
         this.mongoPingNS = pingSumNS / this.serverPingMap.size();
-        this.debug("MongoDB Ping: " + ((this.mongoPingNS / 1_000_000L)) + "ms");
+
+        // Buffer the console log so any subsequent pings that come in within 1 second will be ignored
+        // This is because we might be connected to a cluster, whose heartbeat pings will call this method individually
+        if (pingNotifierTask == null) {
+            pingNotifierTask = Bukkit.getScheduler().runTaskLater(DataStoreSource.get(), () -> {
+                pingNotifierTask = null;
+                this.debug("MongoDB Ping: " + ((this.mongoPingNS / 1_000_000L)) + "ms");
+            }, 20L);
+        }
     }
 }
