@@ -87,10 +87,16 @@ public interface Store<T extends Store<T, K>, K> {
     boolean equals(Object object);
 
     /**
-     * Gets the optimistic versioning field
+     * Gets the optimistic versioning FieldWrapper
      */
     @NotNull
-    FieldWrapper<Long> getVersion();
+    FieldWrapper<Long> getVersionField();
+
+    /**
+     * Gets the id FieldWrapper
+     */
+    @NotNull
+    FieldWrapper<K> getIdField();
 
     /**
      * @return If this Store is read-only right now

@@ -11,6 +11,7 @@ import com.kamikazejam.datastore.base.storage.StorageMethods;
 import com.kamikazejam.datastore.base.store.StoreInstantiator;
 import com.kamikazejam.datastore.mode.object.ObjectCache;
 import com.kamikazejam.datastore.mode.profile.ProfileCache;
+import com.mongodb.DuplicateKeyException;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Blocking;
@@ -37,7 +38,6 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
     // ------------------------------------------------------ //
 
     // create is in ObjectCache or ProfileCache
-    // readOrCreate is in ObjectCache or ProfileCache
 
     /**
      * Read a Store from this cache (or the database if it doesn't exist in the cache)
@@ -55,6 +55,24 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      */
     @NotNull
     Optional<X> read(@NotNull K key, boolean cacheStore);
+
+    /**
+     * Get a Store object from the cache or create a new one if it doesn't exist.<br>
+     * This specific method will override any key set in the initializer. Since the key is an argument.
+     * @param key The key of the Store to get or create.
+     * @param initializer The initializer for the Store if it doesn't exist.
+     * @return The Store object. (READ-ONLY) (fetched or created)
+     */
+    @NotNull
+    X readOrCreate(@NotNull K key, @NotNull Consumer<X> initializer);
+
+    /**
+     * Create a new Store object with the provided key & initializer.<br>
+     * If you have a specific key for this Store, set it in the initializer.
+     * @throws DuplicateKeyException If the key already exists in the cache. (failed to create)
+     * @return The created Store object. (READ-ONLY)
+     */
+    X create(@NotNull K key, @NotNull Consumer<X> initializer) throws DuplicateKeyException;
 
     /**
      * Modifies a Store in a controlled environment where modifications are allowed

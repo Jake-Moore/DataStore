@@ -12,6 +12,7 @@ import com.kamikazejam.datastore.base.store.CacheLoggerInstantiator;
 import com.kamikazejam.datastore.base.store.StoreInstantiator;
 import com.kamikazejam.datastore.mode.profile.StoreProfileCache;
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener;
+import com.mongodb.DuplicateKeyException;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.IllegalPluginAccessException;
@@ -85,6 +86,47 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
     @Override
     public final @NotNull Optional<X> read(@NotNull K key) {
         return this.read(key, true);
+    }
+
+    @Override
+    public final @NotNull X readOrCreate(@NotNull K key, @NotNull Consumer<X> initializer) {
+        Preconditions.checkNotNull(key, "Key cannot be null");
+        Preconditions.checkNotNull(initializer, "Initializer cannot be null");
+
+        Optional<X> o = read(key);
+        return o.orElseGet(() -> create(key, initializer));
+    }
+
+    @Override
+    public final @NotNull X create(@NotNull K key, @NotNull Consumer<X> initializer) throws DuplicateKeyException {
+        Preconditions.checkNotNull(key, "Key cannot be null");
+        Preconditions.checkNotNull(initializer, "Initializer cannot be null");
+
+        try {
+            // Create a new instance in modifiable state
+            X store = instantiator.instantiate();
+            store.initialize();
+            store.setReadOnly(false);
+
+            // Set the id first (allowing the initializer to change it if necessary)
+            store.getIdField().set(key);
+            // Initialize the store
+            initializer.accept(store);
+            // Enforce Version 0 for creation
+            store.getVersionField().set(0L);
+
+            store.setReadOnly(true);
+
+            // Save the store to our database implementation & cache
+            this.cache(store);
+            this.getDatabaseStore().save(store);
+            return store;
+        } catch (DuplicateKeyException d) {
+            this.getLoggerService().severe("Failed to create Store: Duplicate Key...");
+            throw d;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create Store", e);
+        }
     }
 
     @Override

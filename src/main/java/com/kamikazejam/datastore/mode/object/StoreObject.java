@@ -5,8 +5,6 @@ import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
-import lombok.AccessLevel;
-import lombok.Getter;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -14,7 +12,6 @@ import javax.persistence.Id;
 import java.util.*;
 import java.util.function.Consumer;
 
-@Getter
 @SuppressWarnings({"rawtypes", "unused"})
 public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, String> {
     // ----------------------------------------------------- //
@@ -31,11 +28,11 @@ public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, 
     // ----------------------------------------------------- //
     @JsonIgnore
     protected transient StoreObjectCache<T> cache;
-    @Getter(AccessLevel.NONE) @JsonIgnore
+    @JsonIgnore
     protected transient boolean validObject = true;
-    @Getter(AccessLevel.NONE) @JsonIgnore
+    @JsonIgnore
     protected transient boolean readOnly;
-    @Getter(AccessLevel.NONE) @JsonIgnore
+    @JsonIgnore
     protected transient boolean initialized = false;
 
 
@@ -135,6 +132,16 @@ public abstract class StoreObject<T extends StoreObject<T>> implements Store<T, 
             throw new IllegalArgumentException("Cache must be a StoreObjectCache");
         }
         this.cache = oCache;
+    }
+
+    @Override
+    public @NotNull FieldWrapper<Long> getVersionField() {
+        return this.version;
+    }
+
+    @Override
+    public @NotNull FieldWrapper<String> getIdField() {
+        return this.id;
     }
 
     @Override

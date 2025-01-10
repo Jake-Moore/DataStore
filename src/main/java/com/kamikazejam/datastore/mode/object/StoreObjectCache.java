@@ -51,52 +51,9 @@ public abstract class StoreObjectCache<X extends StoreObject<X>> extends StoreCa
     // CRUD Methods                                           //
     // ------------------------------------------------------ //
     @Override
-    public final @NotNull X create(@NotNull String key, @NotNull Consumer<X> initializer) throws DuplicateKeyException {
-        Preconditions.checkNotNull(key, "Key cannot be null");
-        Preconditions.checkNotNull(initializer, "Initializer cannot be null");
-
-        try {
-            // Create a new instance in modifiable state
-            X store = instantiator.instantiate();
-            store.initialize();
-            store.setReadOnly(false);
-
-            // Set the id first (allowing the initializer to change it if necessary)
-            store.id.set(key);
-            // Initialize the store
-            initializer.accept(store);
-            // Enforce Version 0 for creation
-            store.version.set(0L);
-
-            store.setReadOnly(true);
-
-            // Save the store to our database implementation & cache
-            this.cache(store);
-            this.getDatabaseStore().save(store);
-            return store;
-        } catch (DuplicateKeyException d) {
-            this.getLoggerService().severe("Failed to create Store: Duplicate Key...");
-            throw d;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create Store", e);
-        }
-    }
-
-    @Override
     public final @NotNull X create(@NotNull Consumer<X> initializer) throws DuplicateKeyException {
         return this.create(UUID.randomUUID().toString(), initializer);
     }
-
-    @Override
-    public final @NotNull X readOrCreate(@NotNull String key, @NotNull Consumer<X> initializer) {
-        Preconditions.checkNotNull(key, "Key cannot be null");
-        Preconditions.checkNotNull(initializer, "Initializer cannot be null");
-
-        Optional<X> o = read(key);
-        return o.orElseGet(() -> create(key, initializer));
-    }
-
-
 
     // ------------------------------------------------------ //
     // Cache Methods                                          //
@@ -182,7 +139,7 @@ public abstract class StoreObjectCache<X extends StoreObject<X>> extends StoreCa
 
             // If we want to cache, and have a local store that's newer -> update the local store
             // Note, if not caching then we won't update any local stores and won't cache the db store
-            if (cacheStores && local.isPresent() && dbStore.getVersion().get() >= local.get().getVersion().get()) {
+            if (cacheStores && local.isPresent() && dbStore.getVersionField().get() >= local.get().getVersionField().get()) {
                 StoreObjectCache.this.updateStoreFromNewer(local.get(), dbStore);
                 StoreObjectCache.this.cache(dbStore);
             }

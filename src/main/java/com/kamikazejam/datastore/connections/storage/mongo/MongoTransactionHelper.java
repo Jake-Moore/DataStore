@@ -1,11 +1,5 @@
 package com.kamikazejam.datastore.connections.storage.mongo;
 
-import java.util.Random;
-import java.util.function.Consumer;
-
-import org.bson.Document;
-import org.jetbrains.annotations.NotNull;
-
 import com.google.common.base.Preconditions;
 import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.base.Cache;
@@ -18,8 +12,14 @@ import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
-import static com.mongodb.client.model.Filters.eq;
 import com.mongodb.client.result.UpdateResult;
+import org.bson.Document;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Random;
+import java.util.function.Consumer;
+
+import static com.mongodb.client.model.Filters.eq;
 
 @SuppressWarnings("UnusedReturnValue")
 public class MongoTransactionHelper {
@@ -96,12 +96,12 @@ public class MongoTransactionHelper {
                 workingCopy.setReadOnly(false);
 
                 // Fetch Version prior to updates
-                long currentVersion = workingCopy.getVersion().get();
+                long currentVersion = workingCopy.getVersionField().get();
 
                 // Apply updates to the copy
                 updateFunction.accept(workingCopy);
                 // Increment version (Optimistic Versioning)
-                workingCopy.getVersion().set(currentVersion + 1);
+                workingCopy.getVersionField().set(currentVersion + 1);
 
                 final String id = cache.keyToString(workingCopy.getId());
                 Document doc = JacksonUtil.serializeToDocument(workingCopy);

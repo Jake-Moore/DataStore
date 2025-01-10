@@ -6,8 +6,6 @@ import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
 import com.kamikazejam.datastore.util.PlayerUtil;
-import lombok.AccessLevel;
-import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -19,7 +17,6 @@ import javax.persistence.Id;
 import java.util.*;
 import java.util.function.Consumer;
 
-@Getter
 @SuppressWarnings({"rawtypes", "unused"})
 public abstract class StoreProfile<T extends StoreProfile<T>> implements Store<T, UUID> {
     // ----------------------------------------------------- //
@@ -39,11 +36,11 @@ public abstract class StoreProfile<T extends StoreProfile<T>> implements Store<T
     protected transient StoreProfileCache<T> cache;
     protected transient @Nullable Player player = null;
 
-    @Getter(AccessLevel.NONE) @JsonIgnore
+    @JsonIgnore
     protected transient boolean validObject = true;
-    @Getter(AccessLevel.NONE) @JsonIgnore
+    @JsonIgnore
     protected transient boolean readOnly;
-    @Getter(AccessLevel.NONE) @JsonIgnore
+    @JsonIgnore
     protected transient boolean initialized = false;
 
 
@@ -146,6 +143,16 @@ public abstract class StoreProfile<T extends StoreProfile<T>> implements Store<T
             throw new IllegalArgumentException("Cache must be a StoreProfileCache");
         }
         this.cache = oCache;
+    }
+
+    @Override
+    public @NotNull FieldWrapper<Long> getVersionField() {
+        return this.version;
+    }
+
+    @Override
+    public @NotNull FieldWrapper<UUID> getIdField() {
+        return this.id;
     }
 
     @Override
