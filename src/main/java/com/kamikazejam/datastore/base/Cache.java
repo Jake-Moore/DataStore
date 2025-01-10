@@ -13,15 +13,13 @@ import com.kamikazejam.datastore.mode.object.ObjectCache;
 import com.kamikazejam.datastore.mode.profile.ProfileCache;
 import com.mongodb.DuplicateKeyException;
 import org.bukkit.plugin.Plugin;
-import org.jetbrains.annotations.ApiStatus;
-import org.jetbrains.annotations.Blocking;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.*;
 
 import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
@@ -29,7 +27,7 @@ import java.util.function.Consumer;
  * Getters vary by Store type, they are defined in the store-specific interfaces:
  * {@link ObjectCache} and {@link ProfileCache}
  */
-@SuppressWarnings({"UnusedReturnValue", "unused"})
+@SuppressWarnings({"UnusedReturnValue", "unused", "BlockingMethodInNonBlockingContext"})
 public interface Cache<K, X extends Store<X, K>> extends Service {
 
 
@@ -37,13 +35,15 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
     // CRUD Methods                                           //
     // ------------------------------------------------------ //
 
-    // create is in ObjectCache or ProfileCache
+    // create(initializer) & createAsync are in ObjectCache
+    // additional player methods are in ProfileCache
 
     /**
      * Read a Store from this cache (or the database if it doesn't exist in the cache)
      * @param key The key of the Store to read.
      * @return The Store object. (READ-ONLY) (optional)
      */
+    @Blocking
     @NotNull
     Optional<X> read(@NotNull K key);
 
@@ -53,6 +53,7 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The Store object. (READ-ONLY) (optional)
      */
+    @Blocking
     @NotNull
     Optional<X> read(@NotNull K key, boolean cacheStore);
 
@@ -63,6 +64,7 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * @param initializer The initializer for the Store if it doesn't exist.
      * @return The Store object. (READ-ONLY) (fetched or created)
      */
+    @Blocking
     @NotNull
     X readOrCreate(@NotNull K key, @NotNull Consumer<X> initializer);
 
@@ -72,6 +74,7 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * @throws DuplicateKeyException If the key already exists in the cache. (failed to create)
      * @return The created Store object. (READ-ONLY)
      */
+    @Blocking
     X create(@NotNull K key, @NotNull Consumer<X> initializer) throws DuplicateKeyException;
 
     /**
@@ -79,6 +82,7 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * @throws NoSuchElementException if the Store (by this key) is not found
      * @return The updated Store object. (READ-ONLY)
      */
+    @Blocking
     X update(@NotNull K key, @NotNull Consumer<X> updateFunction);
 
     /**
@@ -86,15 +90,18 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * @throws NoSuchElementException if the Store (by this key) is not found
      * @return The updated Store object. (READ-ONLY)
      */
+    @Blocking
     X update(@NotNull X store, @NotNull Consumer<X> updateFunction);
 
     /**
      * Deletes a Store by ID (removes from both cache and database)
      */
+    @Blocking
     void delete(@NotNull K key);
     /**
      * Deletes a Store (removes from both cache and database)
      */
+    @Blocking
     void delete(@NotNull X store);
 
     /**
@@ -105,6 +112,91 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
     @Blocking
     @NotNull
     Iterable<X> readAll(boolean cacheStores);
+
+    // ------------------------------------------------------ //
+    // CRUD Methods (Async)                                   //
+    // ------------------------------------------------------ //
+    /**
+     * Read a Store from this cache (or the database if it doesn't exist in the cache)
+     * @param key The key of the Store to read.
+     * @return The Store object. (READ-ONLY) (optional)
+     */
+    @NonBlocking
+    @NotNull
+    default CompletableFuture<Optional<X>> readAsync(@NotNull K key) {
+        return CompletableFuture.supplyAsync(() -> read(key));
+    }
+
+    /**
+     * Read a Store from this cache (or the database if it doesn't exist in the cache)
+     * @param key The key of the Store to read.
+     * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
+     * @return The Store object. (READ-ONLY) (optional)
+     */
+    @NonBlocking
+    @NotNull
+    default CompletableFuture<Optional<X>> readAsync(@NotNull K key, boolean cacheStore) {
+        return CompletableFuture.supplyAsync(() -> read(key, cacheStore));
+    }
+
+    /**
+     * Get a Store object from the cache or create a new one if it doesn't exist.<br>
+     * This specific method will override any key set in the initializer. Since the key is an argument.
+     * @param key The key of the Store to get or create.
+     * @param initializer The initializer for the Store if it doesn't exist.
+     * @return The Store object. (READ-ONLY) (fetched or created)
+     */
+    @NonBlocking
+    @NotNull
+    default CompletableFuture<X> readOrCreateAsync(@NotNull K key, @NotNull Consumer<X> initializer) {
+        return CompletableFuture.supplyAsync(() -> readOrCreate(key, initializer));
+    }
+
+    /**
+     * Create a new Store object with the provided key & initializer.<br>
+     * If you have a specific key for this Store, set it in the initializer.
+     * @throws DuplicateKeyException If the key already exists in the cache. (failed to create)
+     * @return The created Store object. (READ-ONLY)
+     */
+    @NonBlocking
+    default CompletableFuture<X> createAsync(@NotNull K key, @NotNull Consumer<X> initializer) throws DuplicateKeyException {
+        return CompletableFuture.supplyAsync(() -> create(key, initializer));
+    }
+
+    /**
+     * Modifies a Store in a controlled environment where modifications are allowed
+     * @throws NoSuchElementException if the Store (by this key) is not found
+     * @return The updated Store object. (READ-ONLY)
+     */
+    @NonBlocking
+    default CompletableFuture<X> updateAsync(@NotNull K key, @NotNull Consumer<X> updateFunction) {
+        return CompletableFuture.supplyAsync(() -> update(key, updateFunction));
+    }
+
+    /**
+     * Modifies a Store in a controlled environment where modifications are allowed
+     * @throws NoSuchElementException if the Store (by this key) is not found
+     * @return The updated Store object. (READ-ONLY)
+     */
+    @NonBlocking
+    default CompletableFuture<X> updateAsync(@NotNull X store, @NotNull Consumer<X> updateFunction) {
+        return CompletableFuture.supplyAsync(() -> update(store, updateFunction));
+    }
+
+    /**
+     * Deletes a Store by ID (removes from both cache and database)
+     */
+    @NonBlocking
+    default void deleteAsync(@NotNull K key) {
+        CompletableFuture.runAsync(() -> delete(key));
+    }
+    /**
+     * Deletes a Store (removes from both cache and database)
+     */
+    @NonBlocking
+    default void deleteAsync(@NotNull X store) {
+        CompletableFuture.runAsync(() -> delete(store));
+    }
 
 
     // ------------------------------------------------------ //

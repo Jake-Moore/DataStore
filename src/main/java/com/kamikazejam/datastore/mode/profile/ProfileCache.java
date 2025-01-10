@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
@@ -19,7 +20,7 @@ import java.util.function.Consumer;
  * All get options (when not handshaking) will create if necessary. This is because every
  * Player UUID is assumed to have a StoreProfile
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "BlockingMethodInNonBlockingContext"})
 public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> {
 
     // ------------------------------------------------------ //
@@ -31,6 +32,7 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
      * @param player The player owning this store.
      * @return The StoreProfile object. (READ-ONLY)
      */
+    @Blocking
     @NotNull
     default X read(@NotNull Player player) {
         return this.read(player, true);
@@ -42,6 +44,7 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The StoreProfile object. (READ-ONLY)
      */
+    @Blocking
     @NotNull
     X read(@NotNull Player player, boolean cacheStore);
 
@@ -50,6 +53,7 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
      * @throws NoSuchElementException if the Store (by this key) is not found
      * @return The updated Store object. (READ-ONLY)
      */
+    @Blocking
     default X update(@NotNull Player player, @NotNull Consumer<X> updateFunction) {
         return this.update(player.getUniqueId(), updateFunction);
     }
@@ -57,11 +61,55 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
     /**
      * Deletes a Store (removes from both cache and database)
      */
+    @Blocking
     default void delete(@NotNull Player player) {
         this.delete(player.getUniqueId());
     }
 
 
+    // ------------------------------------------------------ //
+    // CRUD Methods (Async)                                   //
+    // ------------------------------------------------------ //
+    /**
+     * Read a StoreProfile (by player) from this cache (will fetch from database, will create if necessary)
+     * @param player The player owning this store.
+     * @return The StoreProfile object. (READ-ONLY)
+     */
+    @NonBlocking
+    @NotNull
+    default CompletableFuture<X> readAsync(@NotNull Player player) {
+        return this.readAsync(player, true);
+    }
+
+    /**
+     * Read a StoreProfile (by player) from this cache (will fetch from database, will create if necessary)
+     * @param player The player owning this store.
+     * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
+     * @return The StoreProfile object. (READ-ONLY)
+     */
+    @NonBlocking
+    @NotNull
+    default CompletableFuture<X> readAsync(@NotNull Player player, boolean cacheStore) {
+        return CompletableFuture.supplyAsync(() -> this.read(player, cacheStore));
+    }
+
+    /**
+     * Modifies a Store in a controlled environment where modifications are allowed
+     * @throws NoSuchElementException if the Store (by this key) is not found
+     * @return The updated Store object. (READ-ONLY)
+     */
+    @NonBlocking
+    default CompletableFuture<X> updateAsync(@NotNull Player player, @NotNull Consumer<X> updateFunction) {
+        return this.updateAsync(player.getUniqueId(), updateFunction);
+    }
+
+    /**
+     * Deletes a Store (removes from both cache and database)
+     */
+    @NonBlocking
+    default void deleteAsync(@NotNull Player player) {
+        this.deleteAsync(player.getUniqueId());
+    }
 
     // ------------------------------------------------------ //
     // Cache Methods                                          //
