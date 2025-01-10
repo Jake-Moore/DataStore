@@ -2,17 +2,20 @@ package com.kamikazejam.datastore.base;
 
 import com.kamikazejam.datastore.base.field.FieldWrapper;
 import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.Blocking;
+import org.jetbrains.annotations.NonBlocking;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
  * A Store is an object that can be cached, saved, or loaded within DataStore.
  * Generics: K = Identifier Object Type (i.e. String, UUID)
  */
-@SuppressWarnings({"UnusedReturnValue", "unused"})
+@SuppressWarnings({"UnusedReturnValue", "unused", "BlockingMethodInNonBlockingContext"})
 public interface Store<T extends Store<T, K>, K> {
 
     // ----------------------------------------------------- //
@@ -31,12 +34,34 @@ public interface Store<T extends Store<T, K>, K> {
      * Modifies this Store in a controlled environment where modifications are allowed
      * @return The updated Store object. (READ-ONLY)
      */
+    @Blocking
     T update(@NotNull Consumer<T> updateFunction);
 
     /**
      * Deletes this Store object (removes from both cache and database)
      */
+    @Blocking
     void delete();
+
+    // ----------------------------------------------------- //
+    //                 CRUD Helpers (Async)                  //
+    // ----------------------------------------------------- //
+    /**
+     * Modifies this Store in a controlled environment where modifications are allowed
+     * @return The updated Store object. (READ-ONLY)
+     */
+    @NonBlocking
+    default CompletableFuture<T> updateAsync(@NotNull Consumer<T> updateFunction) {
+        return CompletableFuture.supplyAsync(() -> update(updateFunction));
+    }
+
+    /**
+     * Deletes this Store object (removes from both cache and database)
+     */
+    @NonBlocking
+    default void deleteAsync() {
+        CompletableFuture.runAsync(this::delete);
+    }
 
     // ----------------------------------------------------- //
     //                Api / Internal Methods                 //
