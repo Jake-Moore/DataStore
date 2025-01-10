@@ -91,7 +91,9 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    CompletableFuture<X> update(@NotNull K key, @NotNull Consumer<X> updateFunction);
+    default CompletableFuture<X> update(@NotNull K key, @NotNull Consumer<X> updateFunction) {
+        return CompletableFuture.supplyAsync(() -> updateSync(key, updateFunction));
+    }
 
     /**
      * Modifies a Store in a controlled environment where modifications are allowed

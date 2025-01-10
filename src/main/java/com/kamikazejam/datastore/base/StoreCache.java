@@ -9,12 +9,10 @@ import com.kamikazejam.datastore.base.field.FieldProvider;
 import com.kamikazejam.datastore.base.field.FieldWrapper;
 import com.kamikazejam.datastore.base.index.IndexedField;
 import com.kamikazejam.datastore.base.log.LoggerService;
-import com.kamikazejam.datastore.base.storage.data.StorageUpdateTask;
 import com.kamikazejam.datastore.base.store.CacheLoggerInstantiator;
 import com.kamikazejam.datastore.base.store.StoreInstantiator;
 import com.kamikazejam.datastore.mode.profile.StoreProfileCache;
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener;
-import com.kamikazejam.datastore.util.DataStoreFileLogger;
 import com.mongodb.DuplicateKeyException;
 import lombok.Getter;
 import org.bukkit.Bukkit;
@@ -25,7 +23,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
@@ -149,7 +146,6 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
 
     @Override
     public X updateSync(@NotNull K key, @NotNull Consumer<X> updateFunction) {
-        // This method is straight forward, we do the updates and block every step until we're done
         Preconditions.checkNotNull(key, "key cannot be null");
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null");
 
@@ -162,46 +158,6 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
             throw new IllegalStateException("[StoreCache#update] Failed to update store with key: " + key);
         }
         return originalEntity;
-    }
-
-    @Override
-    public CompletableFuture<X> update(@NotNull K key, @NotNull Consumer<X> updateFunction) {
-        // This method is less straight forward, because DataStore is an async-first system
-        // The goal is to update the object (in cache) one time before we return control
-        // Then we complete the rest of the operation asynchronously, pushing the final values to
-        //  the cached copy once done (so that any updates from database are reflected)
-        Preconditions.checkNotNull(key, "key cannot be null");
-        Preconditions.checkNotNull(updateFunction, "Update function cannot be null");
-
-        X originalEntity = readSync(key).orElse(null);
-        if (originalEntity == null) {
-            throw new NoSuchElementException("[StoreCache#update] Store not found with key: " + key);
-        }
-
-        // Calling the async update() method will not only just return this future
-        // In the method, it will apply the updateFunction to the originalEntity one time
-        // Such that when we return the originalEntity here, it has already been updated (pending finalization)
-        StorageUpdateTask<K, X> updateTask = this.getDatabaseStore().update(originalEntity, updateFunction);
-
-        // Do the finalization (writing to db with transactions) asynchronously
-        // Listen to this async result just for logging purposes
-        updateTask.completeAsync().whenComplete((b, t) -> {
-            if (t != null) {
-                DataStoreFileLogger.warn("Failed to update Store with key: " + key, t);
-            }
-            if (!b) {
-                DataStoreFileLogger.warn("Failed to update Store with key: " + key);
-            }
-            // try to rollback in the most graceful way I can think of
-            // (set our local copy to reflect the database copy)
-            // We need to do this since we already 'messed' up the originalEntity with the updateFunction
-            //  and if we don't do this, then our local copy is ahead of the database copy
-            this.getDatabaseStore().get(key).ifPresent(store -> this.updateStoreFromNewer(originalEntity, store));
-        });
-
-        // Return the final future so that if they want to listen to the final update, they can
-        // But the originalEntity is already updated (pending finalization)
-        return updateTask.getFinalFuture();
     }
 
     // ------------------------------------------------------ //

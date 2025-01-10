@@ -16,7 +16,6 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.persistence.Id;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 @SuppressWarnings({"rawtypes", "unused"})
@@ -67,10 +66,6 @@ public abstract class StoreProfile<T extends StoreProfile<T>> implements Store<T
     @Override
     public void deleteSync() {
         this.getCache().deleteSync(this.getId());
-    }
-    @Override
-    public CompletableFuture<T> update(@NotNull Consumer<T> updateFunction) {
-        return this.getCache().update(this.getId(), updateFunction);
     }
 
     // ----------------------------------------------------- //

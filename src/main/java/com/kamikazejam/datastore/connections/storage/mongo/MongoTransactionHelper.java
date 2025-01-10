@@ -58,8 +58,7 @@ public class MongoTransactionHelper {
         try {
             // Create working copy that will be updated on each attempt
             X baseCopy = JacksonUtil.deepCopy(originalStore);
-            executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, 0);
-            return true;
+            return executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, 0);
         }catch (TransactionRetryLimitExceededException e){
             DataStoreFileLogger.warn("Failed to execute MongoDB update in " + DEFAULT_MAX_RETRIES + " attempts");
             return false;
@@ -67,7 +66,7 @@ public class MongoTransactionHelper {
     }
 
     // If no error is thrown, this method succeeded
-    private static <K, X extends Store<X, K>> void executeUpdateInternal(
+    private static <K, X extends Store<X, K>> boolean executeUpdateInternal(
             @NotNull MongoClient mongoClient,
             @NotNull MongoCollection<Document> collection,
             @NotNull Cache<K, X> cache,
@@ -130,8 +129,7 @@ public class MongoTransactionHelper {
 
                     // Update our working copy with latest version and retry
                     baseCopy = JacksonUtil.deserializeFromDocument(cache.getStoreClass(), currentDoc);
-                    executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
-                    return;
+                    return executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
                 }
 
                 // Success - update the cached store from our working copy
@@ -143,6 +141,7 @@ public class MongoTransactionHelper {
 
                 session.commitTransaction();
                 committed = true;
+                return true;
 
             } catch (TransactionRetryLimitExceededException t) {
                 // re-throw to bubble up
@@ -151,13 +150,14 @@ public class MongoTransactionHelper {
                 if (isWriteConflict(mE)) {
                     logWriteConflict(currentAttempt);
                     // For write conflicts, retry with same working copy
-                    executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
-                    return;
+                    return executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
                 }
                 throw mE;
             } catch (Exception e) {
                 DataStoreFileLogger.warn("Failed to execute MongoDB update", e);
-                executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
+//                return executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
+                // Generic Exceptions are not a cause for retry, we should log and return failure
+                return false;
             } finally {
                 if (!committed) {
                     session.abortTransaction();

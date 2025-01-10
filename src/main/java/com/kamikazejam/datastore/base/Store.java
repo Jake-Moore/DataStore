@@ -16,7 +16,7 @@ import java.util.function.Consumer;
  * A Store is an object that can be cached, saved, or loaded within DataStore.
  * Generics: K = Identifier Object Type (i.e. String, UUID)
  */
-@SuppressWarnings({"UnusedReturnValue", "unused"})
+@SuppressWarnings({"UnusedReturnValue", "unused", "BlockingMethodInNonBlockingContext"})
 public interface Store<T extends Store<T, K>, K> {
 
     // ----------------------------------------------------- //
@@ -36,7 +36,9 @@ public interface Store<T extends Store<T, K>, K> {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    CompletableFuture<T> update(@NotNull Consumer<T> updateFunction);
+    default CompletableFuture<T> update(@NotNull Consumer<T> updateFunction) {
+        return CompletableFuture.supplyAsync(() -> updateSync(updateFunction));
+    }
 
     /**
      * Deletes this Store object (removes from both cache and database)

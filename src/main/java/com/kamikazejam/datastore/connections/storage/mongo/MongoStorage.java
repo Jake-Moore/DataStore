@@ -6,7 +6,6 @@ import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
 import com.kamikazejam.datastore.base.StoreCache;
 import com.kamikazejam.datastore.base.index.IndexedField;
-import com.kamikazejam.datastore.base.storage.data.StorageUpdateTask;
 import com.kamikazejam.datastore.connections.config.MongoConfig;
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor;
 import com.kamikazejam.datastore.connections.storage.StorageService;
@@ -169,28 +168,6 @@ public class MongoStorage extends StorageService {
             DataStoreFileLogger.warn("Failed to update Store in MongoDB Layer after all retries: " + originalStore.getId(), e);
             return false;
         }
-    }
-
-    @Override
-    public <K, X extends Store<X, K>> @NotNull StorageUpdateTask<K, X> update(Cache<K, X> cache, X originalStore, @NotNull Consumer<X> updateFunction) {
-        // Step 1: Copy the originalStore prior to any applications of the updateFunction
-        final X baseCopy = JacksonUtil.deepCopy(originalStore);
-
-        // Step 2: Update the originalStore with the updateFunction (making the changes available as this method returns)
-        originalStore.setReadOnly(false);
-        updateFunction.accept(originalStore);
-        originalStore.setReadOnly(true);
-
-        // Step 3: Return a new StorageUpdateTask that can finish the changes later
-        return new StorageUpdateTask<>(cache, baseCopy, originalStore, () -> {
-            // Try a sync update, but with baseCopy, since this is the only pure copy of the original state
-            if (this.updateSync(cache, baseCopy, updateFunction)) {
-                // If this succeeds, then we need to mirror baseCopy into the originalStore
-                cache.updateStoreFromNewer(originalStore, baseCopy);
-                return originalStore;
-            }
-            throw new IllegalStateException("Failed to update Store in MongoDB Layer: " + originalStore.getId());
-        });
     }
 
     @Override

@@ -3,7 +3,6 @@ package com.kamikazejam.datastore.base.storage;
 import com.kamikazejam.datastore.DataStoreSource;
 import com.kamikazejam.datastore.base.Cache;
 import com.kamikazejam.datastore.base.Store;
-import com.kamikazejam.datastore.base.storage.data.StorageUpdateTask;
 import com.kamikazejam.datastore.connections.storage.StorageService;
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator;
 import org.jetbrains.annotations.NotNull;
@@ -64,11 +63,6 @@ public abstract class StorageDatabase<K, X extends Store<X, K>> extends StorageD
     @Override
     protected boolean updateSync(Cache<K, X> cache, @NotNull X store, @NotNull Consumer<X> updateFunction) {
         return storageService.updateSync(cache, store, updateFunction);
-    }
-
-    @Override
-    protected @NotNull StorageUpdateTask<K, X> update(Cache<K, X> cache, @NotNull X store, @NotNull Consumer<X> updateFunction) {
-        return storageService.update(cache, store, updateFunction);
     }
 
     @Override
