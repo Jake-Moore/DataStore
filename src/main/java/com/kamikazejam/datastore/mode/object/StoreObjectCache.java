@@ -159,7 +159,7 @@ public abstract class StoreObjectCache<X extends StoreObject<X>> extends StoreCa
     }
 
     @Override
-    public boolean hasKey(@NotNull String key) {
+    public boolean hasKeySync(@NotNull String key) {
         return localStore.has(key) || databaseStore.has(key);
     }
 

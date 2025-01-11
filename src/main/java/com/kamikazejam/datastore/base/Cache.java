@@ -387,7 +387,14 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
     /**
      * @return True iff the cache contains a Store with the provided key.
      */
-    boolean hasKey(@NotNull K key);
+    default CompletableFuture<Boolean> hasKey(@NotNull K key) {
+        return CompletableFuture.supplyAsync(() -> hasKeySync(key));
+    }
+
+    /**
+     * @return True iff the cache contains a Store with the provided key.
+     */
+    boolean hasKeySync(@NotNull K key);
 
     /**
      * Gets the {@link StoreLoader} for the provided key.

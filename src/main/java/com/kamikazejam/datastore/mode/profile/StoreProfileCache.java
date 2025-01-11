@@ -120,7 +120,7 @@ public abstract class StoreProfileCache<X extends StoreProfile<X>> extends Store
     }
 
     @Override
-    public boolean hasKey(@NotNull UUID key) {
+    public boolean hasKeySync(@NotNull UUID key) {
         return localStore.has(key) || databaseStore.has(key);
     }
 
