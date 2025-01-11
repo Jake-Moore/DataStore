@@ -1,7 +1,6 @@
 package com.kamikazejam.datastore.mode.profile;
 
 import com.kamikazejam.datastore.base.Cache;
-import com.kamikazejam.datastore.base.index.IndexedField;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Blocking;
@@ -141,15 +140,4 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
     void removeLoader(@NotNull UUID uuid);
 
     void onProfileLeaving(@NotNull Player player, @NotNull X profile);
-
-
-    // ------------------------------------------------- //
-    //                     Indexing                      //
-    // ------------------------------------------------- //
-
-    /**
-     * Retrieves an object by the provided index field and its value.
-     */
-    @NotNull
-    <T> Optional<X> getByIndex(@NotNull IndexedField<X, T> field, @NotNull T value);
 }

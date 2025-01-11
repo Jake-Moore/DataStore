@@ -450,12 +450,25 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
     void saveIndexCache();
 
     @Nullable
-    <T> K getStoreIdByIndex(IndexedField<X, T> index, T value);
+    default <T> CompletableFuture<K> getStoreIdByIndex(IndexedField<X, T> index, T value) {
+        return CompletableFuture.supplyAsync(() -> getStoreIdByIndexSync(index, value));
+    }
+
+    @Nullable
+    <T> K getStoreIdByIndexSync(IndexedField<X, T> index, T value);
 
     /**
      * Retrieves an object by the provided index field and its value.
      */
     @NotNull
-    <T> Optional<X> getByIndex(@NotNull IndexedField<X, T> field, @NotNull T value);
+    default <T> CompletableFuture<Optional<X>> getByIndex(@NotNull IndexedField<X, T> field, @NotNull T value) {
+        return CompletableFuture.supplyAsync(() -> getByIndexSync(field, value));
+    }
+
+    /**
+     * Retrieves an object by the provided index field and its value.
+     */
+    @NotNull
+    <T> Optional<X> getByIndexSync(@NotNull IndexedField<X, T> field, @NotNull T value);
 }
 

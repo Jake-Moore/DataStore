@@ -415,12 +415,12 @@ public abstract class StoreCache<K, X extends Store<X, K>> implements Comparable
     }
 
     @Override
-    public <T> @Nullable K getStoreIdByIndex(IndexedField<X, T> index, T value) {
+    public <T> @Nullable K getStoreIdByIndexSync(IndexedField<X, T> index, T value) {
         return DataStoreSource.getStorageService().getStoreIdByIndex(this, index, value);
     }
 
     @Override
-    public <T> @NotNull Optional<X> getByIndex(@NotNull IndexedField<X, T> field, @NotNull T value) {
+    public <T> @NotNull Optional<X> getByIndexSync(@NotNull IndexedField<X, T> field, @NotNull T value) {
         // 1. -> Check local cache (brute force)
         for (X store : getLocalStore().getAll()) {
             if (field.equals(field.getValue(store), value)) {
