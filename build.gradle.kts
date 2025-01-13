@@ -26,7 +26,7 @@ dependencies {
 
     // Dependencies
     implementation("org.mongodb:mongodb-driver-sync:5.2.1")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
     // Testing Dependencies
