@@ -1,6 +1,7 @@
 package com.kamikazejam.datastore.mode.object;
 
 import com.kamikazejam.datastore.base.Cache;
+import com.kamikazejam.datastore.base.result.StoreResult;
 import com.mongodb.DuplicateKeyException;
 import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.NonBlocking;
@@ -26,8 +27,8 @@ public interface ObjectCache<X extends StoreObject<X>> extends Cache<String, X> 
      */
     @NonBlocking
     @NotNull
-    default CompletableFuture<X> create(@NotNull Consumer<X> initializer) throws DuplicateKeyException {
-        return CompletableFuture.supplyAsync(() -> createSync(initializer));
+    default StoreResult<X> create(@NotNull Consumer<X> initializer) throws DuplicateKeyException {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> createSync(initializer)), this);
     }
 
     // ----------------------------------------------------- //

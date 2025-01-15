@@ -1,6 +1,7 @@
 package com.kamikazejam.datastore.mode.profile;
 
 import com.kamikazejam.datastore.base.Cache;
+import com.kamikazejam.datastore.base.result.StoreResult;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Blocking;
@@ -33,7 +34,7 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
      */
     @NonBlocking
     @NotNull
-    default CompletableFuture<X> read(@NotNull Player player) {
+    default StoreResult<X> read(@NotNull Player player) {
         return this.read(player, true);
     }
 
@@ -45,8 +46,8 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
      */
     @NonBlocking
     @NotNull
-    default CompletableFuture<X> read(@NotNull Player player, boolean cacheStore) {
-        return CompletableFuture.supplyAsync(() -> this.readSync(player, cacheStore));
+    default StoreResult<X> read(@NotNull Player player, boolean cacheStore) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> this.readSync(player, cacheStore)), this);
     }
 
     /**
@@ -55,16 +56,16 @@ public interface ProfileCache<X extends StoreProfile<X>> extends Cache<UUID, X> 
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    default CompletableFuture<X> update(@NotNull Player player, @NotNull Consumer<X> updateFunction) {
-        return CompletableFuture.supplyAsync(() -> this.updateSync(player, updateFunction));
+    default StoreResult<X> update(@NotNull Player player, @NotNull Consumer<X> updateFunction) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> this.updateSync(player, updateFunction)), this);
     }
 
     /**
      * Deletes a Store (removes from both cache and database)
      */
     @NonBlocking
-    default void delete(@NotNull Player player) {
-        CompletableFuture.runAsync(() -> this.deleteSync(player));
+    default StoreResult<Void> delete(@NotNull Player player) {
+        return StoreResult.of(CompletableFuture.runAsync(() -> this.deleteSync(player)), this);
     }
 
 
