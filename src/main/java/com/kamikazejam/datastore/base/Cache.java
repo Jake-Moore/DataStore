@@ -5,6 +5,7 @@ import com.kamikazejam.datastore.base.cache.StoreLoader;
 import com.kamikazejam.datastore.base.exception.DuplicateCacheException;
 import com.kamikazejam.datastore.base.index.IndexedField;
 import com.kamikazejam.datastore.base.log.LoggerService;
+import com.kamikazejam.datastore.base.result.StoreResult;
 import com.kamikazejam.datastore.base.storage.StorageDatabase;
 import com.kamikazejam.datastore.base.storage.StorageLocal;
 import com.kamikazejam.datastore.base.storage.StorageMethods;
@@ -45,8 +46,8 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      */
     @NonBlocking
     @NotNull
-    default CompletableFuture<Optional<X>> read(@NotNull K key) {
-        return CompletableFuture.supplyAsync(() -> readSync(key));
+    default StoreResult<Optional<X>> read(@NotNull K key) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> readSync(key)), this);
     }
 
     /**
@@ -57,8 +58,8 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      */
     @NonBlocking
     @NotNull
-    default CompletableFuture<Optional<X>> read(@NotNull K key, boolean cacheStore) {
-        return CompletableFuture.supplyAsync(() -> readSync(key, cacheStore));
+    default StoreResult<Optional<X>> read(@NotNull K key, boolean cacheStore) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> readSync(key, cacheStore)), this);
     }
 
     /**
@@ -70,8 +71,8 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      */
     @NonBlocking
     @NotNull
-    default CompletableFuture<X> readOrCreate(@NotNull K key, @NotNull Consumer<X> initializer) {
-        return CompletableFuture.supplyAsync(() -> readOrCreateSync(key, initializer));
+    default StoreResult<X> readOrCreate(@NotNull K key, @NotNull Consumer<X> initializer) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> readOrCreateSync(key, initializer)), this);
     }
 
     /**
@@ -81,8 +82,8 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * @return The created Store object. (READ-ONLY)
      */
     @NonBlocking
-    default CompletableFuture<X> create(@NotNull K key, @NotNull Consumer<X> initializer) throws DuplicateKeyException {
-        return CompletableFuture.supplyAsync(() -> createSync(key, initializer));
+    default StoreResult<X> create(@NotNull K key, @NotNull Consumer<X> initializer) throws DuplicateKeyException {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> createSync(key, initializer)), this);
     }
 
     /**
@@ -91,8 +92,8 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    default CompletableFuture<X> update(@NotNull K key, @NotNull Consumer<X> updateFunction) {
-        return CompletableFuture.supplyAsync(() -> updateSync(key, updateFunction));
+    default StoreResult<X> update(@NotNull K key, @NotNull Consumer<X> updateFunction) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> updateSync(key, updateFunction)), this);
     }
 
     /**
@@ -101,7 +102,7 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    default CompletableFuture<X> update(@NotNull X store, @NotNull Consumer<X> updateFunction) {
+    default StoreResult<X> update(@NotNull X store, @NotNull Consumer<X> updateFunction) {
         return this.update(store.getId(), updateFunction);
     }
 
@@ -109,16 +110,16 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * Deletes a Store by ID (removes from both cache and database)
      */
     @NonBlocking
-    default void delete(@NotNull K key) {
-        CompletableFuture.runAsync(() -> deleteSync(key));
+    default StoreResult<Void> delete(@NotNull K key) {
+        return StoreResult.of(CompletableFuture.runAsync(() -> deleteSync(key)), this);
     }
 
     /**
      * Deletes a Store (removes from both cache and database)
      */
     @NonBlocking
-    default void delete(@NotNull X store) {
-        CompletableFuture.runAsync(() -> deleteSync(store));
+    default StoreResult<Void> delete(@NotNull X store) {
+        return StoreResult.of(CompletableFuture.runAsync(() -> deleteSync(store)), this);
     }
 
     /**
@@ -387,8 +388,8 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
     /**
      * @return True iff the cache contains a Store with the provided key.
      */
-    default CompletableFuture<Boolean> hasKey(@NotNull K key) {
-        return CompletableFuture.supplyAsync(() -> hasKeySync(key));
+    default StoreResult<Boolean> hasKey(@NotNull K key) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> hasKeySync(key)), this);
     }
 
     /**
@@ -457,8 +458,8 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
     void saveIndexCache();
 
     @Nullable
-    default <T> CompletableFuture<K> getStoreIdByIndex(IndexedField<X, T> index, T value) {
-        return CompletableFuture.supplyAsync(() -> getStoreIdByIndexSync(index, value));
+    default <T> StoreResult<K> getStoreIdByIndex(@NotNull IndexedField<X, T> index, @NotNull T value) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> getStoreIdByIndexSync(index, value)), this);
     }
 
     @Nullable
@@ -468,8 +469,8 @@ public interface Cache<K, X extends Store<X, K>> extends Service {
      * Retrieves an object by the provided index field and its value.
      */
     @NotNull
-    default <T> CompletableFuture<Optional<X>> getByIndex(@NotNull IndexedField<X, T> field, @NotNull T value) {
-        return CompletableFuture.supplyAsync(() -> getByIndexSync(field, value));
+    default <T> StoreResult<Optional<X>> getByIndex(@NotNull IndexedField<X, T> field, @NotNull T value) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> getByIndexSync(field, value)), this);
     }
 
     /**

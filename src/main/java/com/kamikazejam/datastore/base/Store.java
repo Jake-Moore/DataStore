@@ -1,16 +1,18 @@
 package com.kamikazejam.datastore.base;
 
-import com.kamikazejam.datastore.base.field.FieldProvider;
-import com.kamikazejam.datastore.base.field.FieldWrapper;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.NonBlocking;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
+import com.kamikazejam.datastore.base.field.FieldProvider;
+import com.kamikazejam.datastore.base.field.FieldWrapper;
+import com.kamikazejam.datastore.base.result.StoreResult;
 
 /**
  * A Store is an object that can be cached, saved, or loaded within DataStore.
@@ -36,16 +38,16 @@ public interface Store<T extends Store<T, K>, K> {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    default CompletableFuture<T> update(@NotNull Consumer<T> updateFunction) {
-        return CompletableFuture.supplyAsync(() -> updateSync(updateFunction));
+    default StoreResult<T> update(@NotNull Consumer<T> updateFunction) {
+        return StoreResult.of(CompletableFuture.supplyAsync(() -> updateSync(updateFunction)), getCache());
     }
 
     /**
      * Deletes this Store object (removes from both cache and database)
      */
     @NonBlocking
-    default void delete() {
-        CompletableFuture.runAsync(this::deleteSync);
+    default StoreResult<Void> delete() {
+        return StoreResult.of(CompletableFuture.runAsync(this::deleteSync), getCache());
     }
 
     // ----------------------------------------------------- //
