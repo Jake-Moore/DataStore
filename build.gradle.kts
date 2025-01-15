@@ -25,8 +25,8 @@ dependencies {
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
     // Dependencies
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
     implementation("org.mongodb:mongodb-driver-sync:5.3.0")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
     // Testing Dependencies
