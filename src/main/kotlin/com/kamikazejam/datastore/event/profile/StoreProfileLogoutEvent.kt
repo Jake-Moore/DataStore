@@ -8,7 +8,7 @@ import org.bukkit.event.HandlerList
  * Cache data should NOT be accessed in this event, use [StoreProfilePreLogoutEvent] instead.
  */
 @Suppress("unused")
-class StoreProfileLogoutEvent(private val player: Player) : Event() {
+class StoreProfileLogoutEvent(val player: Player) : Event() {
     override fun getHandlers(): HandlerList {
         return handlerList
     }

@@ -7,7 +7,7 @@ import org.bukkit.event.HandlerList
  * This event is called when a player logs in, after their caches have been loaded
  */
 @Suppress("unused")
-class StoreProfileLoginEvent(private val player: Player) : Event() {
+class StoreProfileLoginEvent(val player: Player) : Event() {
     override fun getHandlers(): HandlerList {
         return handlerList
     }

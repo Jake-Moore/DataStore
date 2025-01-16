@@ -12,9 +12,9 @@ import org.bukkit.event.HandlerList
  */
 @Suppress("unused")
 class StoreProfileCacheQuitEvent<X : StoreProfile<X>>(
-    private val player: Player,
-    private val cache: StoreProfileCache<X>,
-    private val profile: X
+    val player: Player,
+    val cache: StoreProfileCache<X>,
+    val profile: X
 ) : Event() {
     override fun getHandlers(): HandlerList {
         return handlerList
