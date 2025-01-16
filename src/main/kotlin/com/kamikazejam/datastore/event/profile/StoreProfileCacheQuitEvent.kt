@@ -21,6 +21,7 @@ class StoreProfileCacheQuitEvent<X : StoreProfile<X>>(
     }
 
     companion object {
-        val handlerList: HandlerList = HandlerList()
+        @JvmStatic
+        val handlerList = HandlerList()
     }
 }

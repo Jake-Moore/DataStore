@@ -14,6 +14,7 @@ class StoreProfileLogoutEvent(val player: Player) : Event() {
     }
 
     companion object {
-        val handlerList: HandlerList = HandlerList()
+        @JvmStatic
+        val handlerList = HandlerList()
     }
 }
