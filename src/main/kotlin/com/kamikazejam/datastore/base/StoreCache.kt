@@ -321,18 +321,7 @@ abstract class StoreCache<K, X : Store<X, K>>(
      */
     @Suppress("UNCHECKED_CAST")
     private fun copyFieldValue(target: FieldWrapper<*>, source: FieldWrapper<*>) {
-        val targetType = target.getValueType()
-        if (targetType == source.getValueType()) {
-            val typedTarget = target as FieldWrapper<Any>
-            val value = source.get()
-            if (targetType.isInstance(value)) {
-                typedTarget.set(value)
-            } else {
-                getLoggerService().warn("Value type mismatch during copy for field: ${target.name}")
-            }
-        } else {
-            getLoggerService().warn("Field type mismatch during copy: ${target.name}")
-        }
+        (target as FieldWrapper<Any>).set(source.get())
     }
 
     // ------------------------------------------------- //
