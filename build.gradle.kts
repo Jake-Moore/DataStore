@@ -6,10 +6,11 @@ plugins {
     id("java-library")
     id("maven-publish")
     id("com.gradleup.shadow") version "8.3.5"
+    kotlin("jvm")
 }
 
 group = "com.kamikazejam"
-version = "1.0.0.beta.6-SNAPSHOT"
+version = "1.0.0.beta.7-SNAPSHOT"
 description = "Simple Data Storage Solution using MongoDB"
 
 
@@ -32,15 +33,16 @@ dependencies {
     // Testing Dependencies
     testImplementation("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
-    // Lombok
-    compileOnly("org.projectlombok:lombok:1.18.36")
-    annotationProcessor("org.projectlombok:lombok:1.18.36")
-    testCompileOnly("org.projectlombok:lombok:1.18.36")
-    testAnnotationProcessor("org.projectlombok:lombok:1.18.36")
+    // Lombok (With Kotlin we shouldn't need this)
+//    compileOnly("org.projectlombok:lombok:1.18.36")
+//    annotationProcessor("org.projectlombok:lombok:1.18.36")
+//    testCompileOnly("org.projectlombok:lombok:1.18.36")
+//    testAnnotationProcessor("org.projectlombok:lombok:1.18.36")
 
     // Jetbrains
     compileOnly("org.jetbrains:annotations:26.0.1")
     testCompileOnly("org.jetbrains:annotations:26.0.1")
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 // Register a task to delete the jars in the libs folder
