@@ -8,9 +8,7 @@ class MongoConfig private constructor(val uri: String) {
         private var conf: MongoConfig? = null
 
         fun get(): MongoConfig {
-            if (conf != null) {
-                return conf!!
-            }
+            conf?.let { return it }
 
             // Load Config Values
             val config = DataStoreSource.config

@@ -184,7 +184,7 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
             // Try to get the name from our IdUtil, and update the object if possible
             val oPlayer: OfflinePlayer? = Bukkit.getOfflinePlayer(this.uniqueId)
             if (oPlayer?.name != null) {
-                cache!!.update(this.id) { profile: T -> profile.usernameField.set(oPlayer.name) }
+                getCache().update(this.id) { profile: T -> profile.usernameField.set(oPlayer.name) }
                 return oPlayer.name
             }
         }
@@ -227,6 +227,9 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
         get() {
             // Fetch the player and check if they're online
             this.player = Bukkit.getPlayer(this.uniqueId)
-            return this.player != null && player!!.isOnline
+            this.player?.let { player ->
+                return player.isOnline
+            }
+            return false
         }
 }

@@ -391,8 +391,9 @@ abstract class StoreCache<K, X : Store<X, K>>(
         if (service != null) {
             return service
         }
-        _loggerService = loggerInstantiator.instantiate(this)
-        return _loggerService!!
+        val s = loggerInstantiator.instantiate(this)
+        this._loggerService = s
+        return s
     }
 
     override fun setLoggerService(loggerService: LoggerService) {

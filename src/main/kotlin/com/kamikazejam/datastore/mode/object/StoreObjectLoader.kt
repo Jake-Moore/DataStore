@@ -48,24 +48,24 @@ class StoreObjectLoader<X : StoreObject<X>> internal constructor(cache: StoreObj
     override fun fetch(saveToLocalCache: Boolean): X? {
         load(true)
 
-        if (store == null) {
-            return null
-        }
-
         // Double check validity here too
-        val p = store!!.get()
-        if (p != null && !p.valid) {
-            store = WeakReference(null)
-            return null
+        store?.let { ref ->
+            val p = ref.get()
+            if (p != null && !p.valid) {
+                store = WeakReference(null)
+                return null
+            }
+
+            // Save to local cache if necessary
+            if (saveToLocalCache && p != null && !loadedFromLocal) {
+                cache.cache(p)
+            }
+
+            // Ensure the Store has its cache set
+            p?.setCache(cache)
+            return p
         }
 
-        // Save to local cache if necessary
-        if (saveToLocalCache && p != null && !loadedFromLocal) {
-            cache.cache(p)
-        }
-
-        // Ensure the Store has its cache set
-        p?.setCache(cache)
-        return p
+        return null
     }
 }

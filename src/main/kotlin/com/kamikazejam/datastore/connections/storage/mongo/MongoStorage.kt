@@ -109,7 +109,8 @@ class MongoStorage : StorageService() {
 
     override fun <K, X : Store<X, K>> save(cache: Cache<K, X>, store: X): Boolean {
         // Save to database with a transaction & only 1 attempt
-        mongoClient!!.startSession().use { session ->
+        val client = this.mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
+        client.startSession().use { session ->
             session.startTransaction()
             var committed = false
             try {
@@ -144,7 +145,8 @@ class MongoStorage : StorageService() {
             val collection = getMongoCollection(cache)
                 .withWriteConcern(WriteConcern.MAJORITY) // Ensure replication
 
-            return MongoTransactionHelper.executeUpdate(mongoClient!!, collection, cache, store, updateFunction)
+            val client = this.mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
+            return MongoTransactionHelper.executeUpdate(client, collection, cache, store, updateFunction)
         } catch (e: Exception) {
             DataStoreFileLogger.warn(
                 "Failed to update Store in MongoDB Layer after all retries: " + store.id,
@@ -255,12 +257,12 @@ class MongoStorage : StorageService() {
         }
     }
 
+    @Suppress("SameReturnValue")
     private fun disconnectMongo(): Boolean {
-        if (this.mongoClient != null) {
-            mongoClient!!.close()
-            this.mongoClient = null
-            this.mongoConnected = false
-        }
+        val client = this.mongoClient ?: return true
+        client.close()
+        this.mongoClient = null
+        this.mongoConnected = false
         return true
     }
 
@@ -273,12 +275,14 @@ class MongoStorage : StorageService() {
         HashMap() // Map<DatabaseName.CollectionName, MongoCollection<Document>>
 
     private fun <K, X : Store<X, K>> getMongoCollection(cache: Cache<K, X>): MongoCollection<Document> {
+        val client = this.mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
         val collKey = cache.databaseName + "." + cache.name
-        if (collMap.containsKey(collKey)) {
-            return collMap[collKey]!!
+
+        collMap[collKey]?.let {
+            return it
         }
 
-        val database = dbMap.computeIfAbsent(cache.databaseName) { databaseName: String -> mongoClient!!.getDatabase(databaseName) }
+        val database = dbMap.computeIfAbsent(cache.databaseName) { databaseName: String -> client.getDatabase(databaseName) }
         val collection = database.getCollection(cache.name)
         collMap[collKey] = collection
 

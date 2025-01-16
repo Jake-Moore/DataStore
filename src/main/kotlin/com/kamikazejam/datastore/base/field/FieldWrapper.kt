@@ -46,8 +46,9 @@ class FieldWrapper<T> private constructor(
 
     val isWriteable: Boolean
         get() {
-            checkNotNull(parent) { "[FieldWrapper#isWriteable] Field not registered with a parent document" }
-            return !parent!!.readOnly
+            val p = this.parent
+            checkNotNull(p) { "[FieldWrapper#isWriteable] Field not registered with a parent document" }
+            return !p.readOnly
         }
 
     override fun equals(other: Any?): Boolean {

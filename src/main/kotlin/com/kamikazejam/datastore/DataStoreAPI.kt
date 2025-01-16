@@ -139,15 +139,19 @@ object DataStoreAPI {
          * Retrieve the caches in sorted order by dependencies (load order)
          */
         get() {
-            if (_sortedCachesByDependsReversed != null && !hasBeenModified()) {
-                return _sortedCachesByDependsReversed!!
+            _sortedCachesByDependsReversed?.let {
+                if (!hasBeenModified()) {
+                    return it
+                }
             }
-            _sortedCachesByDependsReversed = caches.values.stream().sorted().collect(Collectors.toList())
-            return _sortedCachesByDependsReversed!!
+
+            val s = caches.values.stream().sorted().collect(Collectors.toList())
+            _sortedCachesByDependsReversed = s
+            return s
         }
 
     private fun hasBeenModified(): Boolean {
-        return _sortedCachesByDependsReversed != null && caches.size != _sortedCachesByDependsReversed!!.size
+        return _sortedCachesByDependsReversed?.let { caches.size != it.size } ?: false
     }
 
 

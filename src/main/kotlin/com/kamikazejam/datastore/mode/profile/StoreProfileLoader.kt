@@ -92,9 +92,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(cache: StoreProfileCache<X>, 
         if (store == null) {
             store = cache.getFromCache(player)
         }
-        if (store != null) {
-            store!!.initializePlayer(player)
-        }
+        store?.initializePlayer(player)
     }
 
     companion object {

@@ -19,18 +19,19 @@ object JacksonUtil {
     private var mapper: ObjectMapper? = null
     val objectMapper: ObjectMapper
         get() {
-            if (mapper != null) return mapper!!
-            mapper = ObjectMapper()
+            mapper?.let { return it }
+            val m = ObjectMapper()
+            mapper = m
 
             // Optional: enable pretty printing
             // mapper.enable(SerializationFeature.INDENT_OUTPUT);
 
             // Don't fail on empty POJOs
-            mapper!!.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+            m.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
 
             // to prevent exception when encountering unknown property:
             //  i.e. if the json has a property no longer in the class
-            mapper!!.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            m.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 
             // Configure Jackson to only use fields for serialization (ignoring transient fields)
             //   We have to disable setters and getters, otherwise a transient getter or setter will cause it to be serialized
@@ -42,15 +43,15 @@ object JacksonUtil {
                     JsonAutoDetect.Visibility.NONE,  // don't use creators
                     JsonAutoDetect.Visibility.ANY // any field
                 )
-            mapper!!.setVisibility(check)
+            m.setVisibility(check)
 
             // Enable serialization of null and empty values
-            mapper!!.setSerializationInclusion(JsonInclude.Include.ALWAYS)
+            m.setSerializationInclusion(JsonInclude.Include.ALWAYS)
 
             // Add Basic Spigot Types Module, for handling basic types
-            mapper!!.registerModule(JacksonSpigotModule())
+            m.registerModule(JacksonSpigotModule())
 
-            return mapper!!
+            return m
         }
 
     fun <T> toJson(wrapper: FieldWrapper<T>): String {

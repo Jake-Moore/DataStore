@@ -50,7 +50,7 @@ object DataStoreSource {
         storageMode.enableServices()
 
         // Load Commands
-        pluginSource!!.getCommand("datastore").executor = DataStoreCommand()
+        pl.getCommand("datastore").executor = DataStoreCommand()
 
         // Register ProfileListener
         pl.server.pluginManager.registerEvents(ProfileListener(), pl)
@@ -77,33 +77,33 @@ object DataStoreSource {
     }
 
     fun get(): JavaPlugin {
-        if (pluginSource == null) {
-            throw RuntimeException("Plugin source not set")
-        }
-        return pluginSource!!
+        return pluginSource ?: throw RuntimeException("Plugin source not set")
     }
 
     fun info(msg: String) {
-        if (pluginSource == null) {
+        val pl = pluginSource
+        if (pl == null) {
             println("[INFO] $msg")
         } else {
-            pluginSource!!.logger.info(msg)
+            pl.logger.info(msg)
         }
     }
 
     fun warning(msg: String) {
-        if (pluginSource == null) {
+        val pl = pluginSource
+        if (pl == null) {
             println("[WARNING] $msg")
         } else {
-            pluginSource!!.logger.warning(msg)
+            pl.logger.warning(msg)
         }
     }
 
     fun error(msg: String) {
-        if (pluginSource == null) {
+        val pl = pluginSource
+        if (pl == null) {
             println("[ERROR] $msg")
         } else {
-            pluginSource!!.logger.severe(msg)
+            pl.logger.severe(msg)
         }
     }
 
@@ -112,10 +112,10 @@ object DataStoreSource {
     val config: FileConfiguration
         get() {
             val plugin = get()
-            if (storeCfg == null) {
-                storeCfg = createConfig(plugin)
-            }
-            return storeCfg!!
+            storeCfg?.let { return it }
+            val cfg = createConfig(plugin)
+            storeCfg = cfg
+            return cfg
         }
 
     private fun createConfig(plugin: JavaPlugin): FileConfiguration {
