@@ -132,9 +132,9 @@ open class StoreProfileLoader<X : StoreProfile<X>>(cache: StoreProfileCache<X>, 
             // For logins -> mark as loaded
             if (creative) {
                 // Update their username
-                if (username != null && store.username.get() != username) {
+                if (username != null && store.getUsername() != username) {
                     // Attempt to save the new username
-                    cache.update(store) { x: X -> x.username.set(username) }
+                    cache.update(store) { x: X -> x.usernameField.set(username) }
                 }
             }
             return store
@@ -157,7 +157,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(cache: StoreProfileCache<X>, 
                 // Enforce Version 0 for creation
                 store.idField.set(uuid)
                 store.versionField.set(0L)
-                store.username.set(username)
+                store.usernameField.set(username)
 
                 store.readOnly = true
 
