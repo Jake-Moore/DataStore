@@ -310,6 +310,11 @@ abstract class StoreCache<K, X : Store<X, K>>(
             val updateProvider = updateFields[key]
             if (updateProvider != null) {
                 copyFieldValue(storeProvider.fieldWrapper, updateProvider.fieldWrapper)
+            }else {
+                // For some reason our update didn't have a value for this field
+                // Set the field to null
+                storeProvider.fieldWrapper.set(null)
+                getLoggerService().warn("Update store didn't have a value for field: ${storeProvider.fieldWrapper.name}, class: ${storeProvider.fieldWrapper.getValueType()}")
             }
         }
 
