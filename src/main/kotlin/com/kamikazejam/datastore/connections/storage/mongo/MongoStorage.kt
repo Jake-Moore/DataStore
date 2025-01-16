@@ -99,10 +99,10 @@ class MongoStorage : StorageService() {
 
             return o
         } catch (ex: MongoException) {
-            cache.getLoggerService().info(ex, "MongoDB error getting Object from MongoDB Layer: $key")
+            cache.getLoggerService().info(ex, "MongoDB error getting Object from MongoDB Layer: ${cache.keyToString(key)}")
             return null
         } catch (expected: Exception) {
-            cache.getLoggerService().info(expected, "Error getting Object from MongoDB Layer: $key")
+            cache.getLoggerService().info(expected, "Error getting Object from MongoDB Layer: ${cache.keyToString(key)}")
             return null
         }
     }
@@ -159,10 +159,10 @@ class MongoStorage : StorageService() {
             val query = Filters.eq(JacksonUtil.ID_FIELD, cache.keyToString(key))
             return getMongoCollection(cache).countDocuments(query) > 0
         } catch (ex: MongoException) {
-            cache.getLoggerService().info(ex, "MongoDB error check if Store exists in MongoDB Layer: $key")
+            cache.getLoggerService().info(ex, "MongoDB error check if Store exists in MongoDB Layer: ${cache.keyToString(key)}")
             return false
         } catch (expected: Exception) {
-            cache.getLoggerService().info(expected, "Error checking if Store exists in MongoDB Layer: $key")
+            cache.getLoggerService().info(expected, "Error checking if Store exists in MongoDB Layer: ${cache.keyToString(key)}")
             return false
         }
     }
@@ -176,9 +176,9 @@ class MongoStorage : StorageService() {
             val query = Filters.eq(JacksonUtil.ID_FIELD, cache.keyToString(key))
             return getMongoCollection(cache).deleteMany(query).deletedCount > 0
         } catch (ex: MongoException) {
-            cache.getLoggerService().info(ex, "MongoDB error removing Store from MongoDB Layer: $key")
+            cache.getLoggerService().info(ex, "MongoDB error removing Store from MongoDB Layer: ${cache.keyToString(key)}")
         } catch (expected: Exception) {
-            cache.getLoggerService().info(expected, "Error removing Store from MongoDB Layer: $key")
+            cache.getLoggerService().info(expected, "Error removing Store from MongoDB Layer: ${cache.keyToString(key)}")
         }
         return false
     }

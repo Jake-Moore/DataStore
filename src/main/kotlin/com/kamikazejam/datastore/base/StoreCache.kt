@@ -125,14 +125,14 @@ abstract class StoreCache<K, X : Store<X, K>>(
     override fun updateSync(key: K, updateFunction: Consumer<X>): X {
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
-        val originalEntity = readSync(key) ?: throw NoSuchElementException("[StoreCache#update] Store not found with key: $key")
+        val originalEntity = readSync(key) ?: throw NoSuchElementException("[StoreCache#update] Store not found with key: ${this.keyToString(key)}")
 
         check(
             this.databaseStore.updateSync(
                 originalEntity,
                 updateFunction
             )
-        ) { "[StoreCache#update] Failed to update store with key: $key" }
+        ) { "[StoreCache#update] Failed to update store with key: ${this.keyToString(key)}" }
         return originalEntity
     }
 
