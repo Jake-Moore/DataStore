@@ -254,6 +254,9 @@ class MongoStorage : StorageService() {
         } catch (ex: Exception) {
             // Generic exception catch... just in case.
             return false // Failed to connect.
+        } finally {
+            this.mongoClient = client
+            this.mongoConnected = client != null
         }
     }
 
