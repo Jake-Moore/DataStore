@@ -8,15 +8,14 @@ import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
-import com.kamikazejam.datastore.base.result.AsyncStoreHandler
-import com.kamikazejam.datastore.base.result.StoreResult
+import com.kamikazejam.datastore.base.result.AsyncHandler
+import com.kamikazejam.datastore.base.result.CollectionResult
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
+import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
 import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
 import com.mongodb.*
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.IllegalPluginAccessException
@@ -52,32 +51,32 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     // ------------------------------------------------------ //
     // Generic CRUD Methods                                   //
     // ------------------------------------------------------ //
-    override fun read(key: K, cacheStore: Boolean): AsyncStoreHandler<K, X> {
+    override fun read(key: K, cacheStore: Boolean): AsyncHandler<X> {
         // Try Local Cache First
         val localStore = readFromCache(key)
         localStore?.let { store ->
             store.readOnly = true
-            return AsyncStoreHandler(this) { store }
+            return AsyncHandler(this) { store }
         }
 
         // Try Database Second
-        return AsyncStoreHandler(this) {
+        return AsyncHandler(this) {
             val databaseStore = readFromDatabase(key)
             databaseStore?.let { store ->
                 store.readOnly = true
                 if (cacheStore) {
                     cache(store)
                 }
-                return@AsyncStoreHandler store
+                return@AsyncHandler store
             }
         }
     }
 
     @Throws(DuplicateKeyException::class)
-    override fun create(key: K, initializer: Consumer<X>): AsyncStoreHandler<K, X> {
+    override fun create(key: K, initializer: Consumer<X>): AsyncHandler<X> {
         Preconditions.checkNotNull(initializer, "Initializer cannot be null")
 
-        return AsyncStoreHandler(this) {
+        return AsyncHandler(this) {
             try {
                 // Create a new instance in modifiable state
                 val store: X = instantiator.instantiate()
@@ -96,7 +95,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
                 // Save the store to our database implementation & cache
                 this.cache(store)
                 this.databaseStore.save(store)
-                return@AsyncStoreHandler store
+                return@AsyncHandler store
             } catch (d: DuplicateKeyException) {
                 getLoggerService().severe("Failed to create Store: Duplicate Key...")
                 throw d
@@ -106,30 +105,56 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         }
     }
 
-    override fun delete(key: K): Deferred<Boolean> {
-        return async {
-            localStore.remove(key)
+    override fun delete(key: K): AsyncHandler<Boolean> {
+        localStore.remove(key)
+        return AsyncHandler(this) {
             val removedFromDb = databaseStore.remove(key)
             invalidateIndexes(key, true)
             removedFromDb
         }
     }
 
-    override fun update(key: K, updateFunction: Consumer<X>): AsyncStoreHandler<K, X> {
+    override fun update(key: K, updateFunction: Consumer<X>): AsyncHandler<X> {
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
-        return AsyncStoreHandler(this) {
+        return AsyncHandler(this) {
             when (val readResult = read(key).await()) {
-                is StoreResult.Success -> {
-                    val originalEntity = readResult.store
+                is CollectionResult.Success -> {
+                    val originalEntity = readResult.value
                     check(this.databaseStore.updateSync(originalEntity, updateFunction)) {
                         "[StoreCollection#update] Failed to update store with key: ${this.keyToString(key)}"
                     }
 
                     originalEntity
                 }
-                is StoreResult.Failure -> throw readResult.error
-                is StoreResult.Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
+                is CollectionResult.Failure -> throw readResult.error
+                is CollectionResult.Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
+            }
+        }
+    }
+
+    override fun readAll(cacheStores: Boolean): Iterable<X> {
+        val keysIterable = iDs.iterator()
+
+        // Create an Iterable that iterates through all database keys, transforming into Stores
+        return Iterable {
+            TransformingIterator(keysIterable) { key ->
+                // 1. If we have the object in the cache -> return it
+                val o: X? = localStore.get(key)
+                if (o != null) {
+                    return@TransformingIterator o
+                }
+
+                // 2. We don't have the object in the cache -> load it from the database
+                // If for some reason this was deleted, or not found, we can just return null
+                //  and the TransformingIterator will skip it
+                val db: X = databaseStore.get(key) ?: return@TransformingIterator null
+
+                // Optionally cache this loaded Store
+                if (cacheStores) {
+                    this.cache(db)
+                }
+                db
             }
         }
     }
@@ -348,33 +373,40 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         DataStoreSource.storageService.saveIndexCache(this)
     }
 
-    override fun <T> getStoreIdByIndexSync(index: IndexedField<X, T>, value: T): K? {
-        return DataStoreSource.storageService.getStoreIdByIndex(this, index, value)
+    override fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K?> {
+        return AsyncHandler(this) {
+            DataStoreSource.storageService.getStoreIdByIndex(this, index, value)
+        }
     }
 
-    override fun <T> getByIndexSync(field: IndexedField<X, T>, value: T): X? {
+    override fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X?> {
         // 1. -> Check local cache (brute force)
         for (store in localStore.all) {
             if (field.equals(field.getValue(store), value)) {
-                return store
+                return AsyncHandler(this) { store }
             }
         }
 
         // 2. -> Check database (uses storage service like mongodb)
-        val id = DataStoreSource.storageService.getStoreIdByIndex(this, field, value) ?: return null
+        return AsyncHandler(this) {
+            val id = DataStoreSource.storageService.getStoreIdByIndex(this, field, value) ?: return@AsyncHandler null
 
-        // 3. -> Obtain the Profile by its ID
-        val o = this.readSync(id)
-        if (o != null && !field.equals(value, field.getValue(o))) {
-            // This can happen if:
-            //    The local copy had its field changed
-            //    and those changes were not saved to DB or Index Cache
-            // This is not considered an error, but we should return empty
-            return null
+            // 3. -> Obtain the Profile by its ID
+            when (val readResult = this.read(id).await()) {
+                is CollectionResult.Success -> {
+                    if (!field.equals(value, field.getValue(readResult.value))) {
+                        // This can happen if:
+                        //    The local copy had its field changed
+                        //    and those changes were not saved to DB or Index Cache
+                        // This is not considered an error, but we should return empty
+                        return@AsyncHandler null
+                    }
+                    return@AsyncHandler readResult.value
+                }
+                is CollectionResult.Failure -> throw readResult.error
+                is CollectionResult.Empty -> return@AsyncHandler null
+            }
         }
-
-        // Either the Optional is empty or the Store has the correct value -> return
-        return o
     }
 
     private var _loggerService: LoggerService? = null

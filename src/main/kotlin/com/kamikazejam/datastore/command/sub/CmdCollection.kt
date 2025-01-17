@@ -3,7 +3,6 @@ package com.kamikazejam.datastore.command.sub
 import com.kamikazejam.datastore.DataStoreAPI
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
-import com.kamikazejam.datastore.base.result.AsyncStoreHandler
 import com.kamikazejam.datastore.command.SubCommand
 import com.kamikazejam.datastore.util.Color
 import org.bukkit.command.CommandSender

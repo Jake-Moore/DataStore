@@ -6,15 +6,13 @@ import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
-import com.kamikazejam.datastore.base.result.AsyncStoreHandler
+import com.kamikazejam.datastore.base.result.AsyncHandler
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
 import com.kamikazejam.datastore.mode.`object`.store.ObjectStorageDatabase
 import com.kamikazejam.datastore.mode.`object`.store.ObjectStorageLocal
 import com.mongodb.*
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
 import org.bukkit.Bukkit
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -70,10 +68,13 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     //                          CRUD                         //
     // ----------------------------------------------------- //
     @Throws(DuplicateKeyException::class)
-    override fun create(initializer: Consumer<X>): AsyncStoreHandler<String, X> {
+    override fun create(initializer: Consumer<X>): AsyncHandler<X> {
         return this.create(UUID.randomUUID().toString(), initializer)
     }
 
+    // ----------------------------------------------------- //
+    //                 Misc Collection Methods               //
+    // ----------------------------------------------------- //
     override fun loader(key: String): StoreObjectLoader<X> {
         Preconditions.checkNotNull(key)
         return loaders.computeIfAbsent(key) { s: String -> StoreObjectLoader(this, s) }
@@ -85,32 +86,6 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
     override fun keyFromString(key: String): String {
         return key
-    }
-
-    override fun readAll(cacheStores: Boolean): Iterable<X> {
-        val keysIterable = databaseStore.keys.iterator()
-
-        // Create an Iterable that iterates through all database keys, transforming into Stores
-        return Iterable {
-            TransformingIterator(keysIterable) { key ->
-                // 1. If we have the object in the cache -> return it
-                val o: X? = localStore.get(key)
-                if (o != null) {
-                    return@TransformingIterator o
-                }
-
-                // 2. We don't have the object in the cache -> load it from the database
-                // If for some reason this was deleted, or not found, we can just return null
-                //  and the TransformingIterator will skip it
-                val db: X = databaseStore.get(key) ?: return@TransformingIterator null
-
-                // Optionally cache this loaded Store
-                if (cacheStores) {
-                    this.cache(db)
-                }
-                db
-            }
-        }
     }
 
     override fun readAllFromDatabase(cacheStores: Boolean): Iterable<X?> {
@@ -142,8 +117,8 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     override val cached: kotlin.collections.Collection<X>
         get() = localStore.localStorage.values
 
-    override fun hasKey(key: String): Deferred<Boolean> {
-        return async {
+    override fun hasKey(key: String): AsyncHandler<Boolean> {
+        return AsyncHandler(this) {
             localStore.has(key) || databaseStore.has(key)
         }
     }

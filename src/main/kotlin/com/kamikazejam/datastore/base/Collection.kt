@@ -1,11 +1,11 @@
 package com.kamikazejam.datastore.base
 
 import com.kamikazejam.datastore.DataStoreRegistration
-import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
+import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.base.log.LoggerService
-import com.kamikazejam.datastore.base.result.AsyncStoreHandler
+import com.kamikazejam.datastore.base.result.AsyncHandler
 import com.kamikazejam.datastore.base.storage.StorageDatabase
 import com.kamikazejam.datastore.base.storage.StorageLocal
 import com.kamikazejam.datastore.base.storage.StorageMethods
@@ -14,14 +14,11 @@ import com.kamikazejam.datastore.mode.`object`.ObjectCollection
 import com.kamikazejam.datastore.mode.profile.ProfileCollection
 import com.mongodb.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Blocking
-import org.jetbrains.annotations.NonBlocking
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import kotlin.coroutines.CoroutineContext
 
@@ -48,7 +45,7 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
      * @return The created Store object. (READ-ONLY)
      */
     @Throws(DuplicateKeyException::class)
-    fun create(key: K, initializer: Consumer<X>): AsyncStoreHandler<K, X>
+    fun create(key: K, initializer: Consumer<X>): AsyncHandler<X>
 
     /**
      * Read a Store from this collection (or the database if it doesn't exist in the cache)
@@ -56,20 +53,20 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The Store object. (READ-ONLY) (optional)
      */
-    fun read(key: K, cacheStore: Boolean = true): AsyncStoreHandler<K, X>
+    fun read(key: K, cacheStore: Boolean = true): AsyncHandler<X>
 
     /**
      * Modifies a Store in a controlled environment where modifications are allowed
      * @throws NoSuchElementException if the Store (by this key) is not found
      * @return The updated Store object. (READ-ONLY)
      */
-    fun update(key: K, updateFunction: Consumer<X>): AsyncStoreHandler<K, X>
+    fun update(key: K, updateFunction: Consumer<X>): AsyncHandler<X>
 
     /**
      * Deletes a Store by ID (removes from both cache and database collection)
      * @return True if the Store was deleted, false if it was not found (does not exist)
      */
-    fun delete(key: K): Deferred<Boolean>
+    fun delete(key: K): AsyncHandler<Boolean>
 
     /**
      * Retrieves ALL Stores, including cached values and additional values from database.
@@ -244,7 +241,7 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
     /**
      * @return True iff this Collection contains a Store with the provided key. (checks database too)
      */
-    fun hasKey(key: K): Deferred<Boolean>
+    fun hasKey(key: K): AsyncHandler<Boolean>
 
     /**
      * Gets the [StoreLoader] for the provided key.
@@ -299,32 +296,11 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
     @ApiStatus.Internal
     fun saveIndexCache()
 
-    fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncStoreHandler<K?>? {
-        return AsyncStoreHandler.of<K?>(CompletableFuture.supplyAsync<K?> {
-            getStoreIdByIndexSync(
-                index,
-                value
-            )
-        }, this)
-    }
-
-    fun <T> getStoreIdByIndexSync(index: IndexedField<X, T>, value: T): K?
+    fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K?>
 
     /**
      * Retrieves an object by the provided index field and its value.
      */
-    fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncStoreHandler<X?> {
-        return AsyncStoreHandler.of<X?>(CompletableFuture.supplyAsync<X?> {
-            getByIndexSync(
-                field,
-                value
-            )
-        }, this)
-    }
-
-    /**
-     * Retrieves an object by the provided index field and its value.
-     */
-    fun <T> getByIndexSync(field: IndexedField<X, T>, value: T): X?
+    fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X?>
 }
 

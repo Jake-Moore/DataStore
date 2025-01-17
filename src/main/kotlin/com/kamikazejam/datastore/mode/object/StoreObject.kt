@@ -6,7 +6,7 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
-import kotlinx.coroutines.Deferred
+import com.kamikazejam.datastore.base.result.AsyncHandler
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
 import java.util.function.Consumer
@@ -54,11 +54,11 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //
     // ----------------------------------------------------- //
-    override fun updateSync(updateFunction: Consumer<T>): T {
-        return getCollection().updateSync(this.id, updateFunction)
+    override fun update(updateFunction: Consumer<T>): AsyncHandler<T> {
+        return getCollection().update(this.id, updateFunction)
     }
 
-    override fun delete(): Deferred<Boolean> {
+    override fun delete(): AsyncHandler<Boolean> {
         return getCollection().delete(this.id)
     }
 

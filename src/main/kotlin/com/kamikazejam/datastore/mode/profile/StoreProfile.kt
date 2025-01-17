@@ -6,14 +6,13 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
+import com.kamikazejam.datastore.base.result.AsyncHandler
 import com.kamikazejam.datastore.util.PlayerUtil
-import kotlinx.coroutines.Deferred
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.ApiStatus.Internal
 import java.util.*
-import java.util.function.Consumer
 import javax.persistence.Id
 
 @Suppress("unused")
@@ -58,11 +57,7 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //
     // ----------------------------------------------------- //
-    override fun updateSync(updateFunction: Consumer<T>): T {
-        return getCollection().updateSync(this.id, updateFunction)
-    }
-
-    override fun delete(): Deferred<Boolean> {
+    override fun delete(): AsyncHandler<Boolean> {
         return getCollection().delete(this.id)
     }
 

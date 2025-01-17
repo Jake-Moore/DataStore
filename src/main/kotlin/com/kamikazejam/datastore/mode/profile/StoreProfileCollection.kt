@@ -5,22 +5,20 @@ import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.StoreCollection
+import com.kamikazejam.datastore.base.extensions.read
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
+import com.kamikazejam.datastore.base.result.AsyncHandler
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
-import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
 import com.kamikazejam.datastore.event.profile.StoreProfileQuitEvent
 import com.kamikazejam.datastore.mode.profile.store.ProfileStorageDatabase
 import com.kamikazejam.datastore.mode.profile.store.ProfileStorageLocal
 import com.kamikazejam.datastore.util.PlayerUtil
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
-import java.util.stream.Collectors
 
 @Suppress("unused")
 abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constructor(
@@ -67,21 +65,6 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     // ----------------------------------------------------- //
     //                          CRUD                         //
     // ----------------------------------------------------- //
-    override fun readSync(player: Player, cacheStore: Boolean): X {
-        val store: X = StoreProfileLoader.loadOrCreateStore(this, player.uniqueId, true, player.name)
-        if (cacheStore) {
-            this.cache(store)
-        }
-        return store
-    }
-
-    override fun readAll(cacheStores: Boolean): Iterable<X> {
-        return Iterable {
-            TransformingIterator(iDs.iterator()) { id: UUID ->
-                readSync(id, cacheStores)
-            }
-        }
-    }
 
     override fun readAllFromDatabase(cacheStores: Boolean): Iterable<X?> {
         return databaseStore.all
@@ -107,8 +90,8 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     override val cached: kotlin.collections.Collection<X>
         get() = localStore.localStorage.values
 
-    override fun hasKey(key: UUID): Deferred<Boolean> {
-        return async {
+    override fun hasKey(key: UUID): AsyncHandler<Boolean> {
+        return AsyncHandler(this) {
             localStore.has(key) || databaseStore.has(key)
         }
     }
@@ -132,13 +115,13 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
         get() = databaseStore.keys
 
 
-    override val online: kotlin.collections.Collection<X>
-        // ----------------------------------------------------- //
-        get() =// Stream online players and map them to their StoreProfile
-            Bukkit.getOnlinePlayers().stream()
-                .filter { PlayerUtil.isFullyValidPlayer(it) }
-                .map { player: Player -> this.readSync(player) }
-                .collect(Collectors.toSet())
+    override suspend fun getOnline(): kotlin.collections.Collection<X> {
+        return Bukkit.getOnlinePlayers()
+            .filter { PlayerUtil.isFullyValidPlayer(it) }
+            .mapNotNull { player ->
+                this.read(player).await().getOrNull()
+            }
+    }
 
     override fun getFromCache(player: Player): X? {
         Preconditions.checkNotNull(player)

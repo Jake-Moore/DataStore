@@ -3,14 +3,11 @@ package com.kamikazejam.datastore.base
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.FieldWrapperMap
-import com.kamikazejam.datastore.base.result.AsyncStoreHandler
+import com.kamikazejam.datastore.base.result.AsyncHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.annotations.ApiStatus
-import org.jetbrains.annotations.Blocking
 import org.jetbrains.annotations.NonBlocking
-import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import kotlin.coroutines.CoroutineContext
 
@@ -18,7 +15,7 @@ import kotlin.coroutines.CoroutineContext
  * A Store is an object that can have CRUD operations performed on it.
  * Generics: K = Identifier Object Type (i.e. String, UUID)
  */
-@Suppress("unused", "BlockingMethodInNonBlockingContext")
+@Suppress("unused")
 interface Store<T : Store<T, K>, K> : CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.IO
@@ -41,28 +38,15 @@ interface Store<T : Store<T, K>, K> : CoroutineScope {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    fun update(updateFunction: Consumer<T>): AsyncStoreHandler<K, T> {
-        return AsyncStoreHandler.of(
-            CompletableFuture.supplyAsync { updateSync(updateFunction) },
-            getCollection()
-        )
+    fun update(updateFunction: Consumer<T>): AsyncHandler<T> {
+        return getCollection().update(id, updateFunction)
     }
 
     /**
      * Deletes this Store object (removes from both cache and database)
      */
     @NonBlocking
-    fun delete(): Deferred<Boolean>
-
-    // ----------------------------------------------------- //
-    //                  CRUD Helpers (sync)                  //
-    // ----------------------------------------------------- //
-    /**
-     * Modifies this Store in a controlled environment where modifications are allowed
-     * @return The updated Store object. (READ-ONLY)
-     */
-    @Blocking
-    fun updateSync(updateFunction: Consumer<T>): T
+    fun delete(): AsyncHandler<Boolean>
 
     // ----------------------------------------------------- //
     //                Api / Internal Methods                 //

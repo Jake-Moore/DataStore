@@ -2,6 +2,7 @@ package com.kamikazejam.datastore.mode.profile
 
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
+import com.kamikazejam.datastore.base.extensions.update
 import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
 import com.kamikazejam.datastore.util.Color
