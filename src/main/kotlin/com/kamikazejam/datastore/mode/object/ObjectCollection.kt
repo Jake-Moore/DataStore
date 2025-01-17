@@ -20,5 +20,5 @@ interface ObjectCollection<X : StoreObject<X>> : Collection<String, X> {
      * @return The created Store object. (READ-ONLY)
      */
     @Throws(DuplicateKeyException::class)
-    fun create(initializer: Consumer<X>): AsyncHandler<X>
+    fun create(initializer: Consumer<X> = Consumer {}): AsyncHandler<X>
 }

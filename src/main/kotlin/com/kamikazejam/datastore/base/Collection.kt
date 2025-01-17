@@ -45,7 +45,7 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
      * @return The created Store object. (READ-ONLY)
      */
     @Throws(DuplicateKeyException::class)
-    fun create(key: K, initializer: Consumer<X>): AsyncHandler<X>
+    fun create(key: K, initializer: Consumer<X> = Consumer {}): AsyncHandler<X>
 
     /**
      * Read a Store from this collection (or the database if it doesn't exist in the cache)

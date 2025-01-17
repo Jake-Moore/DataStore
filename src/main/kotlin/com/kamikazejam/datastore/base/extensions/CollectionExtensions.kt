@@ -16,7 +16,7 @@ import java.util.function.Consumer
  * @param initializer The initializer for the Store if it doesn't exist.
  * @return The Store object. (READ-ONLY) (fetched or created)
  */
-fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Consumer<X>): AsyncHandler<X> {
+fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Consumer<X> = Consumer {}): AsyncHandler<X> {
     return AsyncHandler(this) {
         when (val readResult = read(key).await()) {
             is CollectionResult.Success -> return@AsyncHandler readResult.value
