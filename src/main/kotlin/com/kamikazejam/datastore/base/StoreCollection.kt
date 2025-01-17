@@ -373,13 +373,13 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         DataStoreSource.storageService.saveIndexCache(this)
     }
 
-    override fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K> {
+    override fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K> {
         return AsyncHandler(this) {
             DataStoreSource.storageService.getStoreIdByIndex(this, index, value)
         }
     }
 
-    override fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X> {
+    override fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X> {
         // 1. -> Check local cache (brute force)
         for (store in localStore.all) {
             if (field.equals(field.getValue(store), value)) {

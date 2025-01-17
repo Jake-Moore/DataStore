@@ -296,11 +296,15 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
     @ApiStatus.Internal
     fun saveIndexCache()
 
-    fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K>
+
+    // ------------------------------------------------- //
+    //                     Indexing                      //
+    // ------------------------------------------------- //
+    fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K>
 
     /**
      * Retrieves an object by the provided index field and its value.
      */
-    fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X>
+    fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X>
 }
 

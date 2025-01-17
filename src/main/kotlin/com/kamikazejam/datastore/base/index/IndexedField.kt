@@ -13,7 +13,7 @@ abstract class IndexedField<X : Store<X, *>, T>(
 ) {
     abstract fun equals(a: T?, b: T?): Boolean
 
-    abstract fun <K, Y : Store<Y, K>> getValue(store: Y): T
+    abstract fun getValue(store: X): T?
 
     abstract fun toString(value: Any): String
 
