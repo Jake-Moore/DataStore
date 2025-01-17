@@ -67,6 +67,7 @@ class FieldWrapperMap<K, V> private constructor(
         }
 
     companion object {
+        @JvmStatic
         fun <K, V> of(name: String, defaultValue: Map<K, V>? = null): FieldWrapperMap<K, V> =
             FieldWrapperMap(name, defaultValue)
     }

@@ -79,6 +79,7 @@ class FieldWrapperConcurrentMap<K : Any, V : Any> private constructor(
     override fun replace(key: K, value: V): V? = getModifiableMap().replace(key, value)
 
     companion object {
+        @JvmStatic
         fun <K : Any, V : Any> of(name: String, defaultValue: ConcurrentMap<K, V>? = null): FieldWrapperConcurrentMap<K, V> =
             FieldWrapperConcurrentMap(name, defaultValue)
     }

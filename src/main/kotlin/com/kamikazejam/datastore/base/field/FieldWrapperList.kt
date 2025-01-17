@@ -90,6 +90,7 @@ class FieldWrapperList<E> private constructor(
     }
 
     companion object {
+        @JvmStatic
         fun <E> of(name: String, defaultValue: List<E>? = null): FieldWrapperList<E> =
             FieldWrapperList(name, defaultValue)
     }

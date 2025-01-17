@@ -55,6 +55,7 @@ class FieldWrapperSet<E> private constructor(
     }
 
     companion object {
+        @JvmStatic
         fun <E> of(name: String, defaultValue: Set<E>? = null): FieldWrapperSet<E> =
             FieldWrapperSet(name, defaultValue)
     }

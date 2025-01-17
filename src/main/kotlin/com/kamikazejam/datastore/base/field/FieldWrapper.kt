@@ -68,6 +68,7 @@ class FieldWrapper<T> private constructor(
         // ------------------------------------------------------ //
         // Static Constructors                                    //
         // ------------------------------------------------------ //
+        @JvmStatic
         fun <T> of(name: String, defaultValue: T?, valueType: Class<T>): FieldWrapper<T> {
             return FieldWrapper(name, defaultValue, valueType)
         }
