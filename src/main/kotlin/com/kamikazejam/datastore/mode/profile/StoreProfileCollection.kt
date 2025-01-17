@@ -13,6 +13,8 @@ import com.kamikazejam.datastore.event.profile.StoreProfileQuitEvent
 import com.kamikazejam.datastore.mode.profile.store.ProfileStorageDatabase
 import com.kamikazejam.datastore.mode.profile.store.ProfileStorageLocal
 import com.kamikazejam.datastore.util.PlayerUtil
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.*
@@ -45,6 +47,9 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
         }
     }
 
+    // ------------------------------------------------------ //
+    //                  Collection Methods                    //
+    // ------------------------------------------------------ //
     override fun initialize(): Boolean {
         // nothing to do here
         return true
@@ -102,8 +107,10 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     override val cached: kotlin.collections.Collection<X>
         get() = localStore.localStorage.values
 
-    override fun hasKeySync(key: UUID): Boolean {
-        return localStore.has(key) || databaseStore.has(key)
+    override fun hasKey(key: UUID): Deferred<Boolean> {
+        return async {
+            localStore.has(key) || databaseStore.has(key)
+        }
     }
 
     override fun readFromCache(key: UUID): X? {

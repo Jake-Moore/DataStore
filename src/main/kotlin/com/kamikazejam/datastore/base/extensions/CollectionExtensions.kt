@@ -6,6 +6,9 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.result.AsyncStoreHandler
 import com.kamikazejam.datastore.base.result.StoreResult
+import kotlinx.coroutines.Deferred
+import org.jetbrains.annotations.NonBlocking
+import java.util.NoSuchElementException
 import java.util.function.Consumer
 
 /**
@@ -29,4 +32,22 @@ fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Cons
             }
         }
     }
+}
+
+/**
+ * Modifies a Store in a controlled environment where modifications are allowed
+ * @throws NoSuchElementException if the Store (by this key) is not found
+ * @return The updated Store object. (READ-ONLY)
+ */
+@NonBlocking
+fun <K, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: Consumer<X>): AsyncStoreHandler<K, X> {
+    return this.update(store.id, updateFunction)
+}
+
+/**
+ * Deletes a Store by ID (removes from both cache and database collection)
+ * @return True if the Store was deleted, false if it was not found (does not exist)
+ */
+fun <K, X : Store<X, K>> Collection<K, X>.delete(store: X): Deferred<Boolean> {
+    return this.delete(store.id)
 }

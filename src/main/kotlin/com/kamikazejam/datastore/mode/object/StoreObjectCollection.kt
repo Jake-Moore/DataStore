@@ -13,6 +13,8 @@ import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterat
 import com.kamikazejam.datastore.mode.`object`.store.ObjectStorageDatabase
 import com.kamikazejam.datastore.mode.`object`.store.ObjectStorageLocal
 import com.mongodb.*
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import org.bukkit.Bukkit
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -45,15 +47,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     }
 
     // ------------------------------------------------------ //
-    // CRUD Methods                                           //
-    // ------------------------------------------------------ //
-    @Throws(DuplicateKeyException::class)
-    override fun create(initializer: Consumer<X>): AsyncStoreHandler<String, X> {
-        return this.create(UUID.randomUUID().toString(), initializer)
-    }
-
-    // ------------------------------------------------------ //
-    // Cache Methods                                          //
+    // Collection Methods                                     //
     // ------------------------------------------------------ //
     override fun initialize(): Boolean {
         // Nothing to do here
@@ -70,6 +64,14 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
         // Don't clear database (can't)
         return success
+    }
+
+    // ----------------------------------------------------- //
+    //                          CRUD                         //
+    // ----------------------------------------------------- //
+    @Throws(DuplicateKeyException::class)
+    override fun create(initializer: Consumer<X>): AsyncStoreHandler<String, X> {
+        return this.create(UUID.randomUUID().toString(), initializer)
     }
 
     override fun loader(key: String): StoreObjectLoader<X> {
@@ -140,8 +142,10 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     override val cached: kotlin.collections.Collection<X>
         get() = localStore.localStorage.values
 
-    override fun hasKeySync(key: String): Boolean {
-        return localStore.has(key) || databaseStore.has(key)
+    override fun hasKey(key: String): Deferred<Boolean> {
+        return async {
+            localStore.has(key) || databaseStore.has(key)
+        }
     }
 
     override fun readFromCache(key: String): X? {

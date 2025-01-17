@@ -14,6 +14,7 @@ import com.kamikazejam.datastore.mode.`object`.ObjectCollection
 import com.kamikazejam.datastore.mode.profile.ProfileCollection
 import com.mongodb.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
@@ -29,25 +30,16 @@ import kotlin.coroutines.CoroutineContext
  * Getters vary by Store type, they are defined in the store-specific interfaces:
  * [ObjectCollection] and [ProfileCollection]
  */
-@Suppress("unused", "BlockingMethodInNonBlockingContext")
+@Suppress("unused")
 interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.IO
 
     // ----------------------------------------------------- //
-    //                 CRUD Helpers (Async)                  //
+    //                     CRUD Helpers                      //
     // ----------------------------------------------------- //
     // create(initializer) are in ObjectCollection
     // additional player methods are in ProfileCollection
-
-    /**
-     * Read a Store from this collection (or the database if it doesn't exist in the cache)
-     * @param key The key of the Store to read.
-     * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
-     * @return The Store object. (READ-ONLY) (optional)
-     */
-    @NonBlocking
-    fun read(key: K, cacheStore: Boolean = true): AsyncStoreHandler<K, X>
 
     /**
      * Create a new Store object with the provided key & initializer.<br></br>
@@ -55,45 +47,29 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
      * @throws DuplicateKeyException If the key already exists in the collection. (failed to create)
      * @return The created Store object. (READ-ONLY)
      */
-    @NonBlocking
     @Throws(DuplicateKeyException::class)
     fun create(key: K, initializer: Consumer<X>): AsyncStoreHandler<K, X>
 
     /**
-     * Modifies a Store in a controlled environment where modifications are allowed
-     * @throws NoSuchElementException if the Store (by this key) is not found
-     * @return The updated Store object. (READ-ONLY)
+     * Read a Store from this collection (or the database if it doesn't exist in the cache)
+     * @param key The key of the Store to read.
+     * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
+     * @return The Store object. (READ-ONLY) (optional)
      */
-    @NonBlocking
-    fun update(key: K, updateFunction: Consumer<X>): AsyncStoreHandler<X> {
-        return AsyncStoreHandler.of(CompletableFuture.supplyAsync { updateSync(key, updateFunction) }, this)
-    }
+    fun read(key: K, cacheStore: Boolean = true): AsyncStoreHandler<K, X>
 
     /**
      * Modifies a Store in a controlled environment where modifications are allowed
      * @throws NoSuchElementException if the Store (by this key) is not found
      * @return The updated Store object. (READ-ONLY)
      */
-    @NonBlocking
-    fun update(store: X, updateFunction: Consumer<X>): AsyncStoreHandler<X> {
-        return this.update(store.id, updateFunction)
-    }
+    fun update(key: K, updateFunction: Consumer<X>): AsyncStoreHandler<K, X>
 
     /**
      * Deletes a Store by ID (removes from both cache and database collection)
+     * @return True if the Store was deleted, false if it was not found (does not exist)
      */
-    @NonBlocking
-    fun delete(key: K): AsyncStoreHandler<Void> {
-        return AsyncStoreHandler.of<Void>(CompletableFuture.runAsync { deleteSync(key) }, this)
-    }
-
-    /**
-     * Deletes a Store (removes from both cache and database collection)
-     */
-    @NonBlocking
-    fun delete(store: X): AsyncStoreHandler<Void> {
-        return AsyncStoreHandler.of<Void>(CompletableFuture.runAsync { deleteSync(store) }, this)
-    }
+    fun delete(key: K): Deferred<Boolean>
 
     /**
      * Retrieves ALL Stores, including cached values and additional values from database.
@@ -102,41 +78,6 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
      */
     @Blocking
     fun readAll(cacheStores: Boolean): Iterable<X>
-
-
-
-
-    // TODO DElEte ALL SYNC
-
-    /**
-     * Modifies a Store in a controlled environment where modifications are allowed
-     * @throws NoSuchElementException if the Store (by this key) is not found
-     * @return The updated Store object. (READ-ONLY)
-     */
-    @Blocking
-    fun updateSync(key: K, updateFunction: Consumer<X>): X
-
-    /**
-     * Modifies a Store in a controlled environment where modifications are allowed
-     * @throws NoSuchElementException if the Store (by this key) is not found
-     * @return The updated Store object. (READ-ONLY)
-     */
-    @Blocking
-    fun updateSync(store: X, updateFunction: Consumer<X>): X {
-        return this.updateSync(store.id, updateFunction)
-    }
-
-    /**
-     * Deletes a Store by ID (removes from both cache and database collection)
-     */
-    @Blocking
-    fun deleteSync(key: K)
-
-    /**
-     * Deletes a Store (removes from both cache and database collection)
-     */
-    @Blocking
-    fun deleteSync(store: X)
 
 
     // ------------------------------------------------------ //
@@ -303,16 +244,7 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
     /**
      * @return True iff this Collection contains a Store with the provided key. (checks database too)
      */
-    fun hasKey(key: K): AsyncStoreHandler<Boolean> {
-        return AsyncStoreHandler.of(CompletableFuture.supplyAsync {
-            hasKeySync(
-                key
-            )
-        }, this)
-    }
-
-
-    fun hasKeySync(key: K): Boolean
+    fun hasKey(key: K): Deferred<Boolean>
 
     /**
      * Gets the [StoreLoader] for the provided key.

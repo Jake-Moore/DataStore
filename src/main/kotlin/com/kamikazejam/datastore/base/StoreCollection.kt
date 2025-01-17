@@ -9,11 +9,14 @@ import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.result.AsyncStoreHandler
+import com.kamikazejam.datastore.base.result.StoreResult
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
 import com.mongodb.*
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.IllegalPluginAccessException
@@ -103,29 +106,32 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         }
     }
 
-    override fun deleteSync(key: K) {
-        localStore.remove(key)
-        databaseStore.remove(key)
-        this.invalidateIndexes(key, true)
+    override fun delete(key: K): Deferred<Boolean> {
+        return async {
+            localStore.remove(key)
+            val removedFromDb = databaseStore.remove(key)
+            invalidateIndexes(key, true)
+            removedFromDb
+        }
     }
 
-    override fun deleteSync(store: X) {
-        Preconditions.checkNotNull(store, "Store cannot be null")
-        delete(store.id)
-    }
-
-    override fun updateSync(key: K, updateFunction: Consumer<X>): X {
+    override fun update(key: K, updateFunction: Consumer<X>): AsyncStoreHandler<K, X> {
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
-        val originalEntity = readSync(key) ?: throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
+        return AsyncStoreHandler(this) {
+            when (val readResult = read(key).await()) {
+                is StoreResult.Success -> {
+                    val originalEntity = readResult.store
+                    check(this.databaseStore.updateSync(originalEntity, updateFunction)) {
+                        "[StoreCollection#update] Failed to update store with key: ${this.keyToString(key)}"
+                    }
 
-        check(
-            this.databaseStore.updateSync(
-                originalEntity,
-                updateFunction
-            )
-        ) { "[StoreCollection#update] Failed to update store with key: ${this.keyToString(key)}" }
-        return originalEntity
+                    originalEntity
+                }
+                is StoreResult.Failure -> throw readResult.error
+                is StoreResult.Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
+            }
+        }
     }
 
     // ------------------------------------------------------ //
