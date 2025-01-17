@@ -1,7 +1,7 @@
 package com.kamikazejam.datastore.command
 
-import com.kamikazejam.datastore.command.sub.CmdCache
-import com.kamikazejam.datastore.command.sub.CmdCaches
+import com.kamikazejam.datastore.command.sub.CmdCollection
+import com.kamikazejam.datastore.command.sub.CmdCollections
 import com.kamikazejam.datastore.command.sub.CmdDatabases
 import com.kamikazejam.datastore.command.sub.CmdInfo
 import com.kamikazejam.datastore.util.Color
@@ -15,8 +15,8 @@ class DataStoreCommand : TabExecutor {
     private val subCommands: MutableList<SubCommand> = ArrayList()
 
     init {
-        subCommands.add(CmdCache())
-        subCommands.add(CmdCaches())
+        subCommands.add(CmdCollection())
+        subCommands.add(CmdCollections())
         subCommands.add(CmdDatabases())
         subCommands.add(CmdInfo())
     }

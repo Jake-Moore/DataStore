@@ -1,6 +1,6 @@
 package com.kamikazejam.datastore.base.storage
 
-import com.kamikazejam.datastore.base.Cache
+import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import org.jetbrains.annotations.ApiStatus
 
@@ -56,9 +56,9 @@ interface StorageMethods<K, X : Store<X, K>> {
 
     /**
      * Retrieve all Store keys (in string form) from this store.
-     * Uses [Cache.keyToString] to convert keys to strings.
+     * Uses [Collection.keyToString] to convert keys to strings.
      */
-    fun getKeyStrings(cache: Cache<K, X>): Iterable<String>
+    fun getKeyStrings(collection: Collection<K, X>): Iterable<String>
 
     /**
      * Clear all Stores from this store. No Stores are deleted, just removed from memory.

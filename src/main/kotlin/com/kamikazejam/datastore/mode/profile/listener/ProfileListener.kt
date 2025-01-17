@@ -4,15 +4,16 @@ import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.kamikazejam.datastore.DataStoreAPI
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.exception.CachingError
+import com.kamikazejam.datastore.base.Collection
+import com.kamikazejam.datastore.base.exception.ProfileDenyJoinError
 import com.kamikazejam.datastore.event.profile.StoreProfileLoginEvent
 import com.kamikazejam.datastore.event.profile.StoreProfileLogoutEvent
 import com.kamikazejam.datastore.event.profile.StoreProfilePreLogoutEvent
-import com.kamikazejam.datastore.mode.profile.ProfileCache
+import com.kamikazejam.datastore.mode.profile.ProfileCollection
 import com.kamikazejam.datastore.mode.profile.StoreProfile
-import com.kamikazejam.datastore.mode.profile.StoreProfileCache
+import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.StoreProfileLoader
-import com.kamikazejam.datastore.util.AsyncCachesExecutor
+import com.kamikazejam.datastore.util.AsyncCollectionsExecutor
 import com.kamikazejam.datastore.util.Color
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
@@ -61,8 +62,8 @@ class ProfileListener : Listener {
             cachePlayerProfiles(username, uniqueId, ip, timeout)[timeout + 3, TimeUnit.SECONDS]
         } catch (t: Throwable) {
             if (t is ExecutionException) {
-                if (t.cause is CachingError) {
-                    event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, (t.cause as CachingError).message)
+                if (t.cause is ProfileDenyJoinError) {
+                    event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, (t.cause as ProfileDenyJoinError).message)
                     return
                 }
             }
@@ -88,14 +89,14 @@ class ProfileListener : Listener {
         timeoutSec: Long
     ): CompletableFuture<Void> {
         // Compile all the ProfileCaches
-        val caches: MutableList<StoreProfileCache<X>> = ArrayList()
-        DataStoreAPI.caches.values.forEach { c: com.kamikazejam.datastore.base.Cache<*, *>? ->
-            if (c is StoreProfileCache<*>) {
-                caches.add(c as StoreProfileCache<X>)
+        val collections: MutableList<StoreProfileCollection<X>> = ArrayList()
+        DataStoreAPI.collections.values.forEach { c: Collection<*, *>? ->
+            if (c is StoreProfileCollection<*>) {
+                collections.add(c as StoreProfileCollection<X>)
             }
         }
-        val executor = AsyncCachesExecutor(caches, { cache ->
-                val loader: StoreProfileLoader<X> = cache.loader(uniqueId)
+        val executor = AsyncCollectionsExecutor(collections, { collection ->
+                val loader: StoreProfileLoader<X> = collection.loader(uniqueId)
                 loader.login(username)
                 loader.fetch(true)
                 if (loader.denyJoin) {
@@ -106,7 +107,7 @@ class ProfileListener : Listener {
                         loader.joinDenyReason
 
                     // If denied, throw an exception (will be caught by original join event)
-                    throw CachingError(message)
+                    throw ProfileDenyJoinError(message)
                 }
             }, timeoutSec
         )
@@ -130,8 +131,8 @@ class ProfileListener : Listener {
     @EventHandler(priority = EventPriority.LOW)
     fun onProfileCachingInit(event: PlayerJoinEvent) {
         val player: Player = event.player
-        DataStoreAPI.caches.values.forEach { c: com.kamikazejam.datastore.base.Cache<*, *> ->
-            if (c is StoreProfileCache<*>) {
+        DataStoreAPI.collections.values.forEach { c: Collection<*, *> ->
+            if (c is StoreProfileCollection<*>) {
                 val loader: StoreProfileLoader<*> = c.loader(player.uniqueId)
                 loader.initializeOnJoin(player)
             }
@@ -151,8 +152,8 @@ class ProfileListener : Listener {
         Bukkit.getServer().pluginManager.callEvent(preLogoutEvent)
 
         // Best way to do this for now, is to do this sync and in order of reverse depends
-        DataStoreAPI.sortedCachesByDependsReversed.forEach { c: com.kamikazejam.datastore.base.Cache<*, *>? ->
-            if (c is StoreProfileCache<*>) {
+        DataStoreAPI.sortedCollectionsByDependsReversed.forEach { c: Collection<*, *>? ->
+            if (c is StoreProfileCollection<*>) {
                 quit(player, c)
             }
         }
@@ -165,14 +166,14 @@ class ProfileListener : Listener {
     }
 
     companion object {
-        fun <X : StoreProfile<X>> quit(player: Player, cache: ProfileCache<X>) {
+        fun <X : StoreProfile<X>> quit(player: Player, cache: ProfileCollection<X>) {
             cache.getLoggerService().debug("Player " + player.name + " quitting, saving profile...")
             quitHelper(player, cache)
         }
 
-        private fun <X : StoreProfile<X>> quitHelper(player: Player, cache: ProfileCache<X>) {
+        private fun <X : StoreProfile<X>> quitHelper(player: Player, cache: ProfileCollection<X>) {
             // save on quit in standalone mode
-            val o: X? = cache.getFromCache(player.uniqueId)
+            val o: X? = cache.readFromCache(player.uniqueId)
             o?.let { profile ->
                 // ModificationRequest can be ignored since we are saving below
                 cache.onProfileLeaving(player, profile)

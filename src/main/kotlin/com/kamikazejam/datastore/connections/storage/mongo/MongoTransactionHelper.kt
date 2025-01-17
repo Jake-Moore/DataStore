@@ -2,7 +2,7 @@ package com.kamikazejam.datastore.connections.storage.mongo
 
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.Cache
+import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.connections.storage.exception.TransactionRetryLimitExceededException
 import com.kamikazejam.datastore.util.DataStoreFileLogger
@@ -39,7 +39,7 @@ object MongoTransactionHelper {
     fun <K, X : Store<X, K>> executeUpdate(
         mongoClient: MongoClient,
         collection: MongoCollection<Document>,
-        cache: Cache<K, X>,
+        cache: Collection<K, X>,
         originalStore: X,
         updateFunction: Consumer<X>
     ): Boolean {
@@ -72,7 +72,7 @@ object MongoTransactionHelper {
     private fun <K, X : Store<X, K>> executeUpdateInternal(
         mongoClient: MongoClient,
         collection: MongoCollection<Document>,
-        cache: Cache<K, X>,
+        cache: Collection<K, X>,
         originalStore: X,
         baseStore: X,
         updateFunction: Consumer<X>,

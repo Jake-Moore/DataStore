@@ -3,7 +3,7 @@ package com.kamikazejam.datastore.base
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.FieldWrapperMap
-import com.kamikazejam.datastore.base.result.StoreResult
+import com.kamikazejam.datastore.base.result.AsyncStoreHandler
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Blocking
 import org.jetbrains.annotations.NonBlocking
@@ -34,8 +34,8 @@ interface Store<T : Store<T, K>, K> {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    fun update(updateFunction: Consumer<T>): StoreResult<T> {
-        return StoreResult.of(
+    fun update(updateFunction: Consumer<T>): AsyncStoreHandler<T> {
+        return AsyncStoreHandler.of(
             CompletableFuture.supplyAsync { updateSync(updateFunction) },
             getCache()
         )
@@ -45,8 +45,8 @@ interface Store<T : Store<T, K>, K> {
      * Deletes this Store object (removes from both cache and database)
      */
     @NonBlocking
-    fun delete(): StoreResult<Void> {
-        return StoreResult.of<Void>(
+    fun delete(): AsyncStoreHandler<Void> {
+        return AsyncStoreHandler.of<Void>(
             CompletableFuture.runAsync { this.deleteSync() },
             getCache()
         )
@@ -95,12 +95,12 @@ interface Store<T : Store<T, K>, K> {
      *
      * @return Cache
      */
-    fun getCache(): Cache<K, T>
+    fun getCache(): Collection<K, T>
 
     /**
      * Sets the cache associated with this Store object.
      */
-    fun setCache(cache: Cache<K, T>)
+    fun setCache(collection: Collection<K, T>)
 
     /**
      * Gets the optimistic versioning FieldWrapper

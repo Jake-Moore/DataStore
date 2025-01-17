@@ -11,6 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin
 @Suppress("unused")
 class DataStorePlugin : JavaPlugin() {
     override fun onEnable() {
+        
         DataStoreSource.onEnable(this)
     }
 

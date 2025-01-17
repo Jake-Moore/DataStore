@@ -13,8 +13,8 @@ import java.util.function.Consumer
 
 
 @Suppress("unused")
-open class StoreProfileLoader<X : StoreProfile<X>>(cache: StoreProfileCache<X>, uuid: UUID) : StoreLoader<X> {
-    protected val cache: StoreProfileCache<X>
+open class StoreProfileLoader<X : StoreProfile<X>>(cache: StoreProfileCollection<X>, uuid: UUID) : StoreLoader<X> {
+    protected val cache: StoreProfileCollection<X>
     protected val uuid: UUID
     private var username: String? = null
 
@@ -97,7 +97,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(cache: StoreProfileCache<X>, 
 
     companion object {
         fun <X : StoreProfile<X>> loadOrCreateStore(
-            cache: StoreProfileCache<X>,
+            cache: StoreProfileCollection<X>,
             uuid: UUID,
             creative: Boolean,
             username: String?
@@ -139,7 +139,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(cache: StoreProfileCache<X>, 
         }
 
         private fun <X : StoreProfile<X>> createStore(
-            cache: ProfileCache<X>,
+            cache: ProfileCollection<X>,
             uuid: UUID,
             username: String?,
             initializer: Consumer<X>

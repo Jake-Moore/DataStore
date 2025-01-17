@@ -1,6 +1,6 @@
 package com.kamikazejam.datastore.util
 
-import com.kamikazejam.datastore.base.Cache
+import com.kamikazejam.datastore.base.Collection
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
@@ -10,8 +10,8 @@ import java.util.stream.Collectors
  * Executes a List of caches in smart order from their dependencies, as parallel as possible.
  * @param <T> the type of Cache
 </T> */
-class AsyncCachesExecutor<T : Cache<*, *>>(var caches: List<T>, execution: Execution<T>, timeoutSec: Long) {
-    fun interface Execution<T : Cache<*, *>> {
+class AsyncCollectionsExecutor<T : Collection<*, *>>(var caches: List<T>, execution: Execution<T>, timeoutSec: Long) {
+    fun interface Execution<T : Collection<*, *>> {
         fun run(cache: T)
     }
 

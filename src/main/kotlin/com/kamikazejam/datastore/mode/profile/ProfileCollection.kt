@@ -1,7 +1,7 @@
 package com.kamikazejam.datastore.mode.profile
 
-import com.kamikazejam.datastore.base.Cache
-import com.kamikazejam.datastore.base.result.StoreResult
+import com.kamikazejam.datastore.base.Collection
+import com.kamikazejam.datastore.base.result.AsyncStoreHandler
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Blocking
@@ -16,7 +16,8 @@ import java.util.function.Consumer
  * Player UUID is assumed to have a StoreProfile
  */
 @Suppress("unused", "BlockingMethodInNonBlockingContext")
-interface ProfileCache<X : StoreProfile<X>> : Cache<UUID, X> {
+interface ProfileCollection<X : StoreProfile<X>> :
+    Collection<UUID, X> {
     // ----------------------------------------------------- //
     //                 CRUD Helpers (Async)                  //
     // ----------------------------------------------------- //
@@ -26,7 +27,7 @@ interface ProfileCache<X : StoreProfile<X>> : Cache<UUID, X> {
      * @return The StoreProfile object. (READ-ONLY)
      */
     @NonBlocking
-    fun read(player: Player): StoreResult<X> {
+    fun read(player: Player): AsyncStoreHandler<X> {
         return this.read(player, true)
     }
 
@@ -37,8 +38,8 @@ interface ProfileCache<X : StoreProfile<X>> : Cache<UUID, X> {
      * @return The StoreProfile object. (READ-ONLY)
      */
     @NonBlocking
-    fun read(player: Player, cacheStore: Boolean): StoreResult<X> {
-        return StoreResult.of(CompletableFuture.supplyAsync { this.readSync(player, cacheStore) }, this)
+    fun read(player: Player, cacheStore: Boolean): AsyncStoreHandler<X> {
+        return AsyncStoreHandler.of(CompletableFuture.supplyAsync { this.readSync(player, cacheStore) }, this)
     }
 
     /**
@@ -47,16 +48,16 @@ interface ProfileCache<X : StoreProfile<X>> : Cache<UUID, X> {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    fun update(player: Player, updateFunction: Consumer<X>): StoreResult<X> {
-        return StoreResult.of(CompletableFuture.supplyAsync { this.updateSync(player, updateFunction) }, this)
+    fun update(player: Player, updateFunction: Consumer<X>): AsyncStoreHandler<X> {
+        return AsyncStoreHandler.of(CompletableFuture.supplyAsync { this.updateSync(player, updateFunction) }, this)
     }
 
     /**
      * Deletes a Store (removes from both cache and database)
      */
     @NonBlocking
-    fun delete(player: Player): StoreResult<Void> {
-        return StoreResult.of<Void>(CompletableFuture.runAsync { this.deleteSync(player) }, this)
+    fun delete(player: Player): AsyncStoreHandler<Void> {
+        return AsyncStoreHandler.of<Void>(CompletableFuture.runAsync { this.deleteSync(player) }, this)
     }
 
 
@@ -123,7 +124,7 @@ interface ProfileCache<X : StoreProfile<X>> : Cache<UUID, X> {
     /**
      * Gets all online players' Profile objects. These should all be in the cache.
      */
-    val online: Collection<X>
+    val online: kotlin.collections.Collection<X>
 
     @ApiStatus.Internal
     fun removeLoader(uuid: UUID)

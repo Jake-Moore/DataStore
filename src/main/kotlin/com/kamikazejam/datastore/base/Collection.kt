@@ -2,16 +2,16 @@ package com.kamikazejam.datastore.base
 
 import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.base.cache.StoreLoader
-import com.kamikazejam.datastore.base.exception.DuplicateCacheException
+import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
-import com.kamikazejam.datastore.base.result.StoreResult
+import com.kamikazejam.datastore.base.result.AsyncStoreHandler
 import com.kamikazejam.datastore.base.storage.StorageDatabase
 import com.kamikazejam.datastore.base.storage.StorageLocal
 import com.kamikazejam.datastore.base.storage.StorageMethods
 import com.kamikazejam.datastore.base.store.StoreInstantiator
-import com.kamikazejam.datastore.mode.`object`.ObjectCache
-import com.kamikazejam.datastore.mode.profile.ProfileCache
+import com.kamikazejam.datastore.mode.`object`.ObjectCollection
+import com.kamikazejam.datastore.mode.profile.ProfileCollection
 import com.mongodb.*
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
@@ -24,24 +24,15 @@ import java.util.function.Consumer
 /**
  * A Cache holds Store objects and manages their retrieval, caching, and saving.
  * Getters vary by Store type, they are defined in the store-specific interfaces:
- * [ObjectCache] and [ProfileCache]
+ * [ObjectCollection] and [ProfileCollection]
  */
 @Suppress("unused", "BlockingMethodInNonBlockingContext")
-interface Cache<K, X : Store<X, K>> : Service {
+interface Collection<K, X : Store<X, K>> : Service {
     // ----------------------------------------------------- //
     //                 CRUD Helpers (Async)                  //
     // ----------------------------------------------------- //
     // create(initializer) & createAsync are in ObjectCache
     // additional player methods are in ProfileCache
-    /**
-     * Read a Store from this cache (or the database if it doesn't exist in the cache)
-     * @param key The key of the Store to read.
-     * @return The Store object. (READ-ONLY) (optional)
-     */
-    @NonBlocking
-    fun read(key: K): StoreResult<X?> {
-        return StoreResult.of<X?>(CompletableFuture.supplyAsync<X?> { readSync(key) }, this)
-    }
 
     /**
      * Read a Store from this cache (or the database if it doesn't exist in the cache)
@@ -50,21 +41,7 @@ interface Cache<K, X : Store<X, K>> : Service {
      * @return The Store object. (READ-ONLY) (optional)
      */
     @NonBlocking
-    fun read(key: K, cacheStore: Boolean): StoreResult<X?> {
-        return StoreResult.of<X?>(CompletableFuture.supplyAsync<X?> { readSync(key, cacheStore) }, this)
-    }
-
-    /**
-     * Get a Store object from the cache or create a new one if it doesn't exist.<br></br>
-     * This specific method will override any key set in the initializer. Since the key is an argument.
-     * @param key The key of the Store to get or create.
-     * @param initializer The initializer for the Store if it doesn't exist.
-     * @return The Store object. (READ-ONLY) (fetched or created)
-     */
-    @NonBlocking
-    fun readOrCreate(key: K, initializer: Consumer<X>): StoreResult<X> {
-        return StoreResult.of(CompletableFuture.supplyAsync { readOrCreateSync(key, initializer) }, this)
-    }
+    fun read(key: K, cacheStore: Boolean = true): AsyncStoreHandler<K, X>
 
     /**
      * Create a new Store object with the provided key & initializer.<br></br>
@@ -74,8 +51,16 @@ interface Cache<K, X : Store<X, K>> : Service {
      */
     @NonBlocking
     @Throws(DuplicateKeyException::class)
-    fun create(key: K, initializer: Consumer<X>): StoreResult<X> {
-        return StoreResult.of(CompletableFuture.supplyAsync { createSync(key, initializer) }, this)
+    fun create(key: K, initializer: Consumer<X>): AsyncStoreHandler<K, X>
+
+    /**
+     * Modifies a Store in a controlled environment where modifications are allowed
+     * @throws NoSuchElementException if the Store (by this key) is not found
+     * @return The updated Store object. (READ-ONLY)
+     */
+    @NonBlocking
+    fun update(key: K, updateFunction: Consumer<X>): AsyncStoreHandler<X> {
+        return AsyncStoreHandler.of(CompletableFuture.supplyAsync { updateSync(key, updateFunction) }, this)
     }
 
     /**
@@ -84,17 +69,7 @@ interface Cache<K, X : Store<X, K>> : Service {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    fun update(key: K, updateFunction: Consumer<X>): StoreResult<X> {
-        return StoreResult.of(CompletableFuture.supplyAsync { updateSync(key, updateFunction) }, this)
-    }
-
-    /**
-     * Modifies a Store in a controlled environment where modifications are allowed
-     * @throws NoSuchElementException if the Store (by this key) is not found
-     * @return The updated Store object. (READ-ONLY)
-     */
-    @NonBlocking
-    fun update(store: X, updateFunction: Consumer<X>): StoreResult<X> {
+    fun update(store: X, updateFunction: Consumer<X>): AsyncStoreHandler<X> {
         return this.update(store.id, updateFunction)
     }
 
@@ -102,16 +77,16 @@ interface Cache<K, X : Store<X, K>> : Service {
      * Deletes a Store by ID (removes from both cache and database)
      */
     @NonBlocking
-    fun delete(key: K): StoreResult<Void> {
-        return StoreResult.of<Void>(CompletableFuture.runAsync { deleteSync(key) }, this)
+    fun delete(key: K): AsyncStoreHandler<Void> {
+        return AsyncStoreHandler.of<Void>(CompletableFuture.runAsync { deleteSync(key) }, this)
     }
 
     /**
      * Deletes a Store (removes from both cache and database)
      */
     @NonBlocking
-    fun delete(store: X): StoreResult<Void> {
-        return StoreResult.of<Void>(CompletableFuture.runAsync { deleteSync(store) }, this)
+    fun delete(store: X): AsyncStoreHandler<Void> {
+        return AsyncStoreHandler.of<Void>(CompletableFuture.runAsync { deleteSync(store) }, this)
     }
 
     /**
@@ -122,45 +97,10 @@ interface Cache<K, X : Store<X, K>> : Service {
     @Blocking
     fun readAll(cacheStores: Boolean): Iterable<X>
 
-    // ----------------------------------------------------- //
-    //                  CRUD Helpers (sync)                  //
-    // ----------------------------------------------------- //
-    /**
-     * Read a Store from this cache (or the database if it doesn't exist in the cache)
-     * @param key The key of the Store to read.
-     * @return The Store object. (READ-ONLY) (optional)
-     */
-    @Blocking
-    fun readSync(key: K): X?
 
-    /**
-     * Read a Store from this cache (or the database if it doesn't exist in the cache)
-     * @param key The key of the Store to read.
-     * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
-     * @return The Store object. (READ-ONLY) (optional)
-     */
-    @Blocking
-    fun readSync(key: K, cacheStore: Boolean): X?
 
-    /**
-     * Get a Store object from the cache or create a new one if it doesn't exist.<br></br>
-     * This specific method will override any key set in the initializer. Since the key is an argument.
-     * @param key The key of the Store to get or create.
-     * @param initializer The initializer for the Store if it doesn't exist.
-     * @return The Store object. (READ-ONLY) (fetched or created)
-     */
-    @Blocking
-    fun readOrCreateSync(key: K, initializer: Consumer<X>): X
 
-    /**
-     * Create a new Store object with the provided key & initializer.<br></br>
-     * If you have a specific key for this Store, set it in the initializer.
-     * @throws DuplicateKeyException If the key already exists in the cache. (failed to create)
-     * @return The created Store object. (READ-ONLY)
-     */
-    @Blocking
-    @Throws(DuplicateKeyException::class)
-    fun createSync(key: K, initializer: Consumer<X>): X
+    // TODO DElEte ALL SYNC
 
     /**
      * Modifies a Store in a controlled environment where modifications are allowed
@@ -214,7 +154,7 @@ interface Cache<K, X : Store<X, K>> : Service {
     // ------------------------------------------------------ //
     /**
      * Get the name of this cache (set by the end user, should be unique)
-     * A [DuplicateCacheException] error will be thrown if another cache
+     * A [DuplicateCollectionException] error will be thrown if another cache
      * exists with the same name or ID during creation.
      *
      * @return String: Cache Name
@@ -226,7 +166,7 @@ interface Cache<K, X : Store<X, K>> : Service {
      *
      * @return The Store if it was cached.
      */
-    fun getFromCache(key: K): X?
+    fun readFromCache(key: K): X?
 
     /**
      * Retrieve a Store from the database. (Force queries the database, and updates this cache)
@@ -234,7 +174,7 @@ interface Cache<K, X : Store<X, K>> : Service {
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The Store if it was found in the database.
      */
-    fun getFromDatabase(key: K, cacheStore: Boolean): X?
+    fun readFromDatabase(key: K, cacheStore: Boolean = true): X?
 
     /**
      * Adds a Store to this cache.
@@ -261,7 +201,7 @@ interface Cache<K, X : Store<X, K>> : Service {
     /**
      * Gets all Store objects that are in this cache.
      */
-    val cached: Collection<X>
+    val cached: kotlin.collections.Collection<X>
 
     /**
      * Gets the [LoggerService] for this cache. For logging purposes.
@@ -313,12 +253,12 @@ interface Cache<K, X : Store<X, K>> : Service {
     /**
      * Add a dependency on another Cache. This Cache will be loaded after the dependency.
      */
-    fun addDepend(cache: Cache<*, *>)
+    fun addDepend(collection: Collection<*, *>)
 
     /**
      * Check if this Cache is dependent on the provided cache.
      */
-    fun isDependentOn(cache: Cache<*, *>): Boolean
+    fun isDependentOn(collection: Collection<*, *>): Boolean
 
     /**
      * Check if this Cache is dependent on the provided cache.
@@ -357,8 +297,8 @@ interface Cache<K, X : Store<X, K>> : Service {
     /**
      * @return True iff the cache contains a Store with the provided key.
      */
-    fun hasKey(key: K): StoreResult<Boolean> {
-        return StoreResult.of(CompletableFuture.supplyAsync {
+    fun hasKey(key: K): AsyncStoreHandler<Boolean> {
+        return AsyncStoreHandler.of(CompletableFuture.supplyAsync {
             hasKeySync(
                 key
             )
@@ -423,8 +363,8 @@ interface Cache<K, X : Store<X, K>> : Service {
     @ApiStatus.Internal
     fun saveIndexCache()
 
-    fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): StoreResult<K?>? {
-        return StoreResult.of<K?>(CompletableFuture.supplyAsync<K?> {
+    fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncStoreHandler<K?>? {
+        return AsyncStoreHandler.of<K?>(CompletableFuture.supplyAsync<K?> {
             getStoreIdByIndexSync(
                 index,
                 value
@@ -437,8 +377,8 @@ interface Cache<K, X : Store<X, K>> : Service {
     /**
      * Retrieves an object by the provided index field and its value.
      */
-    fun <T> getByIndex(field: IndexedField<X, T>, value: T): StoreResult<X?> {
-        return StoreResult.of<X?>(CompletableFuture.supplyAsync<X?> {
+    fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncStoreHandler<X?> {
+        return AsyncStoreHandler.of<X?>(CompletableFuture.supplyAsync<X?> {
             getByIndexSync(
                 field,
                 value

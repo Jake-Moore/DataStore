@@ -3,10 +3,11 @@ package com.kamikazejam.datastore.mode.`object`
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.Cache
-import com.kamikazejam.datastore.base.StoreCache
-import com.kamikazejam.datastore.base.log.CacheLoggerService
-import com.kamikazejam.datastore.base.store.CacheLoggerInstantiator
+import com.kamikazejam.datastore.base.Collection
+import com.kamikazejam.datastore.base.StoreCollection
+import com.kamikazejam.datastore.base.log.CollectionLoggerService
+import com.kamikazejam.datastore.base.result.AsyncStoreHandler
+import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
 import com.kamikazejam.datastore.mode.`object`.store.ObjectStorageDatabase
@@ -19,15 +20,15 @@ import java.util.concurrent.ConcurrentMap
 import java.util.function.Consumer
 
 @Suppress("unused")
-abstract class StoreObjectCache<X : StoreObject<X>> @JvmOverloads constructor(
+abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads constructor(
     module: DataStoreRegistration,
     instantiator: StoreInstantiator<String, X>,
     name: String,
     storeClass: Class<X>,
-    logger: CacheLoggerInstantiator = CacheLoggerInstantiator { cache: Cache<*, *> -> CacheLoggerService(cache) }
+    logger: CollectionLoggerInstantiator = CollectionLoggerInstantiator { collection: Collection<*, *> -> CollectionLoggerService(collection) }
 ) :
-    StoreCache<String, X>(instantiator, name, String::class.java, storeClass, module, logger),
-    ObjectCache<X>
+    StoreCollection<String, X>(instantiator, name, String::class.java, storeClass, module, logger),
+    ObjectCollection<X>
 {
     private val loaders: ConcurrentMap<String, StoreObjectLoader<X>> = ConcurrentHashMap()
     override val localStore: ObjectStorageLocal<X> = ObjectStorageLocal()
@@ -47,8 +48,8 @@ abstract class StoreObjectCache<X : StoreObject<X>> @JvmOverloads constructor(
     // CRUD Methods                                           //
     // ------------------------------------------------------ //
     @Throws(DuplicateKeyException::class)
-    override fun createSync(initializer: Consumer<X>): X {
-        return this.createSync(UUID.randomUUID().toString(), initializer)
+    override fun create(initializer: Consumer<X>): AsyncStoreHandler<String, X> {
+        return this.create(UUID.randomUUID().toString(), initializer)
     }
 
     // ------------------------------------------------------ //
@@ -123,31 +124,31 @@ abstract class StoreObjectCache<X : StoreObject<X>> @JvmOverloads constructor(
                 val dbVer = dbStore.versionField.get() ?: 0
                 val localVer = local?.versionField?.get() ?: 0
                 if (cacheStores && local != null && dbVer >= localVer) {
-                    this@StoreObjectCache.updateStoreFromNewer(local, dbStore)
-                    this@StoreObjectCache.cache(dbStore)
+                    this@StoreObjectCollection.updateStoreFromNewer(local, dbStore)
+                    this@StoreObjectCollection.cache(dbStore)
                 }
 
                 // Find the store object to return
                 val ret = local ?: dbStore
                 // Verify it has the correct cache and cache it if necessary
-                ret.setCache(this@StoreObjectCache)
+                ret.setCache(this@StoreObjectCollection)
                 ret
             }
         }
     }
 
-    override val cached: Collection<X>
+    override val cached: kotlin.collections.Collection<X>
         get() = localStore.localCache.values
 
     override fun hasKeySync(key: String): Boolean {
         return localStore.has(key) || databaseStore.has(key)
     }
 
-    override fun getFromCache(key: String): X? {
+    override fun readFromCache(key: String): X? {
         return localStore.get(key)
     }
 
-    override fun getFromDatabase(key: String, cacheStore: Boolean): X? {
+    override fun readFromDatabase(key: String, cacheStore: Boolean): X? {
         val o: X? = databaseStore.get(key)
         if (cacheStore) {
             o?.let { this.cache(it) }

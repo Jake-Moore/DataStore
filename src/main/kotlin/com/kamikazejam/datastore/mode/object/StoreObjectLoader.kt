@@ -4,9 +4,9 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.cache.StoreLoader
 import java.lang.ref.WeakReference
 
-class StoreObjectLoader<X : StoreObject<X>> internal constructor(cache: StoreObjectCache<X>, identifier: String) :
+class StoreObjectLoader<X : StoreObject<X>> internal constructor(cache: StoreObjectCollection<X>, identifier: String) :
     StoreLoader<X> {
-    private val cache: StoreObjectCache<X>
+    private val cache: StoreObjectCollection<X>
     private val identifier: String
 
     private var store: WeakReference<X>? = null
@@ -38,7 +38,7 @@ class StoreObjectLoader<X : StoreObject<X>> internal constructor(cache: StoreObj
             }
         }
 
-        val db = cache.getFromDatabase(identifier, true)
+        val db = cache.readFromDatabase(identifier, true)
         db?.let { x ->
             store = WeakReference(x)
             loadedFromLocal = false

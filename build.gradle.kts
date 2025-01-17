@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.kamikazejam"
-version = "1.0.0.beta.7-SNAPSHOT"
+version = "1.0.0.beta.8-SNAPSHOT"
 description = "Simple Data Storage Solution using MongoDB"
 
 
@@ -43,6 +43,9 @@ dependencies {
     compileOnly("org.jetbrains:annotations:26.0.1")
     testCompileOnly("org.jetbrains:annotations:26.0.1")
     implementation(kotlin("stdlib-jdk8"))
+
+    // Kotlin Libraries
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
 }
 
 // Register a task to delete the jars in the libs folder

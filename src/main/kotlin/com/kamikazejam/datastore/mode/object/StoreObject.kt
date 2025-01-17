@@ -2,7 +2,7 @@ package com.kamikazejam.datastore.mode.`object`
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.google.common.base.Preconditions
-import com.kamikazejam.datastore.base.Cache
+import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
@@ -32,7 +32,7 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
     // ----------------------------------------------------- //
     @JsonIgnore
     @Transient
-    private var cache: StoreObjectCache<T>? = null
+    private var cache: StoreObjectCollection<T>? = null
 
     @JsonIgnore
     @Transient
@@ -81,7 +81,7 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
         this.validateDuplicateFields() // may throw error
     }
 
-    override fun getCache(): Cache<String, T> {
+    override fun getCache(): Collection<String, T> {
         return cache ?: throw IllegalStateException("Cache is not set")
     }
 
@@ -121,10 +121,10 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
             return map
         }
 
-    override fun setCache(cache: Cache<String, T>) {
-        Preconditions.checkNotNull(cache, "Cache cannot be null")
-        require(cache is StoreObjectCache<T>) { "Cache must be a StoreObjectCache" }
-        this.cache = cache
+    override fun setCache(collection: Collection<String, T>) {
+        Preconditions.checkNotNull(collection, "Cache cannot be null")
+        require(collection is StoreObjectCollection<T>) { "Cache must be a StoreObjectCache" }
+        this.cache = collection
     }
 
     override fun hashCode(): Int {

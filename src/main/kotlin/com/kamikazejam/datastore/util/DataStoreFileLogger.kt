@@ -1,7 +1,7 @@
 package com.kamikazejam.datastore.util
 
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.Cache
+import com.kamikazejam.datastore.base.Collection
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
@@ -28,8 +28,8 @@ object DataStoreFileLogger {
      * Logs a warning message to the console, and saves the current stack trace to a log file
      * @return The file written, if successful
      */
-    fun warn(cache: Cache<*, *>, msg: String): File? {
-        return logToFile(msg, Level.WARNING, getFileByCache(cache))
+    fun warn(collection: Collection<*, *>, msg: String): File? {
+        return logToFile(msg, Level.WARNING, getFileByCache(collection))
     }
 
     /**
@@ -37,11 +37,11 @@ object DataStoreFileLogger {
      * Also appends the given trace to the file
      * @return The file written, if successful
      */
-    fun warn(cache: Cache<*, *>, msg: String, trace: Throwable): File? {
+    fun warn(collection: Collection<*, *>, msg: String, trace: Throwable): File? {
         val file = logToFile(
             msg,
             Level.WARNING,
-            getFileByCache(cache)
+            getFileByCache(collection)
         )
             ?: return null
 
@@ -139,9 +139,9 @@ object DataStoreFileLogger {
         }
     }
 
-    private fun getFileByCache(cache: Cache<*, *>): File {
+    private fun getFileByCache(collection: Collection<*, *>): File {
         // Print the message + a stack trace to a file
-        val fileName = cache.plugin.name + "_" + cache.name + "_" + System.currentTimeMillis() + ".log"
+        val fileName = collection.plugin.name + "_" + collection.name + "_" + System.currentTimeMillis() + ".log"
         return File(
             DataStoreSource.get().dataFolder.toString() + File.separator + "logs" + File.separator + "datastore",
             fileName

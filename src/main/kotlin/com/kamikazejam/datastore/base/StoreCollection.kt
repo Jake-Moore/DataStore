@@ -4,13 +4,14 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreAPI
 import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.exception.DuplicateCacheException
+import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
-import com.kamikazejam.datastore.base.store.CacheLoggerInstantiator
+import com.kamikazejam.datastore.base.result.AsyncStoreHandler
+import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
-import com.kamikazejam.datastore.mode.profile.StoreProfileCache
+import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
 import com.mongodb.*
 import org.bukkit.Bukkit
@@ -25,14 +26,14 @@ import java.util.function.Consumer
  * The abstract backbone of all Store cache systems.
  * All Caching modes (profile, object, simple) extend this class.
  */
-abstract class StoreCache<K, X : Store<X, K>>(
+abstract class StoreCollection<K, X : Store<X, K>>(
     override var instantiator: StoreInstantiator<K, X>,
     override val name: String,
     protected val keyClass: Class<K>,
     override val storeClass: Class<X>,
     final override val registration: DataStoreRegistration,
-    private val loggerInstantiator: CacheLoggerInstantiator
-) : Comparable<StoreCache<*, *>>, Cache<K, X> {
+    private val loggerInstantiator: CollectionLoggerInstantiator
+) : Comparable<StoreCollection<*, *>>, Collection<K, X> {
     private val dependingCaches: MutableSet<String?> = HashSet()
 
     override val plugin: Plugin = registration.plugin
@@ -48,66 +49,57 @@ abstract class StoreCache<K, X : Store<X, K>>(
     // ------------------------------------------------------ //
     // Generic CRUD Methods                                   //
     // ------------------------------------------------------ //
-    override fun readSync(key: K, cacheStore: Boolean): X? {
+    override fun read(key: K, cacheStore: Boolean): AsyncStoreHandler<K, X> {
         // Try Local Cache First
-        val localStore = localStore.get(key)
+        val localStore = readFromCache(key)
         localStore?.let { store ->
             store.readOnly = true
-            return store
+            return AsyncStoreHandler(this) { store }
         }
 
         // Try Database Second
-        val databaseStore = databaseStore.get(key)
-        databaseStore?.let { store ->
-            store.readOnly = true
-            if (cacheStore) {
-                cache(store)
+        return AsyncStoreHandler(this) {
+            val databaseStore = readFromDatabase(key)
+            databaseStore?.let { store ->
+                store.readOnly = true
+                if (cacheStore) {
+                    cache(store)
+                }
+                return@AsyncStoreHandler store
             }
-            return store
         }
-
-        return null
-    }
-
-    override fun readSync(key: K): X? {
-        return this.readSync(key, true)
-    }
-
-    override fun readOrCreateSync(key: K, initializer: Consumer<X>): X {
-        Preconditions.checkNotNull(initializer, "Initializer cannot be null")
-
-        val o = readSync(key)
-        return o ?: createSync(key, initializer)
     }
 
     @Throws(DuplicateKeyException::class)
-    override fun createSync(key: K, initializer: Consumer<X>): X {
+    override fun create(key: K, initializer: Consumer<X>): AsyncStoreHandler<K, X> {
         Preconditions.checkNotNull(initializer, "Initializer cannot be null")
 
-        try {
-            // Create a new instance in modifiable state
-            val store: X = instantiator.instantiate()
-            store.initialize()
-            store.readOnly = false
+        return AsyncStoreHandler(this) {
+            try {
+                // Create a new instance in modifiable state
+                val store: X = instantiator.instantiate()
+                store.initialize()
+                store.readOnly = false
 
-            // Set the id first (allowing the initializer to change it if necessary)
-            store.idField.set(key)
-            // Initialize the store
-            initializer.accept(store)
-            // Enforce Version 0 for creation
-            store.versionField.set(0L)
+                // Set the id first (allowing the initializer to change it if necessary)
+                store.idField.set(key)
+                // Initialize the store
+                initializer.accept(store)
+                // Enforce Version 0 for creation
+                store.versionField.set(0L)
 
-            store.readOnly = true
+                store.readOnly = true
 
-            // Save the store to our database implementation & cache
-            this.cache(store)
-            this.databaseStore.save(store)
-            return store
-        } catch (d: DuplicateKeyException) {
-            getLoggerService().severe("Failed to create Store: Duplicate Key...")
-            throw d
-        } catch (e: Exception) {
-            throw RuntimeException("Failed to create Store", e)
+                // Save the store to our database implementation & cache
+                this.cache(store)
+                this.databaseStore.save(store)
+                return@AsyncStoreHandler store
+            } catch (d: DuplicateKeyException) {
+                getLoggerService().severe("Failed to create Store: Duplicate Key...")
+                throw d
+            } catch (e: Exception) {
+                throw RuntimeException("Failed to create Store", e)
+            }
         }
     }
 
@@ -160,8 +152,8 @@ abstract class StoreCache<K, X : Store<X, K>>(
 
         // Register this cache
         try {
-            DataStoreAPI.saveCache(this)
-        } catch (e: DuplicateCacheException) {
+            DataStoreAPI.saveCollection(this)
+        } catch (e: DuplicateCollectionException) {
             getLoggerService().severe("[DuplicateCacheException] Failed to register cache: $name - Cache Name already exists!")
             return false
         }
@@ -179,7 +171,7 @@ abstract class StoreCache<K, X : Store<X, K>>(
         var success = true
 
         // If this cache is a player cache, save all profiles of online players before we shut down
-        if (this is StoreProfileCache<*>) {
+        if (this is StoreProfileCollection<*>) {
             Bukkit.getOnlinePlayers().forEach { p: Player -> ProfileListener.quit(p, this) }
         }
 
@@ -192,7 +184,7 @@ abstract class StoreCache<K, X : Store<X, K>>(
         running = false
 
         // Unregister this cache
-        DataStoreAPI.removeCache(this)
+        DataStoreAPI.removeCollection(this)
         return success
     }
 
@@ -264,14 +256,14 @@ abstract class StoreCache<K, X : Store<X, K>>(
         }
     }
 
-    override fun addDepend(cache: Cache<*, *>) {
-        Preconditions.checkNotNull(cache)
-        dependingCaches.add(cache.name)
+    override fun addDepend(collection: Collection<*, *>) {
+        Preconditions.checkNotNull(collection)
+        dependingCaches.add(collection.name)
     }
 
-    override fun isDependentOn(cache: Cache<*, *>): Boolean {
-        Preconditions.checkNotNull(cache)
-        return dependingCaches.contains(cache.name)
+    override fun isDependentOn(collection: Collection<*, *>): Boolean {
+        Preconditions.checkNotNull(collection)
+        return dependingCaches.contains(collection.name)
     }
 
     override fun isDependentOn(cacheName: String): Boolean {
@@ -282,10 +274,10 @@ abstract class StoreCache<K, X : Store<X, K>>(
     /**
      * Simple comparator method to determine order between caches based on dependencies
      *
-     * @param other The [StoreCache] to compare.
+     * @param other The [StoreCollection] to compare.
      * @return Comparator sorting integer
      */
-    override fun compareTo(other: StoreCache<*, *>): Int {
+    override fun compareTo(other: StoreCollection<*, *>): Int {
         Preconditions.checkNotNull(other)
         return if (this.isDependentOn(other)) -1 else if (other.isDependentOn(this)) 1 else 0
     }

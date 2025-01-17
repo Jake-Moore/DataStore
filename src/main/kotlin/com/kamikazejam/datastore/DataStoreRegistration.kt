@@ -1,8 +1,8 @@
 package com.kamikazejam.datastore
 
 import com.google.common.base.Preconditions
-import com.kamikazejam.datastore.base.Cache
-import com.kamikazejam.datastore.base.StoreCache
+import com.kamikazejam.datastore.base.Collection
+import com.kamikazejam.datastore.base.StoreCollection
 import org.bukkit.plugin.java.JavaPlugin
 
 @Suppress("unused")
@@ -17,7 +17,7 @@ class DataStoreRegistration internal constructor(plugin: JavaPlugin, dbNameShort
     val databaseName: String
     private val dbNameShort: String
 
-    private val caches: MutableList<Cache<*, *>> = ArrayList()
+    private val caches: MutableList<Collection<*, *>> = ArrayList()
 
     // package-private because DataStore is the only one allowed to create this
     init {
@@ -28,7 +28,7 @@ class DataStoreRegistration internal constructor(plugin: JavaPlugin, dbNameShort
         this.databaseName = DataStoreAPI.getFullDatabaseName(dbNameShort)
     }
 
-    fun registerCache(clazz: Class<out StoreCache<*, *>>) {
+    fun registerCache(clazz: Class<out StoreCollection<*, *>>) {
         // Find a constructor that takes a DataStoreRegistration
         try {
             // Find the constructor (regardless of visibility)
@@ -48,7 +48,7 @@ class DataStoreRegistration internal constructor(plugin: JavaPlugin, dbNameShort
     }
 
     fun shutdown() {
-        caches.forEach { obj: Cache<*, *> -> obj.shutdown() }
+        caches.forEach { obj: Collection<*, *> -> obj.shutdown() }
         caches.clear()
     }
 }

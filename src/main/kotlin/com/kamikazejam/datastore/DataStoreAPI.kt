@@ -1,8 +1,8 @@
 package com.kamikazejam.datastore
 
 import com.google.common.base.Preconditions
-import com.kamikazejam.datastore.base.Cache
-import com.kamikazejam.datastore.base.exception.DuplicateCacheException
+import com.kamikazejam.datastore.base.Collection
+import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.exception.DuplicateDatabaseException
 import com.kamikazejam.datastore.database.DatabaseRegistration
 import org.bukkit.plugin.Plugin
@@ -93,7 +93,7 @@ object DataStoreAPI {
     // ------------------------------------------------------ //
     // Cache Methods                                          //
     // ------------------------------------------------------ //
-    val caches: ConcurrentMap<String, Cache<*, *>> = ConcurrentHashMap()
+    val collections: ConcurrentMap<String, Collection<*, *>> = ConcurrentHashMap()
 
     /**
      * Get a cache by name
@@ -101,57 +101,57 @@ object DataStoreAPI {
      * @param name Name of the cache
      * @return The Cache
      */
-    fun getCache(name: String): Cache<*, *>? {
-        return caches[convertCacheName(name)]
+    fun getCollection(name: String): Collection<*, *>? {
+        return collections[convertCollectionName(name)]
     }
 
     /**
      * Register a cache w/ a hook
      *
-     * @param cache [Cache]
+     * @param collection [Collection]
      */
-    @Throws(DuplicateCacheException::class)
-    fun saveCache(cache: Cache<*, *>) {
-        if (caches.containsKey(convertCacheName(cache.name))) {
-            throw DuplicateCacheException(cache)
+    @Throws(DuplicateCollectionException::class)
+    fun saveCollection(collection: Collection<*, *>) {
+        if (collections.containsKey(convertCollectionName(collection.name))) {
+            throw DuplicateCollectionException(collection)
         }
-        caches[convertCacheName(cache.name)] = cache
+        collections[convertCollectionName(collection.name)] = collection
     }
 
     /**
      * Unregister a cache w/ a hook
      */
-    fun removeCache(cache: Cache<*, *>) {
-        caches.remove(convertCacheName(cache.name))
+    fun removeCollection(collection: Collection<*, *>) {
+        collections.remove(convertCollectionName(collection.name))
     }
 
     /**
      * Removes all spaces from the name and converts it to lowercase.
      */
-    private fun convertCacheName(name: String): String {
+    private fun convertCollectionName(name: String): String {
         return name.lowercase(Locale.getDefault()).replace(" ", "")
     }
 
 
-    private var _sortedCachesByDependsReversed: List<Cache<*, *>>? = null
-    val sortedCachesByDependsReversed: List<Cache<*, *>>
+    private var _sortedCollectionsByDependsReversed: List<Collection<*, *>>? = null
+    val sortedCollectionsByDependsReversed: List<Collection<*, *>>
         /**
          * Retrieve the caches in sorted order by dependencies (load order)
          */
         get() {
-            _sortedCachesByDependsReversed?.let {
+            _sortedCollectionsByDependsReversed?.let {
                 if (!hasBeenModified()) {
                     return it
                 }
             }
 
-            val s = caches.values.stream().sorted().collect(Collectors.toList())
-            _sortedCachesByDependsReversed = s
+            val s = collections.values.stream().sorted().collect(Collectors.toList())
+            _sortedCollectionsByDependsReversed = s
             return s
         }
 
     private fun hasBeenModified(): Boolean {
-        return _sortedCachesByDependsReversed?.let { caches.size != it.size } ?: false
+        return _sortedCollectionsByDependsReversed?.let { collections.size != it.size } ?: false
     }
 
 

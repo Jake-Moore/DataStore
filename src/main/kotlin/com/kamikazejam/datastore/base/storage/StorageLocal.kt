@@ -1,6 +1,6 @@
 package com.kamikazejam.datastore.base.storage
 
-import com.kamikazejam.datastore.base.Cache
+import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import java.util.concurrent.ConcurrentHashMap
@@ -56,8 +56,8 @@ abstract class StorageLocal<K, X : Store<X, K>> : StorageMethods<K, X> {
     override val keys: Iterable<K>
         get() = localCache.keys
 
-    override fun getKeyStrings(cache: Cache<K, X>): Set<String> {
-        return localCache.keys.stream().map { key: K -> cache.keyToString(key) }.collect(Collectors.toSet())
+    override fun getKeyStrings(collection: Collection<K, X>): Set<String> {
+        return localCache.keys.stream().map { key: K -> collection.keyToString(key) }.collect(Collectors.toSet())
     }
 
     override fun clear(): Long {

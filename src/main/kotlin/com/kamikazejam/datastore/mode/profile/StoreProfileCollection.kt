@@ -3,13 +3,13 @@ package com.kamikazejam.datastore.mode.profile
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.Cache
-import com.kamikazejam.datastore.base.StoreCache
-import com.kamikazejam.datastore.base.log.CacheLoggerService
-import com.kamikazejam.datastore.base.store.CacheLoggerInstantiator
+import com.kamikazejam.datastore.base.Collection
+import com.kamikazejam.datastore.base.StoreCollection
+import com.kamikazejam.datastore.base.log.CollectionLoggerService
+import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
-import com.kamikazejam.datastore.event.profile.StoreProfileCacheQuitEvent
+import com.kamikazejam.datastore.event.profile.StoreProfileQuitEvent
 import com.kamikazejam.datastore.mode.profile.store.ProfileStorageDatabase
 import com.kamikazejam.datastore.mode.profile.store.ProfileStorageLocal
 import com.kamikazejam.datastore.util.PlayerUtil
@@ -21,17 +21,17 @@ import java.util.concurrent.ConcurrentMap
 import java.util.stream.Collectors
 
 @Suppress("unused")
-abstract class StoreProfileCache<X : StoreProfile<X>> @JvmOverloads constructor(
+abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constructor(
     module: DataStoreRegistration,
     instantiator: StoreInstantiator<UUID, X>,
     name: String,
     storeClass: Class<X>,
-    logger: CacheLoggerInstantiator = CacheLoggerInstantiator { cache: Cache<*, *> ->
-        CacheLoggerService(cache)
+    logger: CollectionLoggerInstantiator = CollectionLoggerInstantiator { collection: Collection<*, *> ->
+        CollectionLoggerService(collection)
     }
 ) :
-    StoreCache<UUID, X>(instantiator, name, UUID::class.java, storeClass, module, logger),
-    ProfileCache<X> {
+    StoreCollection<UUID, X>(instantiator, name, UUID::class.java, storeClass, module, logger),
+    ProfileCollection<X> {
     private val loaders: ConcurrentMap<UUID, StoreProfileLoader<X>> = ConcurrentHashMap()
     override val localStore: ProfileStorageLocal<X> = ProfileStorageLocal()
     override val databaseStore: ProfileStorageDatabase<X> by lazy { ProfileStorageDatabase(this) }
@@ -99,18 +99,18 @@ abstract class StoreProfileCache<X : StoreProfile<X>> @JvmOverloads constructor(
         return UUID.fromString(key)
     }
 
-    override val cached: Collection<X>
+    override val cached: kotlin.collections.Collection<X>
         get() = localStore.localCache.values
 
     override fun hasKeySync(key: UUID): Boolean {
         return localStore.has(key) || databaseStore.has(key)
     }
 
-    override fun getFromCache(key: UUID): X? {
+    override fun readFromCache(key: UUID): X? {
         return localStore.get(key)
     }
 
-    override fun getFromDatabase(key: UUID, cacheStore: Boolean): X? {
+    override fun readFromDatabase(key: UUID, cacheStore: Boolean): X? {
         val o: X? = databaseStore.get(key)
         if (cacheStore) {
             o?.let { store -> this.cache(store) }
@@ -125,7 +125,7 @@ abstract class StoreProfileCache<X : StoreProfile<X>> @JvmOverloads constructor(
         get() = databaseStore.keys
 
 
-    override val online: Collection<X>
+    override val online: kotlin.collections.Collection<X>
         // ----------------------------------------------------- //
         get() =// Stream online players and map them to their StoreProfile
             Bukkit.getOnlinePlayers().stream()
@@ -135,7 +135,7 @@ abstract class StoreProfileCache<X : StoreProfile<X>> @JvmOverloads constructor(
 
     override fun getFromCache(player: Player): X? {
         Preconditions.checkNotNull(player)
-        return getFromCache(player.uniqueId)
+        return readFromCache(player.uniqueId)
     }
 
     override fun getFromDatabase(player: Player, cacheStore: Boolean): X? {
@@ -153,7 +153,7 @@ abstract class StoreProfileCache<X : StoreProfile<X>> @JvmOverloads constructor(
     }
 
     override fun onProfileLeaving(player: Player, profile: X) {
-        val event = StoreProfileCacheQuitEvent(player, this, profile)
+        val event = StoreProfileQuitEvent(player, this, profile)
         Bukkit.getPluginManager().callEvent(event)
     }
 }

@@ -2,9 +2,9 @@ package com.kamikazejam.datastore.connections.storage.mongo
 
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.Cache
+import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
-import com.kamikazejam.datastore.base.StoreCache
+import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.connections.config.MongoConfig
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor
@@ -88,26 +88,26 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     //                StorageService                     //
     // ------------------------------------------------- //
-    override fun <K, X : Store<X, K>> get(cache: Cache<K, X>, key: K): X? {
+    override fun <K, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? {
         try {
-            val coll = this.getMongoCollection(cache)
-            val doc = coll.find().filter(Filters.eq(JacksonUtil.ID_FIELD, cache.keyToString(key))).first() ?: return null
+            val coll = this.getMongoCollection(collection)
+            val doc = coll.find().filter(Filters.eq(JacksonUtil.ID_FIELD, collection.keyToString(key))).first() ?: return null
 
-            val o: X = JacksonUtil.deserializeFromDocument(cache.storeClass, doc)
+            val o: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
             // Cache Indexes since we are loading from database
-            cache.cacheIndexes(o, true)
+            collection.cacheIndexes(o, true)
 
             return o
         } catch (ex: MongoException) {
-            cache.getLoggerService().info(ex, "MongoDB error getting Object from MongoDB Layer: ${cache.keyToString(key)}")
+            collection.getLoggerService().info(ex, "MongoDB error getting Object from MongoDB Layer: ${collection.keyToString(key)}")
             return null
         } catch (expected: Exception) {
-            cache.getLoggerService().info(expected, "Error getting Object from MongoDB Layer: ${cache.keyToString(key)}")
+            collection.getLoggerService().info(expected, "Error getting Object from MongoDB Layer: ${collection.keyToString(key)}")
             return null
         }
     }
 
-    override fun <K, X : Store<X, K>> save(cache: Cache<K, X>, store: X): Boolean {
+    override fun <K, X : Store<X, K>> save(collection: Collection<K, X>, store: X): Boolean {
         // Save to database with a transaction & only 1 attempt
         val client = this.mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
         client.startSession().use { session ->
@@ -115,13 +115,13 @@ class MongoStorage : StorageService() {
             var committed = false
             try {
                 val doc = JacksonUtil.serializeToDocument(store)
-                getMongoCollection(cache).insertOne(session, doc)
+                getMongoCollection(collection).insertOne(session, doc)
                 session.commitTransaction()
                 committed = true
 
                 // Convert to read-only and cache
                 store.readOnly = true
-                cache.cache(store)
+                collection.cache(store)
             } finally {
                 if (!committed) {
                     session.abortTransaction()
@@ -137,7 +137,7 @@ class MongoStorage : StorageService() {
     //  and the other will have its query fail and will automatically retry.
     // (MongoDB provides the document-level locking already)
     override fun <K, X : Store<X, K>> updateSync(
-        cache: Cache<K, X>,
+        cache: Collection<K, X>,
         store: X,
         updateFunction: Consumer<X>
     ): Boolean {
@@ -156,53 +156,53 @@ class MongoStorage : StorageService() {
         }
     }
 
-    override fun <K, X : Store<X, K>> has(cache: Cache<K, X>, key: K): Boolean {
+    override fun <K, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean {
         try {
-            val query = Filters.eq(JacksonUtil.ID_FIELD, cache.keyToString(key))
-            return getMongoCollection(cache).countDocuments(query) > 0
+            val query = Filters.eq(JacksonUtil.ID_FIELD, collection.keyToString(key))
+            return getMongoCollection(collection).countDocuments(query) > 0
         } catch (ex: MongoException) {
-            cache.getLoggerService().info(ex, "MongoDB error check if Store exists in MongoDB Layer: ${cache.keyToString(key)}")
+            collection.getLoggerService().info(ex, "MongoDB error check if Store exists in MongoDB Layer: ${collection.keyToString(key)}")
             return false
         } catch (expected: Exception) {
-            cache.getLoggerService().info(expected, "Error checking if Store exists in MongoDB Layer: ${cache.keyToString(key)}")
+            collection.getLoggerService().info(expected, "Error checking if Store exists in MongoDB Layer: ${collection.keyToString(key)}")
             return false
         }
     }
 
-    override fun <K, X : Store<X, K>> size(cache: Cache<K, X>): Long {
-        return getMongoCollection(cache).countDocuments()
+    override fun <K, X : Store<X, K>> size(collection: Collection<K, X>): Long {
+        return getMongoCollection(collection).countDocuments()
     }
 
-    override fun <K, X : Store<X, K>> remove(cache: Cache<K, X>, key: K): Boolean {
+    override fun <K, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean {
         try {
-            val query = Filters.eq(JacksonUtil.ID_FIELD, cache.keyToString(key))
-            return getMongoCollection(cache).deleteMany(query).deletedCount > 0
+            val query = Filters.eq(JacksonUtil.ID_FIELD, collection.keyToString(key))
+            return getMongoCollection(collection).deleteMany(query).deletedCount > 0
         } catch (ex: MongoException) {
-            cache.getLoggerService().info(ex, "MongoDB error removing Store from MongoDB Layer: ${cache.keyToString(key)}")
+            collection.getLoggerService().info(ex, "MongoDB error removing Store from MongoDB Layer: ${collection.keyToString(key)}")
         } catch (expected: Exception) {
-            cache.getLoggerService().info(expected, "Error removing Store from MongoDB Layer: ${cache.keyToString(key)}")
+            collection.getLoggerService().info(expected, "Error removing Store from MongoDB Layer: ${collection.keyToString(key)}")
         }
         return false
     }
 
-    override fun <K, X : Store<X, K>> getAll(cache: Cache<K, X>): Iterable<X> {
+    override fun <K, X : Store<X, K>> getAll(collection: Collection<K, X>): Iterable<X> {
         return Iterable {
-            TransformingIterator<Document, X>(getMongoCollection(cache).find().iterator()) { doc: Document ->
-                val store: X = JacksonUtil.deserializeFromDocument(cache.storeClass, doc)
+            TransformingIterator<Document, X>(getMongoCollection(collection).find().iterator()) { doc: Document ->
+                val store: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
                 // Make sure to cache indexes when a store is loaded from the database
-                cache.cacheIndexes(store, true)
+                collection.cacheIndexes(store, true)
                 store
             }
         }
     }
 
-    override fun <K, X : Store<X, K>> getKeys(cache: Cache<K, X>): Iterable<K> {
+    override fun <K, X : Store<X, K>> getKeys(collection: Collection<K, X>): Iterable<K> {
         // Fetch all documents, but use Projection to only retrieve the ID field
-        val docs = getMongoCollection(cache).find().projection(Projections.include(JacksonUtil.ID_FIELD)).iterator()
+        val docs = getMongoCollection(collection).find().projection(Projections.include(JacksonUtil.ID_FIELD)).iterator()
         // We know where the id is located, and we can fetch it as a string, there is no need to deserialize the entire object
         return Iterable {
             TransformingIterator(docs) {
-                doc: Document -> cache.keyFromString(doc.getString(JacksonUtil.ID_FIELD))
+                doc: Document -> collection.keyFromString(doc.getString(JacksonUtil.ID_FIELD))
             }
         }
     }
@@ -212,7 +212,7 @@ class MongoStorage : StorageService() {
         return mongoConnected
     }
 
-    override fun <K, X : Store<X, K>> onRegisteredCache(cache: Cache<K, X>?) {
+    override fun <K, X : Store<X, K>> onRegisteredCache(collection: Collection<K, X>?) {
         // do nothing -> MongoDB handles it
     }
 
@@ -277,7 +277,7 @@ class MongoStorage : StorageService() {
     private val collMap: MutableMap<String, MongoCollection<Document>> =
         HashMap() // Map<DatabaseName.CollectionName, MongoCollection<Document>>
 
-    private fun <K, X : Store<X, K>> getMongoCollection(cache: Cache<K, X>): MongoCollection<Document> {
+    private fun <K, X : Store<X, K>> getMongoCollection(cache: Collection<K, X>): MongoCollection<Document> {
         val client = this.mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
         val collKey = cache.databaseName + "." + cache.name
 
@@ -307,23 +307,23 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    override fun <K, X : Store<X, K>, T> registerIndex(cache: StoreCache<K, X>, index: IndexedField<X, T>) {
+    override fun <K, X : Store<X, K>, T> registerIndex(cache: StoreCollection<K, X>, index: IndexedField<X, T>) {
         getMongoCollection(cache).createIndex(
             Document(index.name, 1),
             IndexOptions().unique(true)
         )
     }
 
-    override fun <K, X : Store<X, K>> cacheIndexes(cache: StoreCache<K, X>, store: X, updateFile: Boolean) {
+    override fun <K, X : Store<X, K>> cacheIndexes(cache: StoreCollection<K, X>, store: X, updateFile: Boolean) {
         // do nothing -> MongoDB handles this
     }
 
-    override fun <K, X : Store<X, K>> saveIndexCache(cache: StoreCache<K, X>) {
+    override fun <K, X : Store<X, K>> saveIndexCache(cache: StoreCollection<K, X>) {
         // do nothing -> MongoDB handles this
     }
 
     override fun <K, X : Store<X, K>, T> getStoreIdByIndex(
-        cache: StoreCache<K, X>,
+        cache: StoreCollection<K, X>,
         index: IndexedField<X, T>,
         value: T
     ): K? {
@@ -341,7 +341,7 @@ class MongoStorage : StorageService() {
         return store.id
     }
 
-    override fun <K, X : Store<X, K>> invalidateIndexes(cache: StoreCache<K, X>, key: K, updateFile: Boolean) {
+    override fun <K, X : Store<X, K>> invalidateIndexes(cache: StoreCollection<K, X>, key: K, updateFile: Boolean) {
         // do nothing -> MongoDB handles this
     }
 
