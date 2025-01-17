@@ -36,8 +36,8 @@ object DataStoreAPI {
     // Registration Methods                                   //
     // ------------------------------------------------------ //
     /**
-     * Register your plugin and reserve a database name for your plugin's caches.
-     * @return Your DataStoreRegistration (to be passed into your cache constructors)
+     * Register your plugin and reserve a database name for your plugin's collections.
+     * @return Your [DatabaseRegistration] (to be passed into your collection constructors)
      * @throws DuplicateDatabaseException - if this databaseName is already in use
      */
     @Throws(DuplicateDatabaseException::class)
@@ -91,22 +91,22 @@ object DataStoreAPI {
 
 
     // ------------------------------------------------------ //
-    // Cache Methods                                          //
+    // Collection Methods                                     //
     // ------------------------------------------------------ //
     val collections: ConcurrentMap<String, Collection<*, *>> = ConcurrentHashMap()
 
     /**
-     * Get a cache by name
+     * Get a collection by name
      *
-     * @param name Name of the cache
-     * @return The Cache
+     * @param name Name of the collection
+     * @return The Collection or null if not found
      */
     fun getCollection(name: String): Collection<*, *>? {
         return collections[convertCollectionName(name)]
     }
 
     /**
-     * Register a cache w/ a hook
+     * Register a collection w/ a hook
      *
      * @param collection [Collection]
      */
@@ -119,7 +119,7 @@ object DataStoreAPI {
     }
 
     /**
-     * Unregister a cache w/ a hook
+     * Unregister a collection w/ a hook
      */
     fun removeCollection(collection: Collection<*, *>) {
         collections.remove(convertCollectionName(collection.name))
@@ -136,7 +136,7 @@ object DataStoreAPI {
     private var _sortedCollectionsByDependsReversed: List<Collection<*, *>>? = null
     val sortedCollectionsByDependsReversed: List<Collection<*, *>>
         /**
-         * Retrieve the caches in sorted order by dependencies (load order)
+         * Retrieve the collections in sorted order by dependencies (load order)
          */
         get() {
             _sortedCollectionsByDependsReversed?.let {

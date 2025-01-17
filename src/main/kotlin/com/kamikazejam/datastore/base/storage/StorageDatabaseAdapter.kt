@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Blocking
 import java.util.function.Consumer
 
 /**
- * Adapts the cache-based api in [StorageMethods] to produce the simple api of [StorageDatabase].
+ * Adapts the collection-based api in [StorageMethods] to produce the simple api of [StorageDatabase].
  */
 abstract class StorageDatabaseAdapter<K, X : Store<X, K>>(protected val collection: Collection<K, X>) :
     StorageMethods<K, X> {

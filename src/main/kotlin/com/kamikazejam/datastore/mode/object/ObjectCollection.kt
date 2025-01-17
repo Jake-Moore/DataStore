@@ -19,7 +19,7 @@ interface ObjectCollection<X : StoreObject<X>> : Collection<String, X> {
     /**
      * Create a new Store object with the provided initializer.<br></br>
      * If you have a specific key for this Store, set it in the initializer.
-     * @throws DuplicateKeyException If the key already exists in the cache. (failed to create)
+     * @throws DuplicateKeyException If the key already exists in the Collection. (failed to create)
      * @return The created Store object. (READ-ONLY)
      */
     @Throws(DuplicateKeyException::class)

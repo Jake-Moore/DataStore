@@ -7,6 +7,7 @@ import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.util.PlayerUtil
+import kotlinx.coroutines.Deferred
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
@@ -33,7 +34,7 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // ----------------------------------------------------- //
     @JsonIgnore
     @Transient
-    private var cache: StoreProfileCollection<T>? = null
+    private var collection: StoreProfileCollection<T>? = null
 
     @Transient
     private var player: Player? = null
@@ -55,14 +56,14 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     protected constructor() : this(true)
 
     // ----------------------------------------------------- //
-    //                  CRUD Helpers (sync)                  //
+    //                     CRUD Helpers                      //
     // ----------------------------------------------------- //
     override fun updateSync(updateFunction: Consumer<T>): T {
-        return getCache().updateSync(this.id, updateFunction)
+        return getCollection().updateSync(this.id, updateFunction)
     }
 
-    override fun deleteSync() {
-        getCache().deleteSync(this.id)
+    override fun delete(): Deferred<Boolean> {
+        return getCollection().delete(this.id)
     }
 
     // ----------------------------------------------------- //
@@ -85,8 +86,8 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
         this.validateDuplicateFields() // may throw error
     }
 
-    override fun getCache(): Collection<UUID, T> {
-        return cache ?: throw IllegalStateException("Cache is not set")
+    override fun getCollection(): Collection<UUID, T> {
+        return collection ?: throw IllegalStateException("Collection is not set")
     }
 
     @get:Internal
@@ -126,10 +127,10 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
             return map
         }
 
-    override fun setCache(collection: Collection<UUID, T>) {
-        Preconditions.checkNotNull(collection, "Cache cannot be null")
-        require(collection is StoreProfileCollection<T>) { "Cache must be a StoreProfileCache" }
-        this.cache = collection
+    override fun setCollection(collection: Collection<UUID, T>) {
+        Preconditions.checkNotNull(collection, "Collection cannot be null")
+        require(collection is StoreProfileCollection<T>) { "Collection must be a StoreProfileCollection" }
+        this.collection = collection
     }
 
     override fun hashCode(): Int {
@@ -184,7 +185,7 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
             // Try to get the name from our IdUtil, and update the object if possible
             val oPlayer: OfflinePlayer? = Bukkit.getOfflinePlayer(this.uniqueId)
             if (oPlayer?.name != null) {
-                getCache().update(this.id) { profile: T -> profile.usernameField.set(oPlayer.name) }
+                getCollection().update(this.id) { profile: T -> profile.usernameField.set(oPlayer.name) }
                 return oPlayer.name
             }
         }

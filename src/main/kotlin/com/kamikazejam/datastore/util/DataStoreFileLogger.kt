@@ -29,7 +29,7 @@ object DataStoreFileLogger {
      * @return The file written, if successful
      */
     fun warn(collection: Collection<*, *>, msg: String): File? {
-        return logToFile(msg, Level.WARNING, getFileByCache(collection))
+        return logToFile(msg, Level.WARNING, getFileByCollection(collection))
     }
 
     /**
@@ -41,7 +41,7 @@ object DataStoreFileLogger {
         val file = logToFile(
             msg,
             Level.WARNING,
-            getFileByCache(collection)
+            getFileByCollection(collection)
         )
             ?: return null
 
@@ -139,7 +139,7 @@ object DataStoreFileLogger {
         }
     }
 
-    private fun getFileByCache(collection: Collection<*, *>): File {
+    private fun getFileByCollection(collection: Collection<*, *>): File {
         // Print the message + a stack trace to a file
         val fileName = collection.plugin.name + "_" + collection.name + "_" + System.currentTimeMillis() + ".log"
         return File(

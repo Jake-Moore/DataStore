@@ -22,7 +22,7 @@ interface ProfileCollection<X : StoreProfile<X>> :
     //                 CRUD Helpers (Async)                  //
     // ----------------------------------------------------- //
     /**
-     * Read a StoreProfile (by player) from this cache (will fetch from database, will create if necessary)
+     * Read a StoreProfile (by player) from this collection (will fetch from database, will create if necessary)
      * @param player The player owning this store.
      * @return The StoreProfile object. (READ-ONLY)
      */
@@ -32,7 +32,7 @@ interface ProfileCollection<X : StoreProfile<X>> :
     }
 
     /**
-     * Read a StoreProfile (by player) from this cache (will fetch from database, will create if necessary)
+     * Read a StoreProfile (by player) from this collection (will fetch from database, will create if necessary)
      * @param player The player owning this store.
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The StoreProfile object. (READ-ONLY)
@@ -65,7 +65,7 @@ interface ProfileCollection<X : StoreProfile<X>> :
     //                  CRUD Helpers (sync)                  //
     // ----------------------------------------------------- //
     /**
-     * Read a StoreProfile (by player) from this cache (will fetch from database, will create if necessary)
+     * Read a StoreProfile (by player) from this collection (will fetch from database, will create if necessary)
      * @param player The player owning this store.
      * @return The StoreProfile object. (READ-ONLY)
      */
@@ -75,7 +75,7 @@ interface ProfileCollection<X : StoreProfile<X>> :
     }
 
     /**
-     * Read a StoreProfile (by player) from this cache (will fetch from database, will create if necessary)
+     * Read a StoreProfile (by player) from this collection (will fetch from database, will create if necessary)
      * @param player The player owning this store.
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The StoreProfile object. (READ-ONLY)
@@ -105,7 +105,7 @@ interface ProfileCollection<X : StoreProfile<X>> :
     // Cache Methods                                          //
     // ------------------------------------------------------ //
     /**
-     * Retrieve a Store from this cache (by player).
+     * Retrieve a Store from this collection (by player).
      * This method does NOT query the database.
      * @return The Store if it was cached.
      */
@@ -122,7 +122,7 @@ interface ProfileCollection<X : StoreProfile<X>> :
     fun getFromDatabase(player: Player, cacheStore: Boolean): X?
 
     /**
-     * Gets all online players' Profile objects. These should all be in the cache.
+     * Gets all online players' Profile objects. These should all be present the collection and cached.
      */
     val online: kotlin.collections.Collection<X>
 

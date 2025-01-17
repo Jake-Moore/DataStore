@@ -1,7 +1,7 @@
 package com.kamikazejam.datastore.base
 
 import com.kamikazejam.datastore.DataStoreRegistration
-import com.kamikazejam.datastore.base.cache.StoreLoader
+import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
@@ -13,6 +13,8 @@ import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.mode.`object`.ObjectCollection
 import com.kamikazejam.datastore.mode.profile.ProfileCollection
 import com.mongodb.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Blocking
@@ -20,22 +22,26 @@ import org.jetbrains.annotations.NonBlocking
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
+import kotlin.coroutines.CoroutineContext
 
 /**
- * A Cache holds Store objects and manages their retrieval, caching, and saving.
+ * A [Collection] holds Store objects and manages their retrieval, caching, and saving.
  * Getters vary by Store type, they are defined in the store-specific interfaces:
  * [ObjectCollection] and [ProfileCollection]
  */
 @Suppress("unused", "BlockingMethodInNonBlockingContext")
-interface Collection<K, X : Store<X, K>> : Service {
+interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.IO
+
     // ----------------------------------------------------- //
     //                 CRUD Helpers (Async)                  //
     // ----------------------------------------------------- //
-    // create(initializer) & createAsync are in ObjectCache
-    // additional player methods are in ProfileCache
+    // create(initializer) are in ObjectCollection
+    // additional player methods are in ProfileCollection
 
     /**
-     * Read a Store from this cache (or the database if it doesn't exist in the cache)
+     * Read a Store from this collection (or the database if it doesn't exist in the cache)
      * @param key The key of the Store to read.
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The Store object. (READ-ONLY) (optional)
@@ -46,7 +52,7 @@ interface Collection<K, X : Store<X, K>> : Service {
     /**
      * Create a new Store object with the provided key & initializer.<br></br>
      * If you have a specific key for this Store, set it in the initializer.
-     * @throws DuplicateKeyException If the key already exists in the cache. (failed to create)
+     * @throws DuplicateKeyException If the key already exists in the collection. (failed to create)
      * @return The created Store object. (READ-ONLY)
      */
     @NonBlocking
@@ -74,7 +80,7 @@ interface Collection<K, X : Store<X, K>> : Service {
     }
 
     /**
-     * Deletes a Store by ID (removes from both cache and database)
+     * Deletes a Store by ID (removes from both cache and database collection)
      */
     @NonBlocking
     fun delete(key: K): AsyncStoreHandler<Void> {
@@ -82,7 +88,7 @@ interface Collection<K, X : Store<X, K>> : Service {
     }
 
     /**
-     * Deletes a Store (removes from both cache and database)
+     * Deletes a Store (removes from both cache and database collection)
      */
     @NonBlocking
     fun delete(store: X): AsyncStoreHandler<Void> {
@@ -121,13 +127,13 @@ interface Collection<K, X : Store<X, K>> : Service {
     }
 
     /**
-     * Deletes a Store by ID (removes from both cache and database)
+     * Deletes a Store by ID (removes from both cache and database collection)
      */
     @Blocking
     fun deleteSync(key: K)
 
     /**
-     * Deletes a Store (removes from both cache and database)
+     * Deletes a Store (removes from both cache and database collection)
      */
     @Blocking
     fun deleteSync(store: X)
@@ -150,26 +156,26 @@ interface Collection<K, X : Store<X, K>> : Service {
 
 
     // ------------------------------------------------------ //
-    // Cache Methods                                          //
+    // Collection Methods                                     //
     // ------------------------------------------------------ //
     /**
-     * Get the name of this cache (set by the end user, should be unique)
-     * A [DuplicateCollectionException] error will be thrown if another cache
+     * Get the name of this collection (set by the end user, should be unique)
+     * A [DuplicateCollectionException] error will be thrown if another collection
      * exists with the same name or ID during creation.
      *
-     * @return String: Cache Name
+     * @return String: Collection Name
      */
     val name: String
 
     /**
-     * Retrieve a Store from this cache. (Does not query the database)
+     * Retrieve a Store from the local cache. (Does not query the database)
      *
-     * @return The Store if it was cached.
+     * @return The Store if it was found in the cache, null otherwise.
      */
     fun readFromCache(key: K): X?
 
     /**
-     * Retrieve a Store from the database. (Force queries the database, and updates this cache)
+     * Retrieve a Store from the database. (Force queries the database, and updates this Collection)
      *
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The Store if it was found in the database.
@@ -177,96 +183,96 @@ interface Collection<K, X : Store<X, K>> : Service {
     fun readFromDatabase(key: K, cacheStore: Boolean = true): X?
 
     /**
-     * Adds a Store to this cache.
+     * Adds a Store to the local cache.
      */
     fun cache(store: X)
 
     /**
-     * Removes a Store from this cache.
+     * Removes a Store from the local cache.
      */
     fun uncache(key: K)
 
     /**
-     * Removes a Store from this cache.
+     * Removes a Store from the local cache.
      */
     fun uncache(store: X)
 
     /**
-     * Checks if a Store is in this Cache.
+     * Checks if a Store is in this Collection.
      *
-     * @return True if the Store is cached. False if not (for instance if it was deleted)
+     * @return True if the Store is locally cached. False if not (for instance if it was deleted)
      */
     fun isCached(key: K): Boolean
 
     /**
-     * Gets all Store objects that are in this cache.
+     * Gets all Store objects that are in the local cache.
      */
     val cached: kotlin.collections.Collection<X>
 
     /**
-     * Gets the [LoggerService] for this cache. For logging purposes.
+     * Gets the [LoggerService] for this collection. For logging purposes.
      */
     fun getLoggerService(): LoggerService
 
     /**
-     * Sets the [LoggerService] for this cache. For logging purposes.
+     * Sets the [LoggerService] for this collection. For logging purposes.
      */
     fun setLoggerService(loggerService: LoggerService)
 
     /**
-     * Gets the [StorageMethods] that handles local storage for this cache.
+     * Gets the [StorageMethods] that handles local storage for this collection.
      */
     val localStore: StorageLocal<K, X>
 
     /**
-     * Gets the [StorageMethods] that handles database storage for this cache.
+     * Gets the [StorageMethods] that handles database storage for this collection.
      */
     val databaseStore: StorageDatabase<K, X>
 
     /**
-     * Gets the plugin that set up this cache.
+     * Gets the plugin that set up this collection.
      */
     val plugin: Plugin
 
     /**
-     * Gets the registration the parent plugin used to create this cache.
+     * Gets the registration the parent plugin used to create this collection.
      */
     val registration: DataStoreRegistration
 
     /**
-     * Return the name of actual the MongoDB database this cache is stored in
+     * Return the name of actual the MongoDB database this Collection is stored in
      * This is different from the developer supplied db name, and is calculated from
      * [com.kamikazejam.datastore.DataStoreAPI.getFullDatabaseName].
      */
     val databaseName: String
 
     /**
-     * Converts a Cache key to a string. Key uniqueness should be maintained.
+     * Converts a Collection key to a string. Key uniqueness should be maintained.
      */
     fun keyToString(key: K): String
 
     /**
-     * Converts a string to a Cache key. Key uniqueness should be maintained.
+     * Converts a string to a Collection key. Key uniqueness should be maintained.
      */
     fun keyFromString(key: String): K
 
     /**
-     * Add a dependency on another Cache. This Cache will be loaded after the dependency.
+     * Add a dependency on another Collection. This Collection will be loaded after the dependency.
      */
     fun addDepend(collection: Collection<*, *>)
 
     /**
-     * Check if this Cache is dependent on the provided cache.
+     * Check if this Collection is dependent on the provided collection.
      */
     fun isDependentOn(collection: Collection<*, *>): Boolean
 
     /**
-     * Check if this Cache is dependent on the provided cache.
+     * Check if this Collection is dependent on the provided collection.
      */
-    fun isDependentOn(cacheName: String): Boolean
+    fun isDependentOn(collName: String): Boolean
 
     /**
-     * Gets the name of all Cache objects this Cache is dependent on.
+     * Gets the name of all [Collection] objects this Collection is dependent on.
      */
     val dependencyNames: Set<String?>
 
@@ -290,12 +296,12 @@ interface Collection<K, X : Store<X, K>> : Service {
     fun tryAsync(runnable: Runnable)
 
     /**
-     * Get the number of Store objects currently stored locally in this cache
+     * Get the number of Store objects currently stored in the local cache
      */
     val localCacheSize: Long
 
     /**
-     * @return True iff the cache contains a Store with the provided key.
+     * @return True iff this Collection contains a Store with the provided key. (checks database too)
      */
     fun hasKey(key: K): AsyncStoreHandler<Boolean> {
         return AsyncStoreHandler.of(CompletableFuture.supplyAsync {
@@ -305,9 +311,7 @@ interface Collection<K, X : Store<X, K>> : Service {
         }, this)
     }
 
-    /**
-     * @return True iff the cache contains a Store with the provided key.
-     */
+
     fun hasKeySync(key: K): Boolean
 
     /**
@@ -320,7 +324,7 @@ interface Collection<K, X : Store<X, K>> : Service {
     val storeClass: Class<X>
 
     /**
-     * Returns the StoreInstantiator for the Store object in this cache.
+     * Returns the StoreInstantiator for the Store object in this Collection.
      */
     val instantiator: StoreInstantiator<K, X>
 
@@ -340,7 +344,7 @@ interface Collection<K, X : Store<X, K>> : Service {
     //                     Indexing                      //
     // ------------------------------------------------- //
     /**
-     * Register an index for this cache.
+     * Register an index for this Collection.
      * @return The registered index (for chaining)
      */
     fun <T> registerIndex(field: IndexedField<X, T>): IndexedField<X, T>

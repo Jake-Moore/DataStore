@@ -12,12 +12,12 @@ class DataStoreRegistration internal constructor(plugin: JavaPlugin, dbNameShort
     /**
      * The full database name as it would appear in MongoDB
      * This includes the DataStore prefix, described in [DataStoreAPI.getFullDatabaseName] (String)}
-     * All plugin caches will be stored in this database as collections
+     * All plugin collections will be stored in this database
      */
     val databaseName: String
     private val dbNameShort: String
 
-    private val caches: MutableList<Collection<*, *>> = ArrayList()
+    private val collections: MutableList<Collection<*, *>> = ArrayList()
 
     // package-private because DataStore is the only one allowed to create this
     init {
@@ -28,7 +28,7 @@ class DataStoreRegistration internal constructor(plugin: JavaPlugin, dbNameShort
         this.databaseName = DataStoreAPI.getFullDatabaseName(dbNameShort)
     }
 
-    fun registerCache(clazz: Class<out StoreCollection<*, *>>) {
+    fun registerCollection(clazz: Class<out StoreCollection<*, *>>) {
         // Find a constructor that takes a DataStoreRegistration
         try {
             // Find the constructor (regardless of visibility)
@@ -36,19 +36,19 @@ class DataStoreRegistration internal constructor(plugin: JavaPlugin, dbNameShort
                 DataStoreRegistration::class.java
             )
             constructor.isAccessible = true
-            val cache = constructor.newInstance(this)
-            caches.add(cache)
-            DataStoreSource.storageService.onRegisteredCache(cache)
-            cache.getLoggerService().info("Cache Registered.")
+            val collection = constructor.newInstance(this)
+            collections.add(collection)
+            DataStoreSource.storageService.onRegisteredCollection(collection)
+            collection.getLoggerService().info("Collection Registered.")
         } catch (ex1: NoSuchMethodException) {
-            DataStoreSource.error("Failed to register cache " + clazz.name + " - No constructor that takes a DataStoreRegistration")
+            DataStoreSource.error("Failed to register collection " + clazz.name + " - No constructor that takes a DataStoreRegistration")
         } catch (t: Throwable) {
-            DataStoreSource.error("Failed to register cache " + clazz.name + " - " + t.javaClass.getName() + ": " + t.message)
+            DataStoreSource.error("Failed to register collection " + clazz.name + " - " + t.javaClass.getName() + ": " + t.message)
         }
     }
 
     fun shutdown() {
-        caches.forEach { obj: Collection<*, *> -> obj.shutdown() }
-        caches.clear()
+        collections.forEach { obj: Collection<*, *> -> obj.shutdown() }
+        collections.clear()
     }
 }

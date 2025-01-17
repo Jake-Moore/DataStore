@@ -7,12 +7,12 @@ import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
 
 /**
- * Executes a List of caches in smart order from their dependencies, as parallel as possible.
- * @param <T> the type of Cache
+ * Executes a List of collections in smart order from their dependencies, as parallel as possible.
+ * @param <T> the type of Collection
 </T> */
-class AsyncCollectionsExecutor<T : Collection<*, *>>(var caches: List<T>, execution: Execution<T>, timeoutSec: Long) {
+class AsyncCollectionsExecutor<T : Collection<*, *>>(var collections: List<T>, execution: Execution<T>, timeoutSec: Long) {
     fun interface Execution<T : Collection<*, *>> {
-        fun run(cache: T)
+        fun run(collection: T)
     }
 
     private val queue: MutableMap<String, T> = HashMap() // Note: only remove from queue when T is completed
@@ -24,7 +24,7 @@ class AsyncCollectionsExecutor<T : Collection<*, *>>(var caches: List<T>, execut
     private var future = CompletableFuture<Void>()
     fun executeInOrder(): CompletableFuture<Void> {
         future = CompletableFuture()
-        // Bukkit.getLogger().severe("[AsyncCachesExecutor] FUTURE created");
+        // Bukkit.getLogger().severe("[AsyncCollectionsExecutor] FUTURE created");
         tryQueue()
         return future
     }
@@ -32,21 +32,21 @@ class AsyncCollectionsExecutor<T : Collection<*, *>>(var caches: List<T>, execut
     private val executed: MutableSet<String> = HashSet()
 
     init {
-        val size = caches.size.toLong()
-        // Filter out null caches
-        caches = caches.stream().filter { obj: T -> Objects.nonNull(obj) }.toList()
-        require(caches.size.toLong() == size) { "We removed null caches from the list!" }
+        val size = collections.size.toLong()
+        // Filter out null collections
+        collections = collections.stream().filter { obj: T -> Objects.nonNull(obj) }.toList()
+        require(collections.size.toLong() == size) { "We removed null collections from the list!" }
 
-        val sorted = caches.stream().sorted().toList()
+        val sorted = collections.stream().sorted().toList()
         sorted.forEach { c: T -> queue[c.name] = c }
         this.execution = execution
         this.timeoutSec = timeoutSec
 
         // Validation of dependencies
-        val cacheNames = caches.stream().map { obj: T -> obj.name }.collect(Collectors.toSet())
-        queue.values.forEach { cache: T ->
-            cache.dependencyNames.forEach { dependency: String? ->
-                require(cacheNames.contains(dependency)) { "Cache " + cache.name + " has a dependency on " + dependency + " which does not exist!" }
+        val collNames = collections.stream().map { obj: T -> obj.name }.collect(Collectors.toSet())
+        queue.values.forEach { collection: T ->
+            collection.dependencyNames.forEach { dependency: String? ->
+                require(collNames.contains(dependency)) { "Collection " + collection.name + " has a dependency on " + dependency + " which does not exist!" }
             }
         }
     }
@@ -54,7 +54,7 @@ class AsyncCollectionsExecutor<T : Collection<*, *>>(var caches: List<T>, execut
     private fun tryQueue() {
         // If there is nothing left in the queue, we are done
         if (queue.isEmpty()) {
-            // Bukkit.getLogger().severe("[AsyncCachesExecutor] FUTURE completed");
+            // Bukkit.getLogger().severe("[AsyncCollectionsExecutor] FUTURE completed");
             future.complete(null)
             return
         }
@@ -71,14 +71,14 @@ class AsyncCollectionsExecutor<T : Collection<*, *>>(var caches: List<T>, execut
             } // Skip if already running/ran
 
 
-            // We have completed all required dependencies, so we can execute this cache
+            // We have completed all required dependencies, so we can execute this collection
             val f = CompletableFuture.supplyAsync {
-                // Bukkit.getLogger().warning("[AsyncCachesExecutor] Running " + c.getName());
+                // Bukkit.getLogger().warning("[AsyncCollectionsExecutor] Running " + c.getName());
                 execution.run(c)
                 c
             }.orTimeout(timeoutSec, TimeUnit.SECONDS)
             executed.add(c.name)
-            f.whenComplete { cache: T, t: Throwable? ->
+            f.whenComplete { collection: T, t: Throwable? ->
                 // If we run into an exception running the Execution, we should complete exceptionally
                 if (t != null) {
                     future.completeExceptionally(t)
@@ -87,9 +87,9 @@ class AsyncCollectionsExecutor<T : Collection<*, *>>(var caches: List<T>, execut
                     return@whenComplete
                 }
                 try {
-                    queue.remove(cache.name)
-                    completed.add(cache.name)
-                    // Bukkit.getLogger().warning("[AsyncCachesExecutor] " + cache.getName() + " completed, isDoneAlr:? " + future.isDone());
+                    queue.remove(collection.name)
+                    completed.add(collection.name)
+                    // Bukkit.getLogger().warning("[AsyncCollectionsExecutor] " + collection.getName() + " completed, isDoneAlr:? " + future.isDone());
                     if (future.isDone) {
                         return@whenComplete
                     }

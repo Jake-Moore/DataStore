@@ -30,22 +30,22 @@ object MongoTransactionHelper {
     /**
      * Execute a MongoDB document update with retries and version checking
      * @param mongoClient The MongoDB client
-     * @param collection The MongoDB collection
-     * @param cache The cache containing the document
+     * @param mongoColl The MongoDB collection
+     * @param collection The collection containing the document
      * @param originalStore The original store to update
      * @param updateFunction The function to apply updates
      * @return Whether the update was successful
      */
     fun <K, X : Store<X, K>> executeUpdate(
         mongoClient: MongoClient,
-        collection: MongoCollection<Document>,
-        cache: Collection<K, X>,
+        mongoColl: MongoCollection<Document>,
+        collection: Collection<K, X>,
         originalStore: X,
         updateFunction: Consumer<X>
     ): Boolean {
         Preconditions.checkNotNull(mongoClient, "MongoClient cannot be null")
+        Preconditions.checkNotNull(mongoColl, "MongoDB Collection cannot be null")
         Preconditions.checkNotNull(collection, "Collection cannot be null")
-        Preconditions.checkNotNull(cache, "Cache cannot be null")
         Preconditions.checkNotNull(originalStore, "Store cannot be null")
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
@@ -54,8 +54,8 @@ object MongoTransactionHelper {
             val baseCopy = JacksonUtil.deepCopy(originalStore)
             return executeUpdateInternal(
                 mongoClient,
+                mongoColl,
                 collection,
-                cache,
                 originalStore,
                 baseCopy,
                 updateFunction,
@@ -71,8 +71,8 @@ object MongoTransactionHelper {
     @Throws(TransactionRetryLimitExceededException::class)
     private fun <K, X : Store<X, K>> executeUpdateInternal(
         mongoClient: MongoClient,
-        collection: MongoCollection<Document>,
-        cache: Collection<K, X>,
+        mongoColl: MongoCollection<Document>,
+        collection: Collection<K, X>,
         originalStore: X,
         baseStore: X,
         updateFunction: Consumer<X>,
@@ -105,10 +105,10 @@ object MongoTransactionHelper {
                 // Increment version (Optimistic Versioning)
                 workingCopy.versionField.set(currentVersion + 1)
 
-                val id = cache.keyToString(workingCopy.id)
+                val id = collection.keyToString(workingCopy.id)
                 val doc = JacksonUtil.serializeToDocument(workingCopy)
 
-                val result = collection.replaceOne(
+                val result = mongoColl.replaceOne(
                     session,
                     Filters.and( // These two filters act as a sort of compare-and-swap mechanic
                         //  inside of this mongo transaction, if these are not met then
@@ -125,16 +125,16 @@ object MongoTransactionHelper {
 
                     // If update failed, fetch current version
                     val currentDoc: Document =
-                        collection.find(session).filter(Filters.eq("_id", id))
+                        mongoColl.find(session).filter(Filters.eq("_id", id))
                             .first()
                             ?: throw RuntimeException("Entity not found")
 
                     // Update our working copy with latest version and retry
-                    baseCopy = JacksonUtil.deserializeFromDocument(cache.storeClass, currentDoc)
+                    baseCopy = JacksonUtil.deserializeFromDocument(collection.storeClass, currentDoc)
                     return executeUpdateInternal(
                         mongoClient,
+                        mongoColl,
                         collection,
-                        cache,
                         originalStore,
                         baseCopy,
                         updateFunction,
@@ -145,8 +145,8 @@ object MongoTransactionHelper {
                 // Success - update the cached store from our working copy
                 workingCopy.readOnly = true
                 originalStore.readOnly = false
-                cache.updateStoreFromNewer(originalStore, workingCopy)
-                cache.cache(originalStore)
+                collection.updateStoreFromNewer(originalStore, workingCopy)
+                collection.cache(originalStore)
                 originalStore.readOnly = true
 
                 session.commitTransaction()
@@ -161,8 +161,8 @@ object MongoTransactionHelper {
                     // For write conflicts, retry with same working copy
                     return executeUpdateInternal(
                         mongoClient,
+                        mongoColl,
                         collection,
-                        cache,
                         originalStore,
                         baseCopy,
                         updateFunction,
@@ -172,7 +172,6 @@ object MongoTransactionHelper {
                 throw mE
             } catch (e: Exception) {
                 DataStoreFileLogger.warn("Failed to execute MongoDB update", e)
-                //                return executeUpdateInternal(mongoClient, collection, cache, originalStore, baseCopy, updateFunction, currentAttempt + 1);
                 // Generic Exceptions are not a cause for retry, we should log and return failure
                 return false
             } finally {

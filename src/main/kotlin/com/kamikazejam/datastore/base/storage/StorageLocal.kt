@@ -8,32 +8,32 @@ import java.util.concurrent.ConcurrentMap
 import java.util.stream.Collectors
 
 abstract class StorageLocal<K, X : Store<X, K>> : StorageMethods<K, X> {
-    val localCache: ConcurrentMap<K, X> = ConcurrentHashMap()
+    val localStorage: ConcurrentMap<K, X> = ConcurrentHashMap()
 
     // ----------------------------------------------------- //
     //                     Store Methods                     //
     // ----------------------------------------------------- //
     override operator fun get(key: K): X? {
-        return localCache[key]
+        return localStorage[key]
     }
 
     override fun save(store: X): Boolean {
         // Ensure we don't re-cache an invalid Store
         if (!store.valid) {
             DataStoreFileLogger.warn(
-                store.getCache(),
-                "StoreLocal.save(X) w/ Invalid Store. Cache: " + store.getCache().name + ", Id: " + store.id
+                store.getCollection(),
+                "StoreLocal.save(X) w/ Invalid Store. Collection: " + store.getCollection().name + ", Id: " + store.id
             )
             return false
         }
 
         // If not called already, call initialized (since we're caching it)
-        localCache[store.id] = store
+        localStorage[store.id] = store
         return true
     }
 
     override fun has(key: K): Boolean {
-        return localCache.containsKey(key)
+        return localStorage.containsKey(key)
     }
 
     override fun has(store: X): Boolean {
@@ -41,7 +41,7 @@ abstract class StorageLocal<K, X : Store<X, K>> : StorageMethods<K, X> {
     }
 
     override fun remove(key: K): Boolean {
-        val x = localCache.remove(key)
+        val x = localStorage.remove(key)
         x?.invalidate()
         return x != null
     }
@@ -51,23 +51,23 @@ abstract class StorageLocal<K, X : Store<X, K>> : StorageMethods<K, X> {
     }
 
     override val all: Iterable<X>
-        get() = localCache.values
+        get() = localStorage.values
 
     override val keys: Iterable<K>
-        get() = localCache.keys
+        get() = localStorage.keys
 
     override fun getKeyStrings(collection: Collection<K, X>): Set<String> {
-        return localCache.keys.stream().map { key: K -> collection.keyToString(key) }.collect(Collectors.toSet())
+        return localStorage.keys.stream().map { key: K -> collection.keyToString(key) }.collect(Collectors.toSet())
     }
 
     override fun clear(): Long {
-        val size = localCache.size
-        localCache.clear()
+        val size = localStorage.size
+        localStorage.clear()
         return size.toLong()
     }
 
     override fun size(): Long {
-        return localCache.size.toLong()
+        return localStorage.size.toLong()
     }
 
     override val isDatabase: Boolean

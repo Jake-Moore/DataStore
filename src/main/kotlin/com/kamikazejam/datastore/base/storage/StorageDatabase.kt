@@ -7,7 +7,7 @@ import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterat
 import java.util.function.Consumer
 
 /**
- * Wraps up the StorageService with the Cache backing the Stores, and exposes ObjectStore methods
+ * Wraps up the StorageService with the Collection backing the Stores, and exposes ObjectStore methods
  *
  * @param <X>
 </X> */
@@ -34,8 +34,8 @@ abstract class StorageDatabase<K, X : Store<X, K>>(collection: Collection<K, X>)
     override fun get(collection: Collection<K, X>, key: K): X? {
         // Fetch the Store from the database
         val o = storageService.get(collection, key)
-        // Ensure Store knows its Cache
-        o?.setCache(collection)
+        // Ensure Store knows its Collection
+        o?.setCollection(collection)
         // Return the Store
         return o
     }
@@ -62,8 +62,8 @@ abstract class StorageDatabase<K, X : Store<X, K>>(collection: Collection<K, X>)
         val storage: Iterator<X> = storageService.getAll(collection).iterator()
         return Iterable {
             TransformingIterator(storage) { x: X ->
-                // Make sure to set the cache and cacheCopy as we load the Stores
-                x.also { it.setCache(collection) }
+                // Make sure to set the collection as we load the Stores
+                x.also { it.setCollection(collection) }
             }
         }
     }

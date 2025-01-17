@@ -1,28 +1,27 @@
 package com.kamikazejam.datastore.mode.`object`
 
 import com.google.common.base.Preconditions
-import com.kamikazejam.datastore.base.cache.StoreLoader
+import com.kamikazejam.datastore.base.loader.StoreLoader
 import java.lang.ref.WeakReference
 
-class StoreObjectLoader<X : StoreObject<X>> internal constructor(cache: StoreObjectCollection<X>, identifier: String) :
-    StoreLoader<X> {
-    private val cache: StoreObjectCollection<X>
+class StoreObjectLoader<X : StoreObject<X>> internal constructor(collection: StoreObjectCollection<X>, identifier: String) : StoreLoader<X> {
+    private val collection: StoreObjectCollection<X>
     private val identifier: String
 
     private var store: WeakReference<X>? = null
     private var loadedFromLocal = false
 
     init {
-        Preconditions.checkNotNull(cache)
+        Preconditions.checkNotNull(collection)
         Preconditions.checkNotNull(identifier)
-        this.cache = cache
+        this.collection = collection
         this.identifier = identifier
     }
 
     @Suppress("SameParameterValue")
     private fun load(fromLocal: Boolean) {
         if (fromLocal) {
-            val local: X? = cache.localStore[identifier]
+            val local: X? = collection.localStore[identifier]
             if (local != null) {
                 // Ensure our Store is valid (not recently deleted)
                 if (local.valid) {
@@ -33,12 +32,12 @@ class StoreObjectLoader<X : StoreObject<X>> internal constructor(cache: StoreObj
 
                 // Nullify the reference if the Store is invalid
                 // Don't quit, we could in theory still pull from the database
-                cache.localStore.remove(identifier)
+                collection.localStore.remove(identifier)
                 this.store = WeakReference(null)
             }
         }
 
-        val db = cache.readFromDatabase(identifier, true)
+        val db = collection.readFromDatabase(identifier, true)
         db?.let { x ->
             store = WeakReference(x)
             loadedFromLocal = false
@@ -56,13 +55,13 @@ class StoreObjectLoader<X : StoreObject<X>> internal constructor(cache: StoreObj
                 return null
             }
 
-            // Save to local cache if necessary
+            // Save to local if necessary
             if (saveToLocalCache && p != null && !loadedFromLocal) {
-                cache.cache(p)
+                collection.cache(p)
             }
 
-            // Ensure the Store has its cache set
-            p?.setCache(cache)
+            // Ensure the Store has its collection set
+            p?.setCollection(collection)
             return p
         }
 

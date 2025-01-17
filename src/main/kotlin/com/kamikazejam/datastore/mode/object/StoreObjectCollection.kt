@@ -36,7 +36,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     override val databaseStore: ObjectStorageDatabase<X> by lazy { ObjectStorageDatabase(this) }
 
     init {
-        // Start this cache
+        // Start this collection
         if (!start()) {
             // Data loss is not tolerated in DataStore, shutdown to prevent issues
             DataStoreSource.get().logger.severe("Failed to start Object Cache: $name")
@@ -131,14 +131,14 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
                 // Find the store object to return
                 val ret = local ?: dbStore
                 // Verify it has the correct cache and cache it if necessary
-                ret.setCache(this@StoreObjectCollection)
+                ret.setCollection(this@StoreObjectCollection)
                 ret
             }
         }
     }
 
     override val cached: kotlin.collections.Collection<X>
-        get() = localStore.localCache.values
+        get() = localStore.localStorage.values
 
     override fun hasKeySync(key: String): Boolean {
         return localStore.has(key) || databaseStore.has(key)

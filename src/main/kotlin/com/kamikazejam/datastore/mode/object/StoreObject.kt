@@ -6,6 +6,7 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
+import kotlinx.coroutines.Deferred
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
 import java.util.function.Consumer
@@ -32,7 +33,7 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
     // ----------------------------------------------------- //
     @JsonIgnore
     @Transient
-    private var cache: StoreObjectCollection<T>? = null
+    private var collection: StoreObjectCollection<T>? = null
 
     @JsonIgnore
     @Transient
@@ -54,11 +55,11 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
     //                     CRUD Helpers                      //
     // ----------------------------------------------------- //
     override fun updateSync(updateFunction: Consumer<T>): T {
-        return getCache().updateSync(this.id, updateFunction)
+        return getCollection().updateSync(this.id, updateFunction)
     }
 
-    override fun deleteSync() {
-        getCache().deleteSync(this.id)
+    override fun delete(): Deferred<Boolean> {
+        return getCollection().delete(this.id)
     }
 
     // ----------------------------------------------------- //
@@ -81,8 +82,8 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
         this.validateDuplicateFields() // may throw error
     }
 
-    override fun getCache(): Collection<String, T> {
-        return cache ?: throw IllegalStateException("Cache is not set")
+    override fun getCollection(): Collection<String, T> {
+        return collection ?: throw IllegalStateException("Collection is not set")
     }
 
     @get:ApiStatus.Internal
@@ -121,10 +122,10 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
             return map
         }
 
-    override fun setCache(collection: Collection<String, T>) {
-        Preconditions.checkNotNull(collection, "Cache cannot be null")
-        require(collection is StoreObjectCollection<T>) { "Cache must be a StoreObjectCache" }
-        this.cache = collection
+    override fun setCollection(collection: Collection<String, T>) {
+        Preconditions.checkNotNull(collection, "Collection cannot be null")
+        require(collection is StoreObjectCollection<T>) { "Collection must be a StoreObjectCollection" }
+        this.collection = collection
     }
 
     override fun hashCode(): Int {

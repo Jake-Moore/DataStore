@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * This class manages the synchronization between a bukkit [Player] and their [StoreProfile] objects.<br></br>
- * Its primary purpose it to listen to joins/quits and ensure caches are loaded & unloaded as players join and leave.
+ * Its primary purpose it to listen to joins/quits and ensure collections are loaded & unloaded as players join and leave.
  */
 @Suppress("unused", "UnstableApiUsage")
 class ProfileListener : Listener {
@@ -47,8 +47,8 @@ class ProfileListener : Listener {
         val ip: String = event.address.hostAddress
 
         val storageService = DataStoreSource.storageService
-        if (!storageService.canCache() || DataStoreSource.onEnableTime <= 0) {
-            DataStoreSource.colorLogger.warn("StorageService is not ready to cache objects, denying join")
+        if (!storageService.canWrite() || DataStoreSource.onEnableTime <= 0) {
+            DataStoreSource.colorLogger.warn("StorageService is not ready to write objects, denying join")
             event.disallow(
                 AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
                 ChatColor.RED.toString() + "Server is starting, please wait."
@@ -56,7 +56,7 @@ class ProfileListener : Listener {
             return
         }
 
-        // Run a special fully parallelized execution for caches based on their depends
+        // Run a special fully parallelized execution for collections based on their depends
         try {
             val timeout: Long = 5 // seconds
             cachePlayerProfiles(username, uniqueId, ip, timeout)[timeout + 3, TimeUnit.SECONDS]
@@ -112,7 +112,7 @@ class ProfileListener : Listener {
             }, timeoutSec
         )
 
-        // Execute the cache list in order
+        // Execute the collection list in order
         return executor.executeInOrder()
     }
 
@@ -138,7 +138,7 @@ class ProfileListener : Listener {
             }
         }
 
-        // Call the event now that caches are loaded
+        // Call the event now that collections are loaded
         val e = StoreProfileLoginEvent(player)
         Bukkit.getServer().pluginManager.callEvent(e)
     }
@@ -147,7 +147,7 @@ class ProfileListener : Listener {
     fun onProfileQuit(event: PlayerQuitEvent) {
         val player: Player = event.player
 
-        // Call the event now that caches are unloaded
+        // Call the event now that collections are unloaded
         val preLogoutEvent = StoreProfilePreLogoutEvent(player)
         Bukkit.getServer().pluginManager.callEvent(preLogoutEvent)
 
@@ -158,29 +158,29 @@ class ProfileListener : Listener {
             }
         }
 
-        // TODO ensure the StoreProfile is removed from cache and not being a memory leak
+        // TODO ensure the StoreProfile is removed from collection and not being a memory leak
 
-        // Call the event now that caches are unloaded
+        // Call the event now that collections are unloaded
         val logoutEvent = StoreProfileLogoutEvent(player)
         Bukkit.getServer().pluginManager.callEvent(logoutEvent)
     }
 
     companion object {
-        fun <X : StoreProfile<X>> quit(player: Player, cache: ProfileCollection<X>) {
-            cache.getLoggerService().debug("Player " + player.name + " quitting, saving profile...")
-            quitHelper(player, cache)
+        fun <X : StoreProfile<X>> quit(player: Player, collection: ProfileCollection<X>) {
+            collection.getLoggerService().debug("Player " + player.name + " quitting, saving profile...")
+            quitHelper(player, collection)
         }
 
-        private fun <X : StoreProfile<X>> quitHelper(player: Player, cache: ProfileCollection<X>) {
+        private fun <X : StoreProfile<X>> quitHelper(player: Player, collection: ProfileCollection<X>) {
             // save on quit in standalone mode
-            val o: X? = cache.readFromCache(player.uniqueId)
+            val o: X? = collection.readFromCache(player.uniqueId)
             o?.let { profile ->
                 // ModificationRequest can be ignored since we are saving below
-                cache.onProfileLeaving(player, profile)
+                collection.onProfileLeaving(player, profile)
                 profile.uninitializePlayer()
 
-                // clean up the cache
-                cache.removeLoader(profile.uniqueId)
+                // clean up the collection
+                collection.removeLoader(profile.uniqueId)
             }
         }
     }

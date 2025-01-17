@@ -37,10 +37,10 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     override val databaseStore: ProfileStorageDatabase<X> by lazy { ProfileStorageDatabase(this) }
 
     init {
-        // Start this cache
+        // Start this collection
         if (!start()) {
             // Data loss is not tolerated in DataStore, shutdown to prevent issues
-            DataStoreSource.get().logger.severe("Failed to start Profile Cache: $name")
+            DataStoreSource.get().logger.severe("Failed to start Profile Collection: $name")
             Bukkit.shutdown()
         }
     }
@@ -100,7 +100,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     }
 
     override val cached: kotlin.collections.Collection<X>
-        get() = localStore.localCache.values
+        get() = localStore.localStorage.values
 
     override fun hasKeySync(key: UUID): Boolean {
         return localStore.has(key) || databaseStore.has(key)

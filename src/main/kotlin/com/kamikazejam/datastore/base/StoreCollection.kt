@@ -23,7 +23,7 @@ import java.util.*
 import java.util.function.Consumer
 
 /**
- * The abstract backbone of all Store cache systems.
+ * The abstract backbone of all Store Collection systems.
  * All Caching modes (profile, object, simple) extend this class.
  */
 abstract class StoreCollection<K, X : Store<X, K>>(
@@ -34,7 +34,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     final override val registration: DataStoreRegistration,
     private val loggerInstantiator: CollectionLoggerInstantiator
 ) : Comparable<StoreCollection<*, *>>, Collection<K, X> {
-    private val dependingCaches: MutableSet<String?> = HashSet()
+    private val dependingCollections: MutableSet<String?> = HashSet()
 
     override val plugin: Plugin = registration.plugin
 
@@ -42,7 +42,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     override var running: Boolean = false
 
     init {
-        // Make sure to load the Index Cache from disk when this cache is created
+        // Make sure to load the Index Cache from disk when this Collection is created
         this.saveIndexCache()
     }
 
@@ -117,14 +117,14 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     override fun updateSync(key: K, updateFunction: Consumer<X>): X {
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
-        val originalEntity = readSync(key) ?: throw NoSuchElementException("[StoreCache#update] Store not found with key: ${this.keyToString(key)}")
+        val originalEntity = readSync(key) ?: throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
 
         check(
             this.databaseStore.updateSync(
                 originalEntity,
                 updateFunction
             )
-        ) { "[StoreCache#update] Failed to update store with key: ${this.keyToString(key)}" }
+        ) { "[StoreCollection#update] Failed to update store with key: ${this.keyToString(key)}" }
         return originalEntity
     }
 
@@ -132,75 +132,75 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     // Service Methods                                        //
     // ------------------------------------------------------ //
     /**
-     * Start the Cache
-     * Should be called by the external plugin during startup after the cache has been created
+     * Start the Collection
+     * Should be called by the external plugin during startup after the Collection has been created
      *
      * @return Boolean successful
      */
     final override fun start(): Boolean {
-        Preconditions.checkState(!running, "Cache $name is already started!")
+        Preconditions.checkState(!running, "Collection $name is already started!")
         Preconditions.checkNotNull(
             instantiator,
-            "Instantiator must be set before calling start() for cache $name"
+            "Instantiator must be set before calling start() for Collection $name"
         )
         var success = true
         if (!initialize()) {
             success = false
-            getLoggerService().error("Failed to initialize internally for cache: $name")
+            getLoggerService().error("Failed to initialize internally for Collection: $name")
         }
         running = true
 
-        // Register this cache
+        // Register this Collection
         try {
             DataStoreAPI.saveCollection(this)
         } catch (e: DuplicateCollectionException) {
-            getLoggerService().severe("[DuplicateCacheException] Failed to register cache: $name - Cache Name already exists!")
+            getLoggerService().severe("[DuplicateCollectionException] Failed to register Collection: $name - Collection Name already exists!")
             return false
         }
         return success
     }
 
     /**
-     * Stop the Cache
+     * Stop the Collection
      * Should be called by the external plugin during shutdown
      *
      * @return Boolean successful
      */
     override fun shutdown(): Boolean {
-        Preconditions.checkState(running, "Cache $name is not running!")
+        Preconditions.checkState(running, "Collection $name is not running!")
         var success = true
 
-        // If this cache is a player cache, save all profiles of online players before we shut down
+        // If this Collection is a player Collection, save all profiles of online players before we shut down
         if (this is StoreProfileCollection<*>) {
             Bukkit.getOnlinePlayers().forEach { p: Player -> ProfileListener.quit(p, this) }
         }
 
-        // terminate() handles the rest of the cache shutdown
+        // terminate() handles the rest of the Collection shutdown
         if (!terminate()) {
             success = false
-            getLoggerService().info("Failed to terminate internally for cache: $name")
+            getLoggerService().info("Failed to terminate internally for Collection: $name")
         }
 
         running = false
 
-        // Unregister this cache
+        // Unregister this Collection
         DataStoreAPI.removeCollection(this)
         return success
     }
 
 
     // ------------------------------------------------------ //
-    // Cache Methods                                          //
+    // Collection Methods                                     //
     // ------------------------------------------------------ //
     /**
-     * Starts up & initializes the cache.
+     * Starts up & initializes the Collection.
      * Prepares everything for a fresh startup, ensures database connections, etc.
      */
     @ApiStatus.Internal
     protected abstract fun initialize(): Boolean
 
     /**
-     * Shut down the cache.
+     * Shut down the Collection.
      * Saves everything first, and safely shuts down
      */
     @ApiStatus.Internal
@@ -222,7 +222,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
             localStore.save(store)
             getLoggerService().debug("Cached store " + store.id)
         }
-        store.setCache(this)
+        store.setCollection(this)
     }
 
     override fun uncache(key: K) {
@@ -258,21 +258,21 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
     override fun addDepend(collection: Collection<*, *>) {
         Preconditions.checkNotNull(collection)
-        dependingCaches.add(collection.name)
+        dependingCollections.add(collection.name)
     }
 
     override fun isDependentOn(collection: Collection<*, *>): Boolean {
         Preconditions.checkNotNull(collection)
-        return dependingCaches.contains(collection.name)
+        return dependingCollections.contains(collection.name)
     }
 
-    override fun isDependentOn(cacheName: String): Boolean {
-        Preconditions.checkNotNull(cacheName)
-        return dependingCaches.contains(cacheName)
+    override fun isDependentOn(collName: String): Boolean {
+        Preconditions.checkNotNull(collName)
+        return dependingCollections.contains(collName)
     }
 
     /**
-     * Simple comparator method to determine order between caches based on dependencies
+     * Simple comparator method to determine order between collections based on dependencies
      *
      * @param other The [StoreCollection] to compare.
      * @return Comparator sorting integer
@@ -283,7 +283,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     }
 
     override val dependencyNames: Set<String?>
-        get() = dependingCaches
+        get() = dependingCollections
 
     @ApiStatus.Internal
     override fun updateStoreFromNewer(store: X, update: X) {
@@ -354,7 +354,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
             }
         }
 
-        // 2. -> Check database (uses cache or mongodb)
+        // 2. -> Check database (uses storage service like mongodb)
         val id = DataStoreSource.storageService.getStoreIdByIndex(this, field, value) ?: return null
 
         // 3. -> Obtain the Profile by its ID
