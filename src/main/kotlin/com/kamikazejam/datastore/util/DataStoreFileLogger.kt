@@ -119,7 +119,7 @@ object DataStoreFileLogger {
         }
     }
 
-    fun appendToFile(lines: List<String?>, file: File): Boolean {
+    fun appendToFile(lines: List<String>, file: File): Boolean {
         val parent = file.parentFile
         if (parent != null && !parent.exists()) {
             parent.mkdirs()

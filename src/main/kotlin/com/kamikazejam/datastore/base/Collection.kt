@@ -90,7 +90,7 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
      * @return An Iterable of all Stores, for sequential processing. (READ-ONLY)
      */
     @Blocking
-    fun readAllFromDatabase(cacheStores: Boolean): Iterable<X?>
+    fun readAllFromDatabase(cacheStores: Boolean): Iterable<X>
 
 
     // ------------------------------------------------------ //
@@ -212,7 +212,7 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
     /**
      * Gets the name of all [Collection] objects this Collection is dependent on.
      */
-    val dependencyNames: Set<String?>
+    val dependencyNames: Set<String>
 
     /**
      * Helper method to use the [.getPlugin] plugin to run an async bukkit task.
@@ -296,11 +296,11 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
     @ApiStatus.Internal
     fun saveIndexCache()
 
-    fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K?>
+    fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K>
 
     /**
      * Retrieves an object by the provided index field and its value.
      */
-    fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X?>
+    fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X>
 }
 

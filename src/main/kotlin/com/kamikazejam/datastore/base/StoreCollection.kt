@@ -36,7 +36,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     final override val registration: DataStoreRegistration,
     private val loggerInstantiator: CollectionLoggerInstantiator
 ) : Comparable<StoreCollection<*, *>>, Collection<K, X> {
-    private val dependingCollections: MutableSet<String?> = HashSet()
+    private val dependingCollections: MutableSet<String> = HashSet()
 
     override val plugin: Plugin = registration.plugin
 
@@ -313,7 +313,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         return if (this.isDependentOn(other)) -1 else if (other.isDependentOn(this)) 1 else 0
     }
 
-    override val dependencyNames: Set<String?>
+    override val dependencyNames: Set<String>
         get() = dependingCollections
 
     @ApiStatus.Internal
@@ -373,13 +373,13 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         DataStoreSource.storageService.saveIndexCache(this)
     }
 
-    override fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K?> {
+    override fun <T> getStoreIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K> {
         return AsyncHandler(this) {
             DataStoreSource.storageService.getStoreIdByIndex(this, index, value)
         }
     }
 
-    override fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X?> {
+    override fun <T> getByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X> {
         // 1. -> Check local cache (brute force)
         for (store in localStore.all) {
             if (field.equals(field.getValue(store), value)) {

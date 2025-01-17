@@ -66,7 +66,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     //                          CRUD                         //
     // ----------------------------------------------------- //
 
-    override fun readAllFromDatabase(cacheStores: Boolean): Iterable<X?> {
+    override fun readAllFromDatabase(cacheStores: Boolean): Iterable<X> {
         return databaseStore.all
     }
 

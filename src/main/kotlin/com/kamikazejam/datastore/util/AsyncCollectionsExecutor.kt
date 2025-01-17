@@ -18,7 +18,7 @@ class AsyncCollectionsExecutor<T : Collection<*, *>>(var collections: List<T>, e
     private val queue: MutableMap<String, T> = HashMap() // Note: only remove from queue when T is completed
     private val currentExecutions: MutableList<CompletableFuture<String>> = ArrayList()
     private val execution: Execution<T>
-    private val completed: MutableSet<String?> = HashSet()
+    private val completed: MutableSet<String> = HashSet()
     private val timeoutSec: Long
 
     private var future = CompletableFuture<Void>()

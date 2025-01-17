@@ -88,7 +88,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
         return key
     }
 
-    override fun readAllFromDatabase(cacheStores: Boolean): Iterable<X?> {
+    override fun readAllFromDatabase(cacheStores: Boolean): Iterable<X> {
         // Create an Iterable that iterates through all database objects, and updates local objects as necessary
         val dbIterator: Iterator<X> = databaseStore.getAll(this).iterator()
         return Iterable {

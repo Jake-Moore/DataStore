@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit
  */
 @Suppress("unused", "UnstableApiUsage")
 class ProfileListener : Listener {
-    private val loginCache: Cache<UUID, Long?> =
+    private val loginCache: Cache<UUID, Long> =
         CacheBuilder.newBuilder().expireAfterWrite(100, TimeUnit.MILLISECONDS).build()
 
     @EventHandler(priority = EventPriority.LOW)
