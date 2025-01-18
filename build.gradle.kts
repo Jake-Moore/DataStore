@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.kamikazejam"
-version = "1.0.0.beta.8-SNAPSHOT"
+version = "1.0.0.beta.9-SNAPSHOT"
 description = "Simple Data Storage Solution using MongoDB"
 
 
@@ -20,7 +20,7 @@ repositories {
     maven("https://repo.luxiouslabs.net/repository/maven-public/")
 }
 
-val kcVersion = "4.0.0-beta.9-20250104.095630-1"
+val kcVersion = "4.0.0-beta.8-20250104.095630-1"
 dependencies {
     // Spigot
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
