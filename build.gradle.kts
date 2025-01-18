@@ -32,12 +32,6 @@ dependencies {
     // Testing Dependencies
     testImplementation("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
-    // Lombok (With Kotlin we shouldn't need this)
-//    compileOnly("org.projectlombok:lombok:1.18.36")
-//    annotationProcessor("org.projectlombok:lombok:1.18.36")
-//    testCompileOnly("org.projectlombok:lombok:1.18.36")
-//    testAnnotationProcessor("org.projectlombok:lombok:1.18.36")
-
     // Jetbrains
     compileOnly("org.jetbrains:annotations:26.0.1")
     testCompileOnly("org.jetbrains:annotations:26.0.1")
