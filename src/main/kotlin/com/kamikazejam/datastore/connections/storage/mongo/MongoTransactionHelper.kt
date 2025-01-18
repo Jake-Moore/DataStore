@@ -98,7 +98,7 @@ object MongoTransactionHelper {
                 workingCopy.readOnly = false
 
                 // Fetch Version prior to updates
-                val currentVersion = workingCopy.versionField.get() ?: 0
+                val currentVersion = workingCopy.versionField.get()
 
                 // Apply updates to the copy
                 updateFunction.accept(workingCopy)

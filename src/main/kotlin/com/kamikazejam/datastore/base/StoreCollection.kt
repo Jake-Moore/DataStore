@@ -6,6 +6,8 @@ import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.field.FieldWrapper
+import com.kamikazejam.datastore.base.field.OptionalField
+import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.result.AsyncHandler
@@ -84,7 +86,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
                 store.readOnly = false
 
                 // Set the id first (allowing the initializer to change it if necessary)
-                store.idField.set(key)
+                store.idField.setNotNull(key)
                 // Initialize the store
                 initializer.accept(store)
                 // Enforce Version 0 for creation
@@ -342,9 +344,8 @@ abstract class StoreCollection<K, X : Store<X, K>>(
                 copyFieldValue(storeProvider.fieldWrapper, updateProvider.fieldWrapper)
             }else {
                 // For some reason our update didn't have a value for this field
-                // Set the field to null
-                storeProvider.fieldWrapper.set(null)
-                getLoggerService().warn("Update store didn't have a value for field: ${storeProvider.fieldWrapper.name}, class: ${storeProvider.fieldWrapper.getValueType()}")
+                // can't do much, just leave the value as is
+                getLoggerService().warn("Update store didn't have a value for field: ${storeProvider.fieldWrapper.name}, class: ${storeProvider.fieldWrapper.getFieldType()}")
             }
         }
 
@@ -356,7 +357,18 @@ abstract class StoreCollection<K, X : Store<X, K>>(
      */
     @Suppress("UNCHECKED_CAST")
     private fun copyFieldValue(target: FieldWrapper<*>, source: FieldWrapper<*>) {
-        (target as FieldWrapper<Any>).set(source.get())
+        val targetAny = (target as FieldWrapper<Any>)
+        val sourceAny = (source as FieldWrapper<Any>)
+        if (targetAny is OptionalField<Any> && sourceAny is OptionalField<Any>) {
+            targetAny.set(sourceAny.get())
+        } else if (targetAny is RequiredField<Any> && sourceAny is RequiredField<Any>) {
+            targetAny.set(sourceAny.get())
+        } else {
+            throw IllegalArgumentException(
+                "FieldWrappers must be of the same type to copy values, found: "
+                        + "${targetAny::class.java.simpleName} and ${sourceAny::class.java.simpleName}"
+            )
+        }
     }
 
     // ------------------------------------------------- //

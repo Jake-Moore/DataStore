@@ -3,6 +3,7 @@ package com.kamikazejam.datastore.base
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.FieldWrapperMap
+import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.base.result.AsyncHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,7 +68,7 @@ interface Store<T : Store<T, K>, K> : CoroutineScope {
      * @return K Identifier
      */
     val id: K
-        get() = idField.get() ?: throw IllegalStateException("idField is null")
+        get() = idField.getNullable() ?: throw IllegalStateException("idField is null")
 
     /**
      * Gets the Collection associated with this Store object.
@@ -85,7 +86,7 @@ interface Store<T : Store<T, K>, K> : CoroutineScope {
     /**
      * Gets the optimistic versioning FieldWrapper
      */
-    val versionField: FieldWrapper<Long>
+    val versionField: RequiredField<Long>
 
     /**
      * Gets the id FieldWrapper

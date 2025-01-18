@@ -4,7 +4,7 @@ import com.kamikazejam.datastore.base.Store
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
 
-interface FieldWrapper<T> : FieldProvider {
+sealed interface FieldWrapper<T> : FieldProvider {
     val name: String
     val valueType: Class<*>
     val elementType: Class<*>?
@@ -13,20 +13,28 @@ interface FieldWrapper<T> : FieldProvider {
     @ApiStatus.Internal
     fun setParent(parent: Store<*, *>)
     
-    fun getValueType(): Class<T>
+    fun getFieldType(): Class<T>
+    
+    fun getNullable(): T?
+    
+    fun setNotNull(value: T)
     
     override val fieldWrapper: FieldWrapper<*>
         get() = this
 }
 
-sealed interface RequiredField<T : Any> : FieldWrapper<T> {
+sealed interface RequiredField<T> : FieldWrapper<T> {
     val defaultValue: T
     fun get(): T
     fun set(value: T)
     
+    override fun getNullable(): T = get()
+    
+    override fun setNotNull(value: T) = set(value)
+    
     companion object {
         @JvmStatic
-        fun <T : Any> of(name: String, defaultValue: T, valueType: Class<T>): RequiredField<T> =
+        fun <T> of(name: String, defaultValue: T, valueType: Class<T>): RequiredField<T> =
             RequiredFieldImpl(name, defaultValue, valueType)
     }
 }
@@ -37,6 +45,10 @@ sealed interface OptionalField<T> : FieldWrapper<T> {
     fun getOrDefault(default: T): T
     fun set(value: T?)
     
+    override fun getNullable(): T? = get()
+    
+    override fun setNotNull(value: T) = set(value)
+    
     companion object {
         @JvmStatic
         fun <T> of(name: String, defaultValue: T?, valueType: Class<T>): OptionalField<T> =
@@ -44,7 +56,7 @@ sealed interface OptionalField<T> : FieldWrapper<T> {
     }
 }
 
-private class RequiredFieldImpl<T : Any>(
+private class RequiredFieldImpl<T>(
     override val name: String,
     override val defaultValue: T,
     override val valueType: Class<*>,
@@ -53,7 +65,7 @@ private class RequiredFieldImpl<T : Any>(
     private var value: T = defaultValue
     private var parent: Store<*, *>? = null
 
-    override fun getValueType(): Class<T> {
+    override fun getFieldType(): Class<T> {
         @Suppress("UNCHECKED_CAST")
         return valueType as Class<T>
     }
@@ -99,7 +111,7 @@ private class OptionalFieldImpl<T>(
     private var value: T? = defaultValue
     private var parent: Store<*, *>? = null
 
-    override fun getValueType(): Class<T> {
+    override fun getFieldType(): Class<T> {
         @Suppress("UNCHECKED_CAST")
         return valueType as Class<T>
     }

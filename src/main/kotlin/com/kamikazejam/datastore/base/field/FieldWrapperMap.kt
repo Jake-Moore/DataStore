@@ -4,10 +4,10 @@ package com.kamikazejam.datastore.base.field
 
 interface FieldWrapperMap<K, V> : MutableMap<K, V>, FieldProvider
 
-sealed interface RequiredFieldMap<K : Any, V : Any> : FieldWrapperMap<K, V> {
+sealed interface RequiredFieldMap<K, V> : FieldWrapperMap<K, V> {
     companion object {
         @JvmStatic
-        fun <K : Any, V : Any> of(name: String, defaultValue: Map<K, V>? = null): RequiredFieldMap<K, V> =
+        fun <K, V> of(name: String, defaultValue: Map<K, V>? = null): RequiredFieldMap<K, V> =
             RequiredFieldMapImpl(name, defaultValue)
     }
 }
@@ -20,7 +20,7 @@ sealed interface OptionalFieldMap<K, V> : FieldWrapperMap<K, V> {
     }
 }
 
-private class RequiredFieldMapImpl<K : Any, V : Any>(
+private class RequiredFieldMapImpl<K, V>(
     name: String,
     defaultValue: Map<K, V>?
 ) : RequiredFieldMap<K, V> {

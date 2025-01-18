@@ -4,10 +4,10 @@ package com.kamikazejam.datastore.base.field
 
 interface FieldWrapperList<E> : MutableList<E>, FieldProvider
 
-sealed interface RequiredFieldList<E : Any> : FieldWrapperList<E> {
+sealed interface RequiredFieldList<E> : FieldWrapperList<E> {
     companion object {
         @JvmStatic
-        fun <E : Any> of(name: String, defaultValue: List<E>? = null): RequiredFieldList<E> =
+        fun <E> of(name: String, defaultValue: List<E>? = null): RequiredFieldList<E> =
             RequiredFieldListImpl(name, defaultValue)
     }
 }
@@ -20,7 +20,7 @@ sealed interface OptionalFieldList<E> : FieldWrapperList<E> {
     }
 }
 
-private class RequiredFieldListImpl<E : Any>(
+private class RequiredFieldListImpl<E>(
     name: String,
     defaultValue: List<E>?
 ) : RequiredFieldList<E> {

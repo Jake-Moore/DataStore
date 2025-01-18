@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.introspect.VisibilityChecker
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.field.FieldWrapper
+import com.kamikazejam.datastore.base.field.OptionalField
+import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.util.jackson.JacksonSpigotModule
 import org.bson.Document
 
@@ -56,13 +58,16 @@ object JacksonUtil {
 
     fun <T> toJson(wrapper: FieldWrapper<T>): String {
         Preconditions.checkNotNull(wrapper, "wrapper cannot be null")
-        return objectMapper.writeValueAsString(wrapper.get())
+        return when (wrapper) {
+            is OptionalField<*> -> objectMapper.writeValueAsString(wrapper.get())
+            is RequiredField<*> -> objectMapper.writeValueAsString(wrapper.get())
+        }
     }
 
     fun <T> fromJson(wrapper: FieldWrapper<T>, json: String): T {
         Preconditions.checkNotNull(json, "json cannot be null")
         Preconditions.checkNotNull(wrapper, "wrapper cannot be null")
-        return objectMapper.readValue(json, wrapper.getValueType())
+        return objectMapper.readValue(json, wrapper.getFieldType())
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -70,7 +75,7 @@ object JacksonUtil {
         val doc = Document()
         for (provider in store.allFields) {
             val field = provider.fieldWrapper
-            val value = field.get()
+            val value = field.getNullable()
             if (value != null) {
                 // Convert the value to a MongoDB-compatible format using Jackson
                 var convertedValue: Any = objectMapper.convertValue(value, Any::class.java)
@@ -113,13 +118,26 @@ object JacksonUtil {
             val rawValue = doc[fieldName]
             if (rawValue != null) {
                 // Convert the MongoDB value to the proper type using Jackson
-                val value = objectMapper.convertValue(rawValue, field.getValueType())
-                field.set(value)
-            } else {
-                field.set(null)
+                val value = objectMapper.convertValue(rawValue, field.getFieldType())
+
+                when (field) {
+                    is OptionalField<V> -> field.set(value)
+                    is RequiredField<V> -> field.set(value)
+                }
+                return
+            }else {
+                // If we have OptionalField, we can set null
+                if (field is OptionalField<V>) {
+                    field.set(null)
+                    return
+                }
             }
-        } else {
-            field.set(field.defaultValue)
+        }
+
+        // Use default is there was nothing serialized or it was null
+        when (field) {
+            is OptionalField<V> -> field.set(field.defaultValue)
+            is RequiredField<V> -> field.set(field.defaultValue)
         }
     }
 
