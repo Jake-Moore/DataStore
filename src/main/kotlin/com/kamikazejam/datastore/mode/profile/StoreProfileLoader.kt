@@ -91,7 +91,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
     fun initializeOnJoin(player: Player) {
         this.player = player
         if (store == null) {
-            store = collection.getFromCache(player)
+            store = collection.readFromCache(player)
         }
         store?.initializePlayer(player)
     }
@@ -161,8 +161,9 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
                 store.readOnly = true
 
                 // Save the store to our database implementation & cache
-                collection.cache(store)
+                // DO DATABASE SAVE FIRST SO ANY EXCEPTIONS ARE THROWN PRIOR TO MODIFYING LOCAL CACHE
                 collection.databaseStore.save(store)
+                collection.cache(store)
                 return store
             } catch (e: Exception) {
                 throw RuntimeException("Failed to create Store", e)

@@ -117,12 +117,6 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     override val cached: kotlin.collections.Collection<X>
         get() = localStore.localStorage.values
 
-    override fun hasKey(key: String): AsyncHandler<Boolean> {
-        return AsyncHandler(this) {
-            localStore.has(key) || databaseStore.has(key)
-        }
-    }
-
     override fun readFromCache(key: String): X? {
         return localStore.get(key)
     }

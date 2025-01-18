@@ -24,7 +24,7 @@ interface ProfileCollection<X : StoreProfile<X>> : Collection<UUID, X> {
      * @return The Store if it was cached.
      */
     @NonBlocking
-    fun getFromCache(player: Player): X?
+    fun readFromCache(player: Player): X?
 
     /**
      * Retrieve a Store from the database (by player).
@@ -33,7 +33,7 @@ interface ProfileCollection<X : StoreProfile<X>> : Collection<UUID, X> {
      * @return The Store if it was found in the database.
      */
     @Blocking
-    fun getFromDatabase(player: Player, cacheStore: Boolean): X?
+    fun readFromDatabase(player: Player, cacheStore: Boolean): X?
 
     /**
      * Gets all online players' Profile objects. These should all be present the collection and cached.

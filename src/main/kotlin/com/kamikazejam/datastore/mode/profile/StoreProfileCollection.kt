@@ -7,7 +7,6 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.extensions.read
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
-import com.kamikazejam.datastore.base.result.AsyncHandler
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.event.profile.StoreProfileQuitEvent
@@ -90,12 +89,6 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     override val cached: kotlin.collections.Collection<X>
         get() = localStore.localStorage.values
 
-    override fun hasKey(key: UUID): AsyncHandler<Boolean> {
-        return AsyncHandler(this) {
-            localStore.has(key) || databaseStore.has(key)
-        }
-    }
-
     override fun readFromCache(key: UUID): X? {
         return localStore.get(key)
     }
@@ -123,12 +116,12 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
             }
     }
 
-    override fun getFromCache(player: Player): X? {
+    override fun readFromCache(player: Player): X? {
         Preconditions.checkNotNull(player)
         return readFromCache(player.uniqueId)
     }
 
-    override fun getFromDatabase(player: Player, cacheStore: Boolean): X? {
+    override fun readFromDatabase(player: Player, cacheStore: Boolean): X? {
         Preconditions.checkNotNull(player)
         val o: X? = databaseStore.get(player.uniqueId)
         if (cacheStore) {

@@ -93,8 +93,9 @@ abstract class StoreCollection<K, X : Store<X, K>>(
                 store.readOnly = true
 
                 // Save the store to our database implementation & cache
-                this.cache(store)
+                // DO DATABASE SAVE FIRST SO ANY EXCEPTIONS ARE THROWN PRIOR TO MODIFYING LOCAL CACHE
                 this.databaseStore.save(store)
+                this.cache(store)
                 return@AsyncHandler store
             } catch (d: DuplicateKeyException) {
                 getLoggerService().severe("Failed to create Store: Duplicate Key...")
@@ -267,6 +268,12 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
     override fun isCached(key: K): Boolean {
         return localStore.has(key)
+    }
+
+    final override fun hasKey(key: K): AsyncHandler<Boolean> {
+        return AsyncHandler(this) {
+            localStore.has(key) || databaseStore.has(key)
+        }
     }
 
     override fun runAsync(runnable: Runnable) {
