@@ -5,7 +5,8 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.field.FieldProvider
-import com.kamikazejam.datastore.base.field.FieldWrapper
+import com.kamikazejam.datastore.base.field.OptionalField
+import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.base.result.AsyncHandler
 import com.kamikazejam.datastore.util.PlayerUtil
 import org.bukkit.Bukkit
@@ -24,9 +25,9 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // ----------------------------------------------------- //
     // The id of this object (a player uuid)
     @Id
-    override val idField: FieldWrapper<UUID> = FieldWrapper.of("_id", null, UUID::class.java)
-    override val versionField: FieldWrapper<Long> = FieldWrapper.of("version", 0L, Long::class.java)
-    val usernameField: FieldWrapper<String> = FieldWrapper.of("username", null, String::class.java)
+    override val idField: OptionalField<UUID> = OptionalField.of("_id", null, UUID::class.java)
+    override val versionField: RequiredField<Long> = RequiredField.of("version", 0L, Long::class.java)
+    val usernameField: OptionalField<String> = OptionalField.of("username", null, String::class.java)
 
     // ----------------------------------------------------- //
     //                      Transients                       //

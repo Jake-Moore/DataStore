@@ -5,7 +5,7 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.field.FieldProvider
-import com.kamikazejam.datastore.base.field.FieldWrapper
+import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.base.result.AsyncHandler
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
@@ -21,11 +21,11 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
     // ----------------------------------------------------- //
     // The id of this object (as a user-defined String)
     @Id
-    override val idField: FieldWrapper<String> = FieldWrapper.of(
+    override val idField: RequiredField<String> = RequiredField.of(
         "_id", UUID.randomUUID().toString(),
         String::class.java
     )
-    override val versionField: FieldWrapper<Long> = FieldWrapper.of("version", 0L, Long::class.java)
+    override val versionField: RequiredField<Long> = RequiredField.of("version", 0L, Long::class.java)
 
 
     // ----------------------------------------------------- //

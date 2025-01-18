@@ -4,91 +4,138 @@ import com.kamikazejam.datastore.base.Store
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
 
-/**
- * A wrapper for fields that enforces access control based on Store state
- */
-@Suppress("unused", "UNCHECKED_CAST")
-class FieldWrapper<T> private constructor(
-    val name: String,
-    private var value: T?,
-    private val valueType: Class<*>,
-    // We don't actually need `elementType` in our implementation yet, but we
-    //  keep it in case it is needed in the future
-    private val elementType: Class<*>?
-) : FieldProvider {
-
-    val defaultValue = value
-    private var parent: Store<*, *>? = null
-
-    private constructor(name: String, defaultValue: T?, valueType: Class<T>) : this(name, defaultValue, valueType, null)
-
+interface FieldWrapper<T> : FieldProvider {
+    val name: String
+    val valueType: Class<*>
+    val elementType: Class<*>?
+    val isWriteable: Boolean
+    
+    @ApiStatus.Internal
+    fun setParent(parent: Store<*, *>)
+    
+    fun getValueType(): Class<T>
+    
     override val fieldWrapper: FieldWrapper<*>
         get() = this
+}
 
-    fun getValueType(): Class<T> {
+sealed interface RequiredField<T : Any> : FieldWrapper<T> {
+    val defaultValue: T
+    fun get(): T
+    fun set(value: T)
+    
+    companion object {
+        @JvmStatic
+        fun <T : Any> of(name: String, defaultValue: T, valueType: Class<T>): RequiredField<T> =
+            RequiredFieldImpl(name, defaultValue, valueType)
+    }
+}
+
+sealed interface OptionalField<T> : FieldWrapper<T> {
+    val defaultValue: T?
+    fun get(): T?
+    fun getOrDefault(default: T): T
+    fun set(value: T?)
+    
+    companion object {
+        @JvmStatic
+        fun <T> of(name: String, defaultValue: T?, valueType: Class<T>): OptionalField<T> =
+            OptionalFieldImpl(name, defaultValue, valueType)
+    }
+}
+
+private class RequiredFieldImpl<T : Any>(
+    override val name: String,
+    override val defaultValue: T,
+    override val valueType: Class<*>,
+    override val elementType: Class<*>? = null
+) : RequiredField<T> {
+    private var value: T = defaultValue
+    private var parent: Store<*, *>? = null
+
+    override fun getValueType(): Class<T> {
+        @Suppress("UNCHECKED_CAST")
         return valueType as Class<T>
     }
 
     @ApiStatus.Internal
-    fun setParent(parent: Store<*, *>) {
+    override fun setParent(parent: Store<*, *>) {
         this.parent = parent
     }
 
-    fun get(): T? {
-        checkNotNull(parent) { "[FieldWrapper#get] Field not registered with a parent document" }
+    override fun get(): T {
+        checkNotNull(parent) { "[RequiredField#get] Field not registered with a parent document" }
         return value
     }
 
-    fun set(value: T?) {
+    override fun set(value: T) {
         check(isWriteable) { "Cannot modify field '$name' in read-only mode" }
         this.value = value
     }
 
-    val isWriteable: Boolean
+    override val isWriteable: Boolean
         get() {
             val p = this.parent
-            checkNotNull(p) { "[FieldWrapper#isWriteable] Field not registered with a parent document" }
+            checkNotNull(p) { "[RequiredField#isWriteable] Field not registered with a parent document" }
             return !p.readOnly
         }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is FieldWrapper<*>) return false
-        return value == other.value && name == other.name && valueType == other.valueType
+        if (other !is RequiredField<*>) return false
+        return value == other.get() && name == other.name && valueType == other.valueType
     }
 
     override fun hashCode(): Int {
         return Objects.hash(value, name, valueType)
     }
+}
 
-    override fun toString(): String {
-        return "FieldWrapper{name='$name', value=$value, valueType=$valueType}"
+private class OptionalFieldImpl<T>(
+    override val name: String,
+    override val defaultValue: T?,
+    override val valueType: Class<*>,
+    override val elementType: Class<*>? = null
+) : OptionalField<T> {
+    private var value: T? = defaultValue
+    private var parent: Store<*, *>? = null
+
+    override fun getValueType(): Class<T> {
+        @Suppress("UNCHECKED_CAST")
+        return valueType as Class<T>
     }
 
-    companion object {
-        // ------------------------------------------------------ //
-        // Static Constructors                                    //
-        // ------------------------------------------------------ //
-        @JvmStatic
-        fun <T> of(name: String, defaultValue: T?, valueType: Class<T>): FieldWrapper<T> {
-            return FieldWrapper(name, defaultValue, valueType)
+    @ApiStatus.Internal
+    override fun setParent(parent: Store<*, *>) {
+        this.parent = parent
+    }
+
+    override fun get(): T? {
+        checkNotNull(parent) { "[OptionalField#get] Field not registered with a parent document" }
+        return value
+    }
+
+    override fun getOrDefault(default: T): T {
+        return get() ?: default
+    }
+
+    override fun set(value: T?) {
+        check(isWriteable) { "Cannot modify field '$name' in read-only mode" }
+        this.value = value
+    }
+
+    override val isWriteable: Boolean
+        get() {
+            val p = this.parent
+            checkNotNull(p) { "[OptionalField#isWriteable] Field not registered with a parent document" }
+            return !p.readOnly
         }
 
-        // Generic constructor for any collection type
-        fun <C : Collection<E>?, E> ofColl(
-            name: String,
-            defaultValue: C?,
-            collectionType: Class<in C>
-        ): FieldWrapper<C?> {
-            return FieldWrapper(name, defaultValue, collectionType, null)
-        }
+    override fun equals(other: Any?): Boolean {
+        if (other !is OptionalField<*>) return false
+        return value == other.get() && name == other.name && valueType == other.valueType
+    }
 
-        // Generic constructor for any map type
-        fun <K, V, M : Map<K, V>?> ofMap(
-            name: String,
-            defaultValue: M?,
-            mapType: Class<in M>
-        ): FieldWrapper<M?> {
-            return FieldWrapper(name, defaultValue, mapType, null)
-        }
+    override fun hashCode(): Int {
+        return Objects.hash(value, name, valueType)
     }
 }

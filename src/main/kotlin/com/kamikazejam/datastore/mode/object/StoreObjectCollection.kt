@@ -98,7 +98,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
                 // If we want to cache, and have a local store that's newer -> update the local store
                 // Note, if not caching then we won't update any local stores and won't cache the db store
-                val dbVer = dbStore.versionField.get() ?: 0
+                val dbVer = dbStore.versionField.get()
                 val localVer = local?.versionField?.get() ?: 0
                 if (cacheStores && local != null && dbVer >= localVer) {
                     this@StoreObjectCollection.updateStoreFromNewer(local, dbStore)
