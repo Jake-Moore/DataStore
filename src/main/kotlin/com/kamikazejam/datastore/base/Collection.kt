@@ -7,6 +7,7 @@ import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncHasKeyHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
+import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.loader.StoreLoader
@@ -18,14 +19,11 @@ import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.mode.`object`.ObjectCollection
 import com.kamikazejam.datastore.mode.profile.ProfileCollection
 import com.mongodb.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Blocking
 import java.util.*
 import java.util.function.Consumer
-import kotlin.coroutines.CoroutineContext
 
 /**
  * A [Collection] holds Store objects and manages their retrieval, caching, and saving.
@@ -33,9 +31,7 @@ import kotlin.coroutines.CoroutineContext
  * [ObjectCollection] and [ProfileCollection]
  */
 @Suppress("unused")
-interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
-    override val coroutineContext: CoroutineContext
-        get() = Dispatchers.IO
+interface Collection<K, X : Store<X, K>> : Service, DataStoreScope {
 
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //

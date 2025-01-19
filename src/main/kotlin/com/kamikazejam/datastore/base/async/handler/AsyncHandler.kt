@@ -2,8 +2,7 @@ package com.kamikazejam.datastore.base.async.handler
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.result.AsyncResult
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
@@ -15,8 +14,7 @@ import kotlinx.coroutines.launch
 abstract class AsyncHandler<T, R : AsyncResult<T>>(
     protected val collection: Collection<*, *>,
     protected val block: suspend () -> T?
-) : CoroutineScope {
-    override val coroutineContext = Dispatchers.IO
+) : DataStoreScope {
     private val deferred = async { runCatching { block() } }
 
     protected abstract fun wrapResult(result: Result<T?>): R

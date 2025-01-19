@@ -2,25 +2,21 @@ package com.kamikazejam.datastore.base
 
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
+import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.FieldWrapperMap
 import com.kamikazejam.datastore.base.field.RequiredField
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.NonBlocking
 import java.util.function.Consumer
-import kotlin.coroutines.CoroutineContext
 
 /**
  * A Store is an object that can have CRUD operations performed on it.
  * Generics: K = Identifier Object Type (i.e. String, UUID)
  */
 @Suppress("unused")
-interface Store<X : Store<X, K>, K> : CoroutineScope {
-    override val coroutineContext: CoroutineContext
-        get() = Dispatchers.IO
+interface Store<X : Store<X, K>, K> : DataStoreScope {
 
     // ----------------------------------------------------- //
     //                  User Defined Methods                 //
