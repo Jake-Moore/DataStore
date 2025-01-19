@@ -15,6 +15,9 @@ import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.StoreProfileLoader
 import com.kamikazejam.datastore.util.AsyncCollectionsExecutor
 import com.kamikazejam.datastore.util.Color
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.time.withTimeout
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
@@ -25,8 +28,9 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerLoginEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import java.time.Duration
+import java.time.temporal.ChronoUnit
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 
@@ -34,7 +38,7 @@ import java.util.concurrent.TimeUnit
  * This class manages the synchronization between a bukkit [Player] and their [StoreProfile] objects.<br></br>
  * Its primary purpose it to listen to joins/quits and ensure collections are loaded & unloaded as players join and leave.
  */
-@Suppress("unused", "UnstableApiUsage")
+@Suppress("unused", "UnstableApiUsage", "UNUSED_VARIABLE")
 class ProfileListener : Listener {
     private val loginCache: Cache<UUID, Long> =
         CacheBuilder.newBuilder().expireAfterWrite(100, TimeUnit.MILLISECONDS).build()
@@ -56,24 +60,23 @@ class ProfileListener : Listener {
             return
         }
 
-        // Run a special fully parallelized execution for collections based on their depends
-        try {
-            val timeout: Long = 5 // seconds
-            cachePlayerProfiles(username, uniqueId, ip, timeout)[timeout + 3, TimeUnit.SECONDS]
-        } catch (t: Throwable) {
-            if (t is ExecutionException) {
-                if (t.cause is ProfileDenyJoinError) {
-                    event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, (t.cause as ProfileDenyJoinError).message)
-                    return
+        // Block while we preload all the player's profiles
+        val timeout: Long = 5 // seconds
+        val ignored = runBlocking {
+            try {
+                withTimeout(Duration.of(timeout + 3, ChronoUnit.SECONDS)) {
+                    // Run a special fully parallelized execution for collections based on their depends
+                    cachePlayerProfiles(username, uniqueId, ip, timeout)
                 }
-            }
+            } catch (t: Throwable) {
+                var message: String = ChatColor.RED.toString() + "A caching error occurred.  Please try again."
+                if (t is ExecutionException && t.cause is ProfileDenyJoinError) {
+                    (t.cause as ProfileDenyJoinError).message?.let { message = it }
+                }
 
-            t.printStackTrace()
-            event.disallow(
-                AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
-                ChatColor.RED.toString() + "A caching error occurred.  Please try again."
-            )
-            return
+                t.printStackTrace()
+                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, message)
+            }
         }
 
         // Save async to prevent unnecessary blocking on join
@@ -87,7 +90,7 @@ class ProfileListener : Listener {
         uniqueId: UUID,
         ip: String,
         timeoutSec: Long
-    ): CompletableFuture<Void> {
+    ): Deferred<Unit> {
         // Compile all the ProfileCaches
         val collections: MutableList<StoreProfileCollection<X>> = ArrayList()
         DataStoreAPI.collections.values.forEach { c: Collection<*, *>? ->

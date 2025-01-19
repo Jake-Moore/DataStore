@@ -19,10 +19,12 @@ import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
-import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
 import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
 import com.mongodb.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.IllegalPluginAccessException
@@ -52,7 +54,8 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
     init {
         // Make sure to load the Index Cache from disk when this Collection is created
-        this.saveIndexCache()
+        // This should occur on start up, so it's okay to block here
+        runBlocking { saveIndexCache() }
     }
 
     // ------------------------------------------------------ //
@@ -115,8 +118,8 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     }
 
     override fun delete(key: K): AsyncDeleteHandler {
-        localStore.remove(key)
         return AsyncDeleteHandler(this) {
+            localStore.remove(key)
             val removedFromDb = databaseStore.remove(key)
             invalidateIndexes(key, true)
             removedFromDb
@@ -142,29 +145,25 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         }
     }
 
-    override fun readAll(cacheStores: Boolean): Iterable<X> {
-        val keysIterable = iDs.iterator()
-
-        // Create an Iterable that iterates through all database keys, transforming into Stores
-        return Iterable {
-            TransformingIterator(keysIterable) { key ->
-                // 1. If we have the object in the cache -> return it
-                val o: X? = localStore.get(key)
-                if (o != null) {
-                    return@TransformingIterator o
-                }
-
-                // 2. We don't have the object in the cache -> load it from the database
-                // If for some reason this was deleted, or not found, we can just return null
-                //  and the TransformingIterator will skip it
-                val db: X = databaseStore.get(key) ?: return@TransformingIterator null
-
-                // Optionally cache this loaded Store
-                if (cacheStores) {
-                    this.cache(db)
-                }
-                db
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override suspend fun readAll(cacheStores: Boolean): Flow<X> {
+        return getIDs().flatMapConcat { key: K ->
+            // 1. If we have the object in the cache -> return it
+            val o: X? = localStore.get(key)
+            if (o != null) {
+                return@flatMapConcat flowOf(o)
             }
+
+            // 2. We don't have the object in the cache -> load it from the database
+            // If for some reason this was deleted, or not found, we can just return null
+            //  and the TransformingIterator will skip it
+            val db: X = databaseStore.get(key) ?: return@flatMapConcat flowOf(null).filterNotNull()
+
+            // Optionally cache this loaded Store
+            if (cacheStores) {
+                cache(db)
+            }
+            flowOf(db)
         }
     }
 
@@ -251,7 +250,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
     override fun cache(store: X) {
         Preconditions.checkNotNull(store)
-        val cached = localStore[store.id]
+        val cached = localStore.get(store.id)
         if (cached != null) {
             // If the objects are different -> update the one in the cache
             //   Note: this is not an equality check, this is a reference check (as intended)
@@ -380,21 +379,21 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    override fun <T> registerIndex(field: IndexedField<X, T>): IndexedField<X, T> {
+    override suspend fun <T> registerIndex(field: IndexedField<X, T>): IndexedField<X, T> {
         getLoggerService().debug("Registering index: " + field.name)
         DataStoreSource.storageService.registerIndex(this, field)
         return field
     }
 
-    override fun cacheIndexes(store: X, save: Boolean) {
+    override suspend fun cacheIndexes(store: X, save: Boolean) {
         DataStoreSource.storageService.cacheIndexes(this, store, save)
     }
 
-    override fun invalidateIndexes(key: K, save: Boolean) {
+    override suspend fun invalidateIndexes(key: K, save: Boolean) {
         DataStoreSource.storageService.invalidateIndexes(this, key, save)
     }
 
-    override fun saveIndexCache() {
+    override suspend fun saveIndexCache() {
         DataStoreSource.storageService.saveIndexCache(this)
     }
 
@@ -406,7 +405,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
     override fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncReadHandler<K, X> {
         // 1. -> Check local cache (brute force)
-        for (store in localStore.all) {
+        for (store in localStore.getAll()) {
             if (field.equals(field.getValue(store), value)) {
                 return AsyncReadHandler(this) { store }
             }
@@ -447,5 +446,9 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
     override fun setLoggerService(loggerService: LoggerService) {
         _loggerService = loggerService
+    }
+
+    override fun getKeyStringIdentifier(key: K): String {
+        return keyToString(key) + "@" + this.name
     }
 }

@@ -19,9 +19,9 @@ class StoreObjectLoader<X : StoreObject<X>> internal constructor(collection: Sto
     }
 
     @Suppress("SameParameterValue")
-    private fun load(fromLocal: Boolean) {
+    private suspend fun load(fromLocal: Boolean) {
         if (fromLocal) {
-            val local: X? = collection.localStore[identifier]
+            val local: X? = collection.localStore.get(identifier)
             if (local != null) {
                 // Ensure our Store is valid (not recently deleted)
                 if (local.valid) {
@@ -44,7 +44,7 @@ class StoreObjectLoader<X : StoreObject<X>> internal constructor(collection: Sto
         }
     }
 
-    override fun fetch(saveToLocalCache: Boolean): X? {
+    override suspend fun fetch(saveToLocalCache: Boolean): X? {
         load(true)
 
         // Double check validity here too

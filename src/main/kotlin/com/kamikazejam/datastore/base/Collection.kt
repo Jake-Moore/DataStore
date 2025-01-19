@@ -14,11 +14,11 @@ import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.storage.StorageDatabase
 import com.kamikazejam.datastore.base.storage.StorageLocal
-import com.kamikazejam.datastore.base.storage.StorageMethods
 import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.mode.`object`.ObjectCollection
 import com.kamikazejam.datastore.mode.profile.ProfileCollection
 import com.mongodb.*
+import kotlinx.coroutines.flow.Flow
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Blocking
@@ -75,14 +75,13 @@ interface Collection<K, X : Store<X, K>> : Service, DataStoreScope {
      * @return An Iterable of all Store, for sequential processing. (READ-ONLY)
      */
     @Blocking
-    fun readAll(cacheStores: Boolean): Iterable<X>
+    suspend fun readAll(cacheStores: Boolean): Flow<X>
 
 
     // ------------------------------------------------------ //
     // Database Methods                                       //
     // ------------------------------------------------------ //
-    @get:Blocking
-    val iDs: Iterable<K>
+    suspend fun getIDs(): Flow<K>
 
     /**
      * Loads all Stores directly from db, bypassing the cache.
@@ -91,7 +90,7 @@ interface Collection<K, X : Store<X, K>> : Service, DataStoreScope {
      * @return An Iterable of all Stores, for sequential processing. (READ-ONLY)
      */
     @Blocking
-    fun readAllFromDatabase(cacheStores: Boolean): Iterable<X>
+    suspend fun readAllFromDatabase(cacheStores: Boolean): Flow<X>
 
 
     // ------------------------------------------------------ //
@@ -119,7 +118,7 @@ interface Collection<K, X : Store<X, K>> : Service, DataStoreScope {
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The Store if it was found in the database.
      */
-    fun readFromDatabase(key: K, cacheStore: Boolean = true): X?
+    suspend fun readFromDatabase(key: K, cacheStore: Boolean = true): X?
 
     /**
      * Adds a Store to the local cache.
@@ -159,12 +158,12 @@ interface Collection<K, X : Store<X, K>> : Service, DataStoreScope {
     fun setLoggerService(loggerService: LoggerService)
 
     /**
-     * Gets the [StorageMethods] that handles local storage for this collection.
+     * Gets the [StorageLocal] that handles local storage for this collection.
      */
     val localStore: StorageLocal<K, X>
 
     /**
-     * Gets the [StorageMethods] that handles database storage for this collection.
+     * Gets the [StorageDatabase] that handles database storage for this collection.
      */
     val databaseStore: StorageDatabase<K, X>
 
@@ -199,6 +198,13 @@ interface Collection<K, X : Store<X, K>> : Service, DataStoreScope {
      * Gets the Class type of the key for this Collection.
      */
     fun getKeyType(): Class<K>
+
+    /**
+     * A non-functional and mostly visual/informative identifier combining the key string and collection name
+     *
+     * Mostly used for logging purposes
+     */
+    fun getKeyStringIdentifier(key: K): String
 
     /**
      * Add a dependency on another Collection. This Collection will be loaded after the dependency.
@@ -282,25 +288,25 @@ interface Collection<K, X : Store<X, K>> : Service, DataStoreScope {
      * Register an index for this Collection.
      * @return The registered index (for chaining)
      */
-    fun <T> registerIndex(field: IndexedField<X, T>): IndexedField<X, T>
+    suspend fun <T> registerIndex(field: IndexedField<X, T>): IndexedField<X, T>
 
     /**
      * Updates the indexes cache with the provided Store object.
      */
     @ApiStatus.Internal
-    fun cacheIndexes(store: X, save: Boolean)
+    suspend fun cacheIndexes(store: X, save: Boolean)
 
     /**
      * Updates the indexes cache with the provided Store object.
      */
     @ApiStatus.Internal
-    fun invalidateIndexes(key: K, save: Boolean)
+    suspend fun invalidateIndexes(key: K, save: Boolean)
 
     /**
      * Saves the index cache to storage.
      */
     @ApiStatus.Internal
-    fun saveIndexCache()
+    suspend fun saveIndexCache()
 
 
     // ------------------------------------------------- //

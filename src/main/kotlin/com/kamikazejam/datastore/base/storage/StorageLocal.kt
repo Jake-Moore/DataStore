@@ -5,19 +5,25 @@ import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
-import java.util.stream.Collectors
 
-abstract class StorageLocal<K, X : Store<X, K>> : StorageMethods<K, X> {
+abstract class StorageLocal<K, X : Store<X, K>> {
     val localStorage: ConcurrentMap<K, X> = ConcurrentHashMap()
 
     // ----------------------------------------------------- //
     //                     Store Methods                     //
     // ----------------------------------------------------- //
-    override operator fun get(key: K): X? {
+    /**
+     * Retrieve a Store from this store.
+     */
+    fun get(key: K): X? {
         return localStorage[key]
     }
 
-    override fun save(store: X): Boolean {
+    /**
+     * Save a Store to this store.
+     * @return If the Store was saved.
+     */
+    fun save(store: X): Boolean {
         // Ensure we don't re-cache an invalid Store
         if (!store.valid) {
             DataStoreFileLogger.warn(
@@ -32,44 +38,79 @@ abstract class StorageLocal<K, X : Store<X, K>> : StorageMethods<K, X> {
         return true
     }
 
-    override fun has(key: K): Boolean {
+    /**
+     * Check if a Store is stored in this store.
+     */
+    fun has(key: K): Boolean {
         return localStorage.containsKey(key)
     }
 
-    override fun has(store: X): Boolean {
+    /**
+     * Check if a Store is stored in this store.
+     */
+    fun has(store: X): Boolean {
         return this.has(store.id)
     }
 
-    override fun remove(key: K): Boolean {
+    /**
+     * Remove a Store from this store.
+     * @return If the Store existed, and was removed.
+     */
+    fun remove(key: K): Boolean {
         val x = localStorage.remove(key)
         x?.invalidate()
         return x != null
     }
 
-    override fun remove(store: X): Boolean {
+    /**
+     * Remove a Store from this store.
+     * @return If the Store existed, and was removed.
+     */
+    fun remove(store: X): Boolean {
         return this.remove(store.id)
     }
 
-    override val all: Iterable<X>
-        get() = localStorage.values
-
-    override val keys: Iterable<K>
-        get() = localStorage.keys
-
-    override fun getKeyStrings(collection: Collection<K, X>): Set<String> {
-        return localStorage.keys.stream().map { key: K -> collection.keyToString(key) }.collect(Collectors.toSet())
-    }
-
-    override fun clear(): Long {
+    /**
+     * Removes all Stores from this storage. In the local case they are removed from cache, in the database case they are DELETED
+     * @return How many objects were removed.
+     */
+    fun removeAll(): Long {
         val size = localStorage.size
         localStorage.clear()
         return size.toLong()
     }
 
-    override fun size(): Long {
+    /**
+     * Retrieve all Stores from this store.
+     */
+    fun getAll(): List<X> {
+        return localStorage.values.toList()
+    }
+
+    /**
+     * Retrieve all Store keys from this store.
+     */
+    fun getKeys(): List<K> {
+        return localStorage.keys.toList()
+    }
+
+    /**
+     * Retrieve all Store keys (in string form) from this store.
+     * Uses [Collection.keyToString] to convert keys to strings.
+     */
+    fun getKeyStrings(collection: Collection<K, X>): List<String> {
+        return localStorage.keys.map { collection.keyToString(it) }
+    }
+
+    /**
+     * @return How many objects are in this Store
+     */
+    fun size(): Long {
         return localStorage.size.toLong()
     }
 
-    override val isDatabase: Boolean
-        get() = false
+    /**
+     * Gets the name of this storage layer.
+     */
+    abstract val layerName: String
 }

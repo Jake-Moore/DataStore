@@ -9,7 +9,6 @@ import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.connections.config.MongoConfig
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor
 import com.kamikazejam.datastore.connections.storage.StorageService
-import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.kamikazejam.datastore.util.JacksonUtil
 import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
@@ -26,6 +25,10 @@ import com.mongodb.client.model.Projections
 import com.mongodb.connection.ClusterSettings
 import com.mongodb.connection.ServerDescription
 import com.mongodb.connection.ServerSettings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import org.bson.Document
 import org.bson.UuidRepresentation
 import org.bukkit.Bukkit
@@ -91,32 +94,32 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     //                StorageService                     //
     // ------------------------------------------------- //
-    override fun <K, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? {
+    override suspend fun <K, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? = withContext(Dispatchers.IO) {
         try {
             // Serialize the value using Jackson, since the value in the db is also a serialized string
             //  and we need to compare the serialized strings in our Filter
             val dbString = serializeValue(collection.keyToString(key))
 
             // Filter based on this serialized string
-            val doc = getMongoCollection(collection).find().filter(Filters.eq(ID_FIELD, dbString)).first() ?: return null
+            val doc = getMongoCollection(collection).find().filter(Filters.eq(ID_FIELD, dbString)).first() ?: return@withContext null
 
             val o: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
             // Cache Indexes since we are loading from database
             collection.cacheIndexes(o, true)
 
-            return o
+            return@withContext o
         } catch (ex: MongoException) {
-            collection.getLoggerService().info(ex, "MongoDB error getting Object from MongoDB Layer: ${collection.keyToString(key)}")
-            return null
+            collection.getLoggerService().info(ex, "MongoDB error getting Store (${collection.getKeyStringIdentifier(key)}) from MongoDB Layer")
+            return@withContext null
         } catch (expected: Exception) {
-            collection.getLoggerService().info(expected, "Error getting Object from MongoDB Layer: ${collection.keyToString(key)}")
-            return null
+            collection.getLoggerService().info(expected, "Error getting Store (${collection.getKeyStringIdentifier(key)}) from MongoDB Layer")
+            return@withContext null
         }
     }
 
-    override fun <K, X : Store<X, K>> save(collection: Collection<K, X>, store: X): Boolean {
+    override suspend fun <K, X : Store<X, K>> save(collection: Collection<K, X>, store: X): Boolean = withContext(Dispatchers.IO) {
         // Save to database with a transaction & only 1 attempt
-        val client = this.mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
+        val client = mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
         client.startSession().use { session ->
             session.startTransaction()
             var committed = false
@@ -135,7 +138,7 @@ class MongoStorage : StorageService() {
                 }
             }
         }
-        return true
+        return@withContext true
     }
 
     // This method needs no additional concurrency safeguards, because of the transactional nature of the update
@@ -143,78 +146,89 @@ class MongoStorage : StorageService() {
     // If two threads enter this method for the same object, only one will succeed in updating the object.
     //  and the other will have its query fail and will automatically retry.
     // (MongoDB provides the document-level locking already)
-    override fun <K, X : Store<X, K>> updateSync(
+    override suspend fun <K, X : Store<X, K>> updateSync(
         collection: Collection<K, X>,
         store: X,
         updateFunction: Consumer<X>
-    ): Boolean {
+    ): Boolean = withContext(Dispatchers.IO) {
         try {
             val mongoColl = getMongoCollection(collection)
                 .withWriteConcern(WriteConcern.MAJORITY) // Ensure replication
 
-            val client = this.mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
-            return MongoTransactionHelper.executeUpdate(client, mongoColl, collection, store, updateFunction)
+            val client = mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
+            return@withContext MongoTransactionHelper.executeUpdate(client, mongoColl, collection, store, updateFunction)
         } catch (e: Exception) {
             DataStoreFileLogger.warn(
                 "Failed to update Store in MongoDB Layer after all retries: " + store.id,
                 e
             )
-            return false
+            return@withContext false
         }
     }
 
-    override fun <K, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean {
+    override suspend fun <K, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Serialize the value using Jackson, since the value in the db is also a serialized string
             //  and we need to compare the serialized strings in our Filter
             val dbString = serializeValue(collection.keyToString(key))
             // Filter based on this serialized string
-            return getMongoCollection(collection).countDocuments(Filters.eq(ID_FIELD, dbString)) > 0
+            return@withContext getMongoCollection(collection).countDocuments(Filters.eq(ID_FIELD, dbString)) > 0
         } catch (ex: MongoException) {
-            collection.getLoggerService().info(ex, "MongoDB error check if Store exists in MongoDB Layer: ${collection.keyToString(key)}")
-            return false
+            collection.getLoggerService().info(ex, "MongoDB error check if Store (${collection.getKeyStringIdentifier(key)}) exists in MongoDB Layer")
+            return@withContext false
         } catch (expected: Exception) {
-            collection.getLoggerService().info(expected, "Error checking if Store exists in MongoDB Layer: ${collection.keyToString(key)}")
-            return false
+            collection.getLoggerService().info(expected, "Error checking if Store (${collection.getKeyStringIdentifier(key)}) exists in MongoDB Layer")
+            return@withContext false
         }
     }
 
-    override fun <K, X : Store<X, K>> size(collection: Collection<K, X>): Long {
-        return getMongoCollection(collection).countDocuments()
+    override suspend fun <K, X : Store<X, K>> size(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
+        return@withContext getMongoCollection(collection).countDocuments()
     }
 
-    override fun <K, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean {
+    override suspend fun <K, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Serialize the value using Jackson, since the value in the db is also a serialized string
             //  and we need to compare the serialized strings in our Filter
             val dbString = serializeValue(collection.keyToString(key))
             // Filter based on this serialized string
-            return getMongoCollection(collection).deleteMany(Filters.eq(ID_FIELD, dbString)).deletedCount > 0
+            return@withContext getMongoCollection(collection).deleteMany(Filters.eq(ID_FIELD, dbString)).deletedCount > 0
         } catch (ex: MongoException) {
-            collection.getLoggerService().info(ex, "MongoDB error removing Store from MongoDB Layer: ${collection.keyToString(key)}")
+            collection.getLoggerService().info(ex, "MongoDB error removing Store (${collection.getKeyStringIdentifier(key)}) from MongoDB Layer")
         } catch (expected: Exception) {
-            collection.getLoggerService().info(expected, "Error removing Store from MongoDB Layer: ${collection.keyToString(key)}")
+            collection.getLoggerService().info(expected, "Error removing Store (${collection.getKeyStringIdentifier(key)}) from MongoDB Layer")
         }
-        return false
+        return@withContext false
     }
 
-    override fun <K, X : Store<X, K>> getAll(collection: Collection<K, X>): Iterable<X> {
-        return Iterable {
-            TransformingIterator<Document, X>(getMongoCollection(collection).find().iterator()) { doc: Document ->
+    override suspend fun <K, X : Store<X, K>> removeAll(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
+        try {
+            // Delete All Documents in Mongo
+            return@withContext getMongoCollection(collection).deleteMany(Filters.empty()).deletedCount
+        } catch (ex: MongoException) {
+            collection.getLoggerService().info(ex, "MongoDB error removing all Stores in Collection (${collection.name}) from MongoDB Layer")
+        } catch (expected: Exception) {
+            collection.getLoggerService().info(expected, "Error removing all Stores in Collection (${collection.name}) from MongoDB Layer")
+        }
+        return@withContext 0
+    }
+
+    override suspend fun <K, X : Store<X, K>> getAll(collection: Collection<K, X>): Flow<X> = flow {
+        withContext(Dispatchers.IO) {
+            for (doc: Document in getMongoCollection(collection).find().iterator()) {
                 val store: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
                 // Make sure to cache indexes when a store is loaded from the database
                 collection.cacheIndexes(store, true)
-                store
+                emit(store)
             }
         }
     }
 
-    override fun <K, X : Store<X, K>> getKeys(collection: Collection<K, X>): Iterable<K> {
-        // Fetch all documents, but use Projection to only retrieve the ID field
-        val docs = getMongoCollection(collection).find().projection(Projections.include(ID_FIELD)).iterator()
-        // We know where the id is located, and we can fetch it as a string, there is no need to deserialize the entire object
-        return Iterable {
-            TransformingIterator(docs) { doc: Document ->
+    override suspend fun <K, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> = flow {
+        withContext(Dispatchers.IO) {
+            // Fetch all documents, but use Projection to only retrieve the ID field
+            for (doc: Document in getMongoCollection(collection).find().projection(Projections.include(ID_FIELD)).iterator()) {
+                // We know where the id is located, and we can fetch it as a string, there is no need to deserialize the entire object
                 val dbValue = doc.getString(ID_FIELD)
 
                 // Parse the Key from the serialized dbValue
@@ -224,6 +238,7 @@ class MongoStorage : StorageService() {
 
                 // Convert the id field string back into a key
                 key ?: throw IllegalStateException("ID Field is null")
+                emit(key)
             }
         }
     }
@@ -328,26 +343,27 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    override fun <K, X : Store<X, K>, T> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, T>) {
+    override suspend fun <K, X : Store<X, K>, T> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, T>) = withContext(Dispatchers.IO) {
         getMongoCollection(collection).createIndex(
             Document(index.name, 1),
             IndexOptions().unique(true)
         )
+        Unit
     }
 
-    override fun <K, X : Store<X, K>> cacheIndexes(collection: StoreCollection<K, X>, store: X, updateFile: Boolean) {
+    override suspend fun <K, X : Store<X, K>> cacheIndexes(collection: StoreCollection<K, X>, store: X, updateFile: Boolean) = withContext(Dispatchers.IO) {
         // do nothing -> MongoDB handles this
     }
 
-    override fun <K, X : Store<X, K>> saveIndexCache(collection: StoreCollection<K, X>) {
+    override suspend fun <K, X : Store<X, K>> saveIndexCache(collection: StoreCollection<K, X>) = withContext(Dispatchers.IO) {
         // do nothing -> MongoDB handles this
     }
 
-    override fun <K, X : Store<X, K>, T> getStoreIdByIndex(
+    override suspend fun <K, X : Store<X, K>, T> getStoreIdByIndex(
         collection: StoreCollection<K, X>,
         index: IndexedField<X, T>,
         value: T
-    ): K? {
+    ): K? = withContext(Dispatchers.IO) {
         // Serialize the value using Jackson, since the value in the db is also a serialized string
         //  and we need to compare the serialized strings in our Filter
         val dbString = serializeValue(value as Any)
@@ -356,16 +372,16 @@ class MongoStorage : StorageService() {
         val doc = getMongoCollection(collection).find(query)
             .projection(Projections.include(ID_FIELD, index.name))
             .first()
-            ?: return null
+            ?: return@withContext null
         val store: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
         // Ensure index value equality
         if (!index.equals(index.getValue(store), value)) {
-            return null
+            return@withContext null
         }
-        return store.id
+        return@withContext store.id
     }
 
-    override fun <K, X : Store<X, K>> invalidateIndexes(collection: StoreCollection<K, X>, key: K, updateFile: Boolean) {
+    override suspend fun <K, X : Store<X, K>> invalidateIndexes(collection: StoreCollection<K, X>, key: K, updateFile: Boolean) = withContext(Dispatchers.IO) {
         // do nothing -> MongoDB handles this
     }
 

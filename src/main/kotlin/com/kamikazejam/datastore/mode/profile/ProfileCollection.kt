@@ -33,7 +33,7 @@ interface ProfileCollection<X : StoreProfile<X>> : Collection<UUID, X> {
      * @return The Store if it was found in the database.
      */
     @Blocking
-    fun readFromDatabase(player: Player, cacheStore: Boolean): X?
+    suspend fun readFromDatabase(player: Player, cacheStore: Boolean): X?
 
     /**
      * Gets all online players' Profile objects. These should all be present the collection and cached.

@@ -13,6 +13,8 @@ import com.kamikazejam.datastore.event.profile.StoreProfileQuitEvent
 import com.kamikazejam.datastore.mode.profile.store.ProfileStorageDatabase
 import com.kamikazejam.datastore.mode.profile.store.ProfileStorageLocal
 import com.kamikazejam.datastore.util.PlayerUtil
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.*
@@ -55,7 +57,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     override fun terminate(): Boolean {
         loaders.clear()
         // Clear locals store (frees memory)
-        localStore.clear()
+        runBlocking { localStore.removeAll() }
 
         // Don't clear database (can't)
         return true
@@ -65,8 +67,8 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     //                          CRUD                         //
     // ----------------------------------------------------- //
 
-    override fun readAllFromDatabase(cacheStores: Boolean): Iterable<X> {
-        return databaseStore.all
+    override suspend fun readAllFromDatabase(cacheStores: Boolean): Flow<X> {
+        return databaseStore.getAll()
     }
 
     // ----------------------------------------------------- //
@@ -97,7 +99,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
         return localStore.get(key)
     }
 
-    override fun readFromDatabase(key: UUID, cacheStore: Boolean): X? {
+    override suspend fun readFromDatabase(key: UUID, cacheStore: Boolean): X? {
         val o: X? = databaseStore.get(key)
         if (cacheStore) {
             o?.let { store -> this.cache(store) }
@@ -108,9 +110,9 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     override val localCacheSize: Long
         get() = localStore.size()
 
-    override val iDs: Iterable<UUID>
-        get() = databaseStore.keys
-
+    override suspend fun getIDs(): Flow<UUID> {
+        return databaseStore.getKeys()
+    }
 
     override suspend fun getOnline(): kotlin.collections.Collection<X> {
         return Bukkit.getOnlinePlayers()
@@ -125,7 +127,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
         return readFromCache(player.uniqueId)
     }
 
-    override fun readFromDatabase(player: Player, cacheStore: Boolean): X? {
+    override suspend fun readFromDatabase(player: Player, cacheStore: Boolean): X? {
         Preconditions.checkNotNull(player)
         val o: X? = databaseStore.get(player.uniqueId)
         if (cacheStore) {

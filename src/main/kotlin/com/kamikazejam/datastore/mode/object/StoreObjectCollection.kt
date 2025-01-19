@@ -9,10 +9,13 @@ import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
-import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
 import com.kamikazejam.datastore.mode.`object`.store.ObjectStorageDatabase
 import com.kamikazejam.datastore.mode.`object`.store.ObjectStorageLocal
 import com.mongodb.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -58,7 +61,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
         loaders.clear()
         // Clear local store (frees memory)
-        localStore.clear()
+        runBlocking { localStore.removeAll() }
 
         // Don't clear database (can't)
         return success
@@ -92,29 +95,26 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
         return String::class.java
     }
 
-    override fun readAllFromDatabase(cacheStores: Boolean): Iterable<X> {
+    override suspend fun readAllFromDatabase(cacheStores: Boolean): Flow<X> = flow {
         // Create an Iterable that iterates through all database objects, and updates local objects as necessary
-        val dbIterator: Iterator<X> = databaseStore.getAll(this).iterator()
-        return Iterable {
-            TransformingIterator(dbIterator) { dbStore: X ->
-                // Load the local object
-                val local: X? = localStore.get(dbStore.id)
+        databaseStore.getAll(this@StoreObjectCollection).map { dbStore: X ->
+            // Load the local object
+            val local: X? = localStore.get(dbStore.id)
 
-                // If we want to cache, and have a local store that's newer -> update the local store
-                // Note, if not caching then we won't update any local stores and won't cache the db store
-                val dbVer = dbStore.versionField.get()
-                val localVer = local?.versionField?.get() ?: 0
-                if (cacheStores && local != null && dbVer >= localVer) {
-                    this@StoreObjectCollection.updateStoreFromNewer(local, dbStore)
-                    this@StoreObjectCollection.cache(dbStore)
-                }
-
-                // Find the store object to return
-                val ret = local ?: dbStore
-                // Verify it has the correct cache and cache it if necessary
-                ret.setCollection(this@StoreObjectCollection)
-                ret
+            // If we want to cache, and have a local store that's newer -> update the local store
+            // Note, if not caching then we won't update any local stores and won't cache the db store
+            val dbVer = dbStore.versionField.get()
+            val localVer = local?.versionField?.get() ?: 0
+            if (cacheStores && local != null && dbVer >= localVer) {
+                this@StoreObjectCollection.updateStoreFromNewer(local, dbStore)
+                this@StoreObjectCollection.cache(dbStore)
             }
+
+            // Find the store object to return
+            val ret = local ?: dbStore
+            // Verify it has the correct cache and cache it if necessary
+            ret.setCollection(this@StoreObjectCollection)
+            ret
         }
     }
 
@@ -125,7 +125,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
         return localStore.get(key)
     }
 
-    override fun readFromDatabase(key: String, cacheStore: Boolean): X? {
+    override suspend fun readFromDatabase(key: String, cacheStore: Boolean): X? {
         val o: X? = databaseStore.get(key)
         if (cacheStore) {
             o?.let { this.cache(it) }
@@ -136,6 +136,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     override val localCacheSize: Long
         get() = localStore.size()
 
-    override val iDs: Iterable<String>
-        get() = databaseStore.keys
+    override suspend fun getIDs(): Flow<String> {
+        return databaseStore.getKeys()
+    }
 }
