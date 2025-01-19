@@ -166,7 +166,8 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
                 collection.cache(store)
                 return store
             } catch (e: Exception) {
-                throw RuntimeException("Failed to create Store", e)
+                // promote error upwards for proper error handling
+                throw e
             }
         }
     }

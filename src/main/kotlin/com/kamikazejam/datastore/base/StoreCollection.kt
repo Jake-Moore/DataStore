@@ -108,7 +108,8 @@ abstract class StoreCollection<K, X : Store<X, K>>(
                 getLoggerService().severe("Failed to create Store: Duplicate Key...")
                 throw d
             } catch (e: Exception) {
-                throw RuntimeException("Failed to create Store", e)
+                // promote upwards, it will catch the errors
+                throw e
             }
         }
     }

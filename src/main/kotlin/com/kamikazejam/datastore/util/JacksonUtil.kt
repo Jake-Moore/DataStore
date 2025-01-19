@@ -110,7 +110,8 @@ object JacksonUtil {
             entity.readOnly = true
             return entity
         } catch (e: Exception) {
-            throw RuntimeException("Failed to deserialize document", e)
+            // promote error upwards
+            throw e
         }
     }
 
