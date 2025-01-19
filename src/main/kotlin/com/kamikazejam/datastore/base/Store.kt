@@ -1,10 +1,11 @@
 package com.kamikazejam.datastore.base
 
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.FieldWrapperMap
 import com.kamikazejam.datastore.base.field.RequiredField
-import com.kamikazejam.datastore.base.result.AsyncHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.annotations.ApiStatus
@@ -17,7 +18,7 @@ import kotlin.coroutines.CoroutineContext
  * Generics: K = Identifier Object Type (i.e. String, UUID)
  */
 @Suppress("unused")
-interface Store<T : Store<T, K>, K> : CoroutineScope {
+interface Store<X : Store<X, K>, K> : CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.IO
 
@@ -39,7 +40,7 @@ interface Store<T : Store<T, K>, K> : CoroutineScope {
      * @return The updated Store object. (READ-ONLY)
      */
     @NonBlocking
-    fun update(updateFunction: Consumer<T>): AsyncHandler<T> {
+    fun update(updateFunction: Consumer<X>): AsyncUpdateHandler<K, X> {
         return getCollection().update(id, updateFunction)
     }
 
@@ -47,7 +48,7 @@ interface Store<T : Store<T, K>, K> : CoroutineScope {
      * Deletes this Store object (removes from both cache and database)
      */
     @NonBlocking
-    fun delete(): AsyncHandler<Boolean>
+    fun delete(): AsyncDeleteHandler
 
     // ----------------------------------------------------- //
     //                Api / Internal Methods                 //
@@ -76,12 +77,12 @@ interface Store<T : Store<T, K>, K> : CoroutineScope {
      *
      * @return Collection
      */
-    fun getCollection(): Collection<K, T>
+    fun getCollection(): Collection<K, X>
 
     /**
      * Sets the Collection associated with this Store object.
      */
-    fun setCollection(collection: Collection<K, T>)
+    fun setCollection(collection: Collection<K, X>)
 
     /**
      * Gets the optimistic versioning FieldWrapper

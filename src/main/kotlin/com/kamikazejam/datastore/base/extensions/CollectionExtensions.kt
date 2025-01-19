@@ -4,8 +4,11 @@ package com.kamikazejam.datastore.base.extensions
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
-import com.kamikazejam.datastore.base.result.AsyncHandler
-import com.kamikazejam.datastore.base.result.CollectionResult
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
+import com.kamikazejam.datastore.base.async.result.CollectionReadResult
+import com.kamikazejam.datastore.base.async.result.StoreResult
 import org.jetbrains.annotations.NonBlocking
 import java.util.function.Consumer
 
@@ -16,16 +19,15 @@ import java.util.function.Consumer
  * @param initializer The initializer for the Store if it doesn't exist.
  * @return The Store object. (READ-ONLY) (fetched or created)
  */
-fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Consumer<X> = Consumer {}): AsyncHandler<X> {
-    return AsyncHandler(this) {
+fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Consumer<X> = Consumer {}): AsyncCreateHandler<K, X> {
+    return AsyncCreateHandler(this) {
         when (val readResult = read(key).await()) {
-            is CollectionResult.Success -> return@AsyncHandler readResult.value
-            is CollectionResult.Failure -> throw readResult.error
-            is CollectionResult.Empty -> {
+            is StoreResult.Success -> return@AsyncCreateHandler readResult.value
+            is StoreResult.Failure -> throw readResult.exception
+            is CollectionReadResult.Empty -> {
                 when (val createResult = create(key, initializer).await()) {
-                    is CollectionResult.Success -> return@AsyncHandler createResult.value
-                    is CollectionResult.Failure -> throw createResult.error
-                    is CollectionResult.Empty -> throw IllegalStateException("Failed to create a new Store object.")
+                    is StoreResult.Success -> return@AsyncCreateHandler createResult.value
+                    is StoreResult.Failure -> throw createResult.exception
                 }
             }
         }
@@ -38,7 +40,7 @@ fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Cons
  * @return The updated Store object. (READ-ONLY)
  */
 @NonBlocking
-fun <K, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: Consumer<X>): AsyncHandler<X> {
+fun <K, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: Consumer<X>): AsyncUpdateHandler<K, X> {
     return this.update(store.id, updateFunction)
 }
 
@@ -46,6 +48,6 @@ fun <K, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: Consu
  * Deletes a Store by ID (removes from both cache and database collection)
  * @return True if the Store was deleted, false if it was not found (does not exist)
  */
-fun <K, X : Store<X, K>> Collection<K, X>.delete(store: X): AsyncHandler<Boolean> {
+fun <K, X : Store<X, K>> Collection<K, X>.delete(store: X): AsyncDeleteHandler {
     return this.delete(store.id)
 }

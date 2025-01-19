@@ -1,7 +1,7 @@
 package com.kamikazejam.datastore.mode.`object`
 
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.base.result.AsyncHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.mongodb.*
 import java.util.function.Consumer
 
@@ -20,5 +20,5 @@ interface ObjectCollection<X : StoreObject<X>> : Collection<String, X> {
      * @return The created Store object. (READ-ONLY)
      */
     @Throws(DuplicateKeyException::class)
-    fun create(initializer: Consumer<X> = Consumer {}): AsyncHandler<X>
+    fun create(initializer: Consumer<X> = Consumer {}): AsyncCreateHandler<String, X>
 }

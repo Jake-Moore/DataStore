@@ -5,8 +5,8 @@ import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.StoreCollection
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
-import com.kamikazejam.datastore.base.result.AsyncHandler
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
@@ -68,7 +68,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     //                          CRUD                         //
     // ----------------------------------------------------- //
     @Throws(DuplicateKeyException::class)
-    override fun create(initializer: Consumer<X>): AsyncHandler<X> {
+    override fun create(initializer: Consumer<X>): AsyncCreateHandler<String, X> {
         return this.create(UUID.randomUUID().toString(), initializer)
     }
 

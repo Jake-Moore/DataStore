@@ -2,11 +2,14 @@
 
 package com.kamikazejam.datastore.base.extensions
 
-import com.kamikazejam.datastore.base.result.AsyncHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.mode.profile.ProfileCollection
 import com.kamikazejam.datastore.mode.profile.StoreProfile
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.NonBlocking
+import java.util.*
 import java.util.function.Consumer
 
 /**
@@ -16,7 +19,7 @@ import java.util.function.Consumer
  * @return The StoreProfile object. (READ-ONLY)
  */
 @NonBlocking
-fun <X : StoreProfile<X>> ProfileCollection<X>.read(player: Player, cacheStore: Boolean = true): AsyncHandler<X> {
+fun <X : StoreProfile<X>> ProfileCollection<X>.read(player: Player, cacheStore: Boolean = true): AsyncReadHandler<UUID, X> {
     return this.read(player.uniqueId, cacheStore)
 }
 
@@ -26,7 +29,7 @@ fun <X : StoreProfile<X>> ProfileCollection<X>.read(player: Player, cacheStore: 
  * @return The updated Store object. (READ-ONLY)
  */
 @NonBlocking
-fun <X : StoreProfile<X>> ProfileCollection<X>.update(player: Player, updateFunction: Consumer<X>): AsyncHandler<X> {
+fun <X : StoreProfile<X>> ProfileCollection<X>.update(player: Player, updateFunction: Consumer<X>): AsyncUpdateHandler<UUID, X> {
     return this.update(player.uniqueId, updateFunction)
 }
 
@@ -34,6 +37,6 @@ fun <X : StoreProfile<X>> ProfileCollection<X>.update(player: Player, updateFunc
  * Deletes a Store (removes from both cache and database)
  */
 @NonBlocking
-fun <X : StoreProfile<X>> ProfileCollection<X>.delete(player: Player): AsyncHandler<Boolean> {
+fun <X : StoreProfile<X>> ProfileCollection<X>.delete(player: Player): AsyncDeleteHandler {
     return this.delete(player.uniqueId)
 }

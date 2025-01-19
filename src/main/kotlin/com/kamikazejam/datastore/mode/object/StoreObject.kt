@@ -4,18 +4,19 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.RequiredField
-import com.kamikazejam.datastore.base.result.AsyncHandler
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
 import java.util.function.Consumer
 import javax.persistence.Id
 
 @Suppress("unused")
-abstract class StoreObject<T : StoreObject<T>> private constructor(
+abstract class StoreObject<X : StoreObject<X>> private constructor(
     @field:Transient @field:JsonIgnore override var readOnly: Boolean
-) : Store<T, String> {
+) : Store<X, String> {
     // ----------------------------------------------------- //
     //                        Fields                         //
     // ----------------------------------------------------- //
@@ -33,7 +34,7 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
     // ----------------------------------------------------- //
     @JsonIgnore
     @Transient
-    private var collection: StoreObjectCollection<T>? = null
+    private var collection: StoreObjectCollection<X>? = null
 
     @JsonIgnore
     @Transient
@@ -54,11 +55,11 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //
     // ----------------------------------------------------- //
-    override fun update(updateFunction: Consumer<T>): AsyncHandler<T> {
+    override fun update(updateFunction: Consumer<X>): AsyncUpdateHandler<String, X> {
         return getCollection().update(this.id, updateFunction)
     }
 
-    override fun delete(): AsyncHandler<Boolean> {
+    override fun delete(): AsyncDeleteHandler {
         return getCollection().delete(this.id)
     }
 
@@ -82,7 +83,7 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
         this.validateDuplicateFields() // may throw error
     }
 
-    override fun getCollection(): Collection<String, T> {
+    override fun getCollection(): Collection<String, X> {
         return collection ?: throw IllegalStateException("Collection is not set")
     }
 
@@ -122,9 +123,9 @@ abstract class StoreObject<T : StoreObject<T>> private constructor(
             return map
         }
 
-    override fun setCollection(collection: Collection<String, T>) {
+    override fun setCollection(collection: Collection<String, X>) {
         Preconditions.checkNotNull(collection, "Collection cannot be null")
-        require(collection is StoreObjectCollection<T>) { "Collection must be a StoreObjectCollection" }
+        require(collection is StoreObjectCollection<X>) { "Collection must be a StoreObjectCollection" }
         this.collection = collection
     }
 

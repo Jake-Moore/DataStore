@@ -4,10 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.OptionalField
 import com.kamikazejam.datastore.base.field.RequiredField
-import com.kamikazejam.datastore.base.result.AsyncHandler
 import com.kamikazejam.datastore.util.PlayerUtil
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
@@ -58,7 +58,7 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //
     // ----------------------------------------------------- //
-    override fun delete(): AsyncHandler<Boolean> {
+    override fun delete(): AsyncDeleteHandler {
         return getCollection().delete(this.id)
     }
 

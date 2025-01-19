@@ -1,11 +1,16 @@
 package com.kamikazejam.datastore.base
 
 import com.kamikazejam.datastore.DataStoreRegistration
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
+import com.kamikazejam.datastore.base.async.handler.impl.AsyncHasKeyHandler
+import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.base.log.LoggerService
-import com.kamikazejam.datastore.base.result.AsyncHandler
 import com.kamikazejam.datastore.base.storage.StorageDatabase
 import com.kamikazejam.datastore.base.storage.StorageLocal
 import com.kamikazejam.datastore.base.storage.StorageMethods
@@ -45,7 +50,7 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
      * @return The created Store object. (READ-ONLY)
      */
     @Throws(DuplicateKeyException::class)
-    fun create(key: K, initializer: Consumer<X> = Consumer {}): AsyncHandler<X>
+    fun create(key: K, initializer: Consumer<X> = Consumer {}): AsyncCreateHandler<K, X>
 
     /**
      * Read a Store from this collection (or the database if it doesn't exist in the cache)
@@ -53,20 +58,20 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
      * @param cacheStore If we should cache the Store upon retrieval. (if it was found)
      * @return The Store object. (READ-ONLY) (optional)
      */
-    fun read(key: K, cacheStore: Boolean = true): AsyncHandler<X>
+    fun read(key: K, cacheStore: Boolean = true): AsyncReadHandler<K, X>
 
     /**
      * Modifies a Store in a controlled environment where modifications are allowed
      * @throws NoSuchElementException if the Store (by this key) is not found
      * @return The updated Store object. (READ-ONLY)
      */
-    fun update(key: K, updateFunction: Consumer<X>): AsyncHandler<X>
+    fun update(key: K, updateFunction: Consumer<X>): AsyncUpdateHandler<K, X>
 
     /**
      * Deletes a Store by ID (removes from both cache and database collection)
      * @return True if the Store was deleted, false if it was not found (does not exist)
      */
-    fun delete(key: K): AsyncHandler<Boolean>
+    fun delete(key: K): AsyncDeleteHandler
 
     /**
      * Retrieves ALL Stores, including cached values and additional values from database.
@@ -241,7 +246,7 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
     /**
      * @return True iff this Collection contains a Store with the provided key. (checks database too)
      */
-    fun hasKey(key: K): AsyncHandler<Boolean>
+    fun hasKey(key: K): AsyncHasKeyHandler
 
     /**
      * Gets the [StoreLoader] for the provided key.
@@ -300,11 +305,11 @@ interface Collection<K, X : Store<X, K>> : Service, CoroutineScope {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K>
+    fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncReadIdHandler<K>
 
     /**
      * Retrieves an object by the provided index field and its value.
      */
-    fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X>
+    fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncReadHandler<K, X>
 }
 

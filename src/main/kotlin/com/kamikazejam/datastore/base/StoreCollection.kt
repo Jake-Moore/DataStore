@@ -4,14 +4,20 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreAPI
 import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
+import com.kamikazejam.datastore.base.async.handler.impl.AsyncHasKeyHandler
+import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
+import com.kamikazejam.datastore.base.async.result.CollectionReadResult
+import com.kamikazejam.datastore.base.async.result.StoreResult
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.OptionalField
 import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
-import com.kamikazejam.datastore.base.result.AsyncHandler
-import com.kamikazejam.datastore.base.result.CollectionResult
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
@@ -53,32 +59,32 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     // ------------------------------------------------------ //
     // Generic CRUD Methods                                   //
     // ------------------------------------------------------ //
-    override fun read(key: K, cacheStore: Boolean): AsyncHandler<X> {
+    override fun read(key: K, cacheStore: Boolean): AsyncReadHandler<K, X> {
         // Try Local Cache First
         val localStore = readFromCache(key)
         localStore?.let { store ->
             store.readOnly = true
-            return AsyncHandler(this) { store }
+            return AsyncReadHandler(this) { store }
         }
 
         // Try Database Second
-        return AsyncHandler(this) {
+        return AsyncReadHandler(this) {
             val databaseStore = readFromDatabase(key)
             databaseStore?.let { store ->
                 store.readOnly = true
                 if (cacheStore) {
                     cache(store)
                 }
-                return@AsyncHandler store
+                return@AsyncReadHandler store
             }
         }
     }
 
     @Throws(DuplicateKeyException::class)
-    override fun create(key: K, initializer: Consumer<X>): AsyncHandler<X> {
+    override fun create(key: K, initializer: Consumer<X>): AsyncCreateHandler<K, X> {
         Preconditions.checkNotNull(initializer, "Initializer cannot be null")
 
-        return AsyncHandler(this) {
+        return AsyncCreateHandler(this) {
             try {
                 // Create a new instance in modifiable state
                 val store: X = instantiator.instantiate()
@@ -98,7 +104,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
                 // DO DATABASE SAVE FIRST SO ANY EXCEPTIONS ARE THROWN PRIOR TO MODIFYING LOCAL CACHE
                 this.databaseStore.save(store)
                 this.cache(store)
-                return@AsyncHandler store
+                return@AsyncCreateHandler store
             } catch (d: DuplicateKeyException) {
                 getLoggerService().severe("Failed to create Store: Duplicate Key...")
                 throw d
@@ -108,21 +114,21 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         }
     }
 
-    override fun delete(key: K): AsyncHandler<Boolean> {
+    override fun delete(key: K): AsyncDeleteHandler {
         localStore.remove(key)
-        return AsyncHandler(this) {
+        return AsyncDeleteHandler(this) {
             val removedFromDb = databaseStore.remove(key)
             invalidateIndexes(key, true)
             removedFromDb
         }
     }
 
-    override fun update(key: K, updateFunction: Consumer<X>): AsyncHandler<X> {
+    override fun update(key: K, updateFunction: Consumer<X>): AsyncUpdateHandler<K, X> {
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
-        return AsyncHandler(this) {
+        return AsyncUpdateHandler(this) {
             when (val readResult = read(key).await()) {
-                is CollectionResult.Success -> {
+                is StoreResult.Success -> {
                     val originalEntity = readResult.value
                     check(this.databaseStore.updateSync(originalEntity, updateFunction)) {
                         "[StoreCollection#update] Failed to update store with key: ${this.keyToString(key)}"
@@ -130,8 +136,8 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
                     originalEntity
                 }
-                is CollectionResult.Failure -> throw readResult.error
-                is CollectionResult.Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
+                is StoreResult.Failure -> throw readResult.exception
+                is CollectionReadResult.Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
             }
         }
     }
@@ -272,8 +278,8 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         return localStore.has(key)
     }
 
-    final override fun hasKey(key: K): AsyncHandler<Boolean> {
-        return AsyncHandler(this) {
+    final override fun hasKey(key: K): AsyncHasKeyHandler {
+        return AsyncHasKeyHandler(this) {
             localStore.has(key) || databaseStore.has(key)
         }
     }
@@ -392,38 +398,38 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         DataStoreSource.storageService.saveIndexCache(this)
     }
 
-    override fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncHandler<K> {
-        return AsyncHandler(this) {
+    override fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncReadIdHandler<K> {
+        return AsyncReadIdHandler(this) {
             DataStoreSource.storageService.getStoreIdByIndex(this, index, value)
         }
     }
 
-    override fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncHandler<X> {
+    override fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncReadHandler<K, X> {
         // 1. -> Check local cache (brute force)
         for (store in localStore.all) {
             if (field.equals(field.getValue(store), value)) {
-                return AsyncHandler(this) { store }
+                return AsyncReadHandler(this) { store }
             }
         }
 
         // 2. -> Check database (uses storage service like mongodb)
-        return AsyncHandler(this) {
-            val id = DataStoreSource.storageService.getStoreIdByIndex(this, field, value) ?: return@AsyncHandler null
+        return AsyncReadHandler(this) {
+            val id = DataStoreSource.storageService.getStoreIdByIndex(this, field, value) ?: return@AsyncReadHandler null
 
             // 3. -> Obtain the Profile by its ID
             when (val readResult = this.read(id).await()) {
-                is CollectionResult.Success -> {
+                is StoreResult.Success -> {
                     if (!field.equals(value, field.getValue(readResult.value))) {
                         // This can happen if:
                         //    The local copy had its field changed
                         //    and those changes were not saved to DB or Index Cache
                         // This is not considered an error, but we should return empty
-                        return@AsyncHandler null
+                        return@AsyncReadHandler null
                     }
-                    return@AsyncHandler readResult.value
+                    return@AsyncReadHandler readResult.value
                 }
-                is CollectionResult.Failure -> throw readResult.error
-                is CollectionResult.Empty -> return@AsyncHandler null
+                is StoreResult.Failure -> throw readResult.exception
+                is CollectionReadResult.Empty -> return@AsyncReadHandler null
             }
         }
     }
