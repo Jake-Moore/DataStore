@@ -22,7 +22,6 @@ import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
 import com.mongodb.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
@@ -145,25 +144,24 @@ abstract class StoreCollection<K, X : Store<X, K>>(
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    override suspend fun readAll(cacheStores: Boolean): Flow<X> {
-        return getIDs().flatMapConcat { key: K ->
-            // 1. If we have the object in the cache -> return it
-            val o: X? = localStore.get(key)
-            if (o != null) {
-                return@flatMapConcat flowOf(o)
+    override suspend fun readAll(cacheStores: Boolean): Flow<X> = flow {
+        getIDs().collect { key ->
+            // 1. If we have the object in the cache -> emit it
+            val cached = localStore.get(key)
+            if (cached != null) {
+                emit(cached)
+                return@collect
             }
 
             // 2. We don't have the object in the cache -> load it from the database
-            // If for some reason this was deleted, or not found, we can just return null
-            //  and the TransformingIterator will skip it
-            val db: X = databaseStore.get(key) ?: return@flatMapConcat flowOf(null).filterNotNull()
-
-            // Optionally cache this loaded Store
-            if (cacheStores) {
-                cache(db)
+            val db = databaseStore.get(key)
+            if (db != null) {
+                // Optionally cache this loaded Store
+                if (cacheStores) {
+                    cache(db)
+                }
+                emit(db)
             }
-            flowOf(db)
         }
     }
 
