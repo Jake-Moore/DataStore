@@ -24,10 +24,6 @@ object JacksonUtil {
 
     private var _objectMapper: ObjectMapper? = null
 
-    fun loadObjectMapper() {
-        objectMapper
-    }
-
     fun serializeValue(value: Any): String {
         return objectMapper.writeValueAsString(value)
     }
@@ -36,7 +32,7 @@ object JacksonUtil {
         return objectMapper.readValue(json, clazz)
     }
 
-    private val objectMapper: ObjectMapper
+    val objectMapper: ObjectMapper
         get() {
             _objectMapper?.let { return it }
             val m = ObjectMapper().registerKotlinModule()

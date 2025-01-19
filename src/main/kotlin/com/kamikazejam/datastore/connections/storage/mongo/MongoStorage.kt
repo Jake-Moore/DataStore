@@ -54,7 +54,7 @@ class MongoStorage : StorageService() {
     override fun start(): Boolean {
         this.debug("Connecting to MongoDB")
         // Load Mapper on start-up
-        JacksonUtil.loadObjectMapper()
+        JacksonUtil.objectMapper
 
         val mongo = this.connectMongo()
         this.running = true
