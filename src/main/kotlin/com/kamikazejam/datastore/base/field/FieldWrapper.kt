@@ -2,7 +2,6 @@ package com.kamikazejam.datastore.base.field
 
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Store
-import org.bukkit.Bukkit
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
 
@@ -86,7 +85,6 @@ private class RequiredFieldImpl<T>(
             value == null || defaultValue!!::class.isInstance(value),
             "Value $value (${value?.let { it::class.java }}) is not an instance of the field type (${defaultValue!!::class.java})"
         )
-        Bukkit.getLogger().info("Setting required field ($name) value to $value (${value?.let { it::class.java }})")
         this.value = value
     }
 
@@ -143,7 +141,6 @@ private class OptionalFieldImpl<T>(
             value == null || valueType.isInstance(value) || valueType::class.java.isInstance(value),
             "Value $value (${value?.let { it::class.java }}) is not an instance of the field type (${valueType::class.java})"
         )
-        Bukkit.getLogger().info("Setting optional field ($name) value to $value (${value?.let { it::class.java }})")
         this.value = value
     }
 

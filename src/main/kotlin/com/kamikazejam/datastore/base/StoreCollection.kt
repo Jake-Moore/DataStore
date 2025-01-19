@@ -22,8 +22,10 @@ import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
 import com.mongodb.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.IllegalPluginAccessException
@@ -145,25 +147,29 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     }
 
     override suspend fun readAll(cacheStores: Boolean): Flow<X> = flow {
-        getIDs().collect { key ->
-            // 1. If we have the object in the cache -> emit it
-            val cached = localStore.get(key)
-            if (cached != null) {
-                emit(cached)
-                return@collect
-            }
-
-            // 2. We don't have the object in the cache -> load it from the database
-            val db = databaseStore.get(key)
-            if (db != null) {
-                // Optionally cache this loaded Store
-                if (cacheStores) {
-                    cache(db)
+        getIDs()
+            .flowOn(Dispatchers.IO)
+            .collect { key ->
+                // 1. If we have the object in the cache -> emit it
+                val cached = localStore.get(key)
+                if (cached != null) {
+                    emit(cached)
+                    return@collect
                 }
-                emit(db)
+
+                // 2. We don't have the object in the cache -> load it from the database
+                withContext(Dispatchers.IO) {
+                    val db = databaseStore.get(key)
+                    if (db != null) {
+                        // Optionally cache this loaded Store
+                        if (cacheStores) {
+                            cache(db)
+                        }
+                        emit(db)
+                    }
+                }
             }
-        }
-    }
+    }.flowOn(Dispatchers.IO)
 
     // ------------------------------------------------------ //
     // Service Methods                                        //
