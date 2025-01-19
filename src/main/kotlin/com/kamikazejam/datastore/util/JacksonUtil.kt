@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.introspect.VisibilityChecker
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Store
@@ -38,7 +39,7 @@ object JacksonUtil {
     private val objectMapper: ObjectMapper
         get() {
             _objectMapper?.let { return it }
-            val m = ObjectMapper()
+            val m = ObjectMapper().registerKotlinModule()
             _objectMapper = m
 
             // Don't fail on empty POJOs
