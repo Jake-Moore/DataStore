@@ -54,6 +54,13 @@ sealed interface UpdateResult<K, X : Store<X, K>> : StoreResult<K, X> {
 sealed interface DeleteResult : AsyncResult<Boolean> {
     data class Success(val value: Boolean) : DeleteResult
     data class Failure(val exception: AsyncHandlerException) : DeleteResult
+
+    fun get(def: Boolean = false): Boolean {
+        return when (this) {
+            is Success -> value
+            else -> def
+        }
+    }
 }
 
 
@@ -64,10 +71,24 @@ sealed interface DeleteResult : AsyncResult<Boolean> {
 sealed interface BoolResult : AsyncResult<Boolean> {
     data class Success(val value: Boolean) : BoolResult
     data class Failure(val exception: AsyncHandlerException) : BoolResult
+
+    fun get(def: Boolean = false): Boolean {
+        return when (this) {
+            is Success -> value
+            else -> def
+        }
+    }
 }
 
 sealed interface ReadIdResult<K> : AsyncResult<K> {
     data class Success<K>(val value: K) : ReadIdResult<K>
     data class Failure<K>(val exception: AsyncHandlerException) : ReadIdResult<K>
     class Empty<K> : ReadIdResult<K>
+
+    fun getOrNull(): K? {
+        return when (this) {
+            is Success -> value
+            else -> null
+        }
+    }
 }
