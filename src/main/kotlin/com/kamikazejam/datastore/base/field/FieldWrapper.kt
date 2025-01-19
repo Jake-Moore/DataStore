@@ -7,7 +7,7 @@ import java.util.*
 
 sealed interface FieldWrapper<T> : FieldProvider {
     val name: String
-    val valueType: Class<*>
+    val valueType: Class<T>
     val elementType: Class<*>?
     val isWriteable: Boolean
     
@@ -57,18 +57,18 @@ sealed interface OptionalField<T> : FieldWrapper<T> {
     }
 }
 
+@Suppress("DuplicatedCode")
 private class RequiredFieldImpl<T>(
     override val name: String,
     override val defaultValue: T,
-    override val valueType: Class<*>,
+    override val valueType: Class<T>,
     override val elementType: Class<*>? = null
 ) : RequiredField<T> {
     private var value: T = defaultValue
     private var parent: Store<*, *>? = null
 
     override fun getFieldType(): Class<T> {
-        @Suppress("UNCHECKED_CAST")
-        return valueType as Class<T>
+        return valueType
     }
 
     @ApiStatus.Internal
@@ -84,8 +84,8 @@ private class RequiredFieldImpl<T>(
     override fun set(value: T) {
         Preconditions.checkState(isWriteable, "Cannot modify field '$name' in read-only mode")
         Preconditions.checkState(
-            value == null || valueType.isInstance(value),
-            "Value $value (${value?.let { it::class.java }}) is not an instance of the field type"
+            value == null || valueType.isInstance(value) || valueType::class.java.isInstance(value),
+            "Value $value (${value?.let { it::class.java }}) is not an instance of the field type (${valueType::class.java})"
         )
         this.value = value
     }
@@ -111,15 +111,14 @@ private class RequiredFieldImpl<T>(
 private class OptionalFieldImpl<T>(
     override val name: String,
     override val defaultValue: T?,
-    override val valueType: Class<*>,
+    override val valueType: Class<T>,
     override val elementType: Class<*>? = null
 ) : OptionalField<T> {
     private var value: T? = defaultValue
     private var parent: Store<*, *>? = null
 
     override fun getFieldType(): Class<T> {
-        @Suppress("UNCHECKED_CAST")
-        return valueType as Class<T>
+        return valueType
     }
 
     @ApiStatus.Internal
@@ -142,8 +141,8 @@ private class OptionalFieldImpl<T>(
     override fun set(value: T?) {
         Preconditions.checkState(isWriteable, "Cannot modify field '$name' in read-only mode")
         Preconditions.checkState(
-            value == null || valueType.isInstance(value),
-            "Value $value (${value?.let { it::class.java }}) is not an instance of the field type"
+            value == null || valueType.isInstance(value) || valueType::class.java.isInstance(value),
+            "Value $value (${value?.let { it::class.java }}) is not an instance of the field type (${valueType::class.java})"
         )
         this.value = value
     }
