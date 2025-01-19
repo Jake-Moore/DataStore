@@ -35,6 +35,7 @@ import org.bson.UuidRepresentation
 import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitTask
+import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
 import java.util.stream.StreamSupport
 
@@ -307,9 +308,10 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     //             MongoCollection Management            //
     // ------------------------------------------------- //
-    private val dbMap: MutableMap<String, MongoDatabase> = HashMap() // Map<DatabaseName, MongoDatabase>
-    private val collMap: MutableMap<String, MongoCollection<Document>> =
-        HashMap() // Map<DatabaseName.CollectionName, MongoCollection<Document>>
+    // Map<DatabaseName, MongoDatabase>
+    private val dbMap: MutableMap<String, MongoDatabase> = ConcurrentHashMap()
+    // Map<DatabaseName.CollectionName, MongoCollection<Document>>
+    private val collMap: MutableMap<String, MongoCollection<Document>> = ConcurrentHashMap()
 
     private fun <K, X : Store<X, K>> getMongoCollection(collection: Collection<K, X>): MongoCollection<Document> {
         val client = this.mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
