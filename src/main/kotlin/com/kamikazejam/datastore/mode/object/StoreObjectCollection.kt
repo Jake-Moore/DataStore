@@ -15,7 +15,6 @@ import com.mongodb.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -61,7 +60,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
         loaders.clear()
         // Clear local store (frees memory)
-        runBlocking { localStore.removeAll() }
+        localStore.removeAll()
 
         // Don't clear database (can't)
         return success

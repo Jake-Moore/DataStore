@@ -14,7 +14,6 @@ import com.kamikazejam.datastore.mode.profile.store.ProfileStorageDatabase
 import com.kamikazejam.datastore.mode.profile.store.ProfileStorageLocal
 import com.kamikazejam.datastore.util.PlayerUtil
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.*
@@ -57,7 +56,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     override fun terminate(): Boolean {
         loaders.clear()
         // Clear locals store (frees memory)
-        runBlocking { localStore.removeAll() }
+        localStore.removeAll()
 
         // Don't clear database (can't)
         return true
