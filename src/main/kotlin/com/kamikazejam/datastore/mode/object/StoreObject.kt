@@ -8,6 +8,8 @@ import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.RequiredField
+import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
+import com.kamikazejam.datastore.util.JacksonUtil.VERSION_FIELD
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
 import java.util.function.Consumer
@@ -22,11 +24,8 @@ abstract class StoreObject<X : StoreObject<X>> private constructor(
     // ----------------------------------------------------- //
     // The id of this object (as a user-defined String)
     @Id
-    override val idField: RequiredField<String> = RequiredField.of(
-        "_id", UUID.randomUUID().toString(),
-        String::class.java
-    )
-    override val versionField: RequiredField<Long> = RequiredField.of("version", 0L, Long::class.java)
+    override val idField: RequiredField<String> = RequiredField.of(ID_FIELD, UUID.randomUUID().toString(), String::class.java)
+    override val versionField: RequiredField<Long> = RequiredField.of(VERSION_FIELD, 0L, Long::class.java)
 
 
     // ----------------------------------------------------- //

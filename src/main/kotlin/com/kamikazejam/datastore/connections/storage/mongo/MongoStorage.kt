@@ -5,6 +5,8 @@ import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.StoreCollection
+import com.kamikazejam.datastore.base.field.OptionalField
+import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.connections.config.MongoConfig
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor
@@ -12,6 +14,7 @@ import com.kamikazejam.datastore.connections.storage.StorageService
 import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterator
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.kamikazejam.datastore.util.JacksonUtil
+import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
 import com.mongodb.*
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
@@ -30,6 +33,7 @@ import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitTask
 import java.util.function.Consumer
 import java.util.stream.StreamSupport
+import kotlin.collections.HashMap
 
 @Suppress("unused")
 class MongoStorage : StorageService() {
@@ -90,8 +94,11 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     override fun <K, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? {
         try {
-            val coll = this.getMongoCollection(collection)
-            val doc = coll.find().filter(Filters.eq(JacksonUtil.ID_FIELD, collection.keyToString(key))).first() ?: return null
+            // Mimic an ID FieldWrapper so we can reproduce the serialized result
+            val field = RequiredField.of(ID_FIELD, collection.keyToString(key), String::class.java)
+            val dbString = JacksonUtil.serializeFieldProvider(field)
+            // Filter based on this serialized string
+            val doc = getMongoCollection(collection).find().filter(Filters.eq(ID_FIELD, dbString)).first() ?: return null
 
             val o: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
             // Cache Indexes since we are loading from database
@@ -158,8 +165,11 @@ class MongoStorage : StorageService() {
 
     override fun <K, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean {
         try {
-            val query = Filters.eq(JacksonUtil.ID_FIELD, collection.keyToString(key))
-            return getMongoCollection(collection).countDocuments(query) > 0
+            // Mimic an ID FieldWrapper so we can reproduce the serialized result
+            val field = RequiredField.of(ID_FIELD, collection.keyToString(key), String::class.java)
+            val dbString = JacksonUtil.serializeFieldProvider(field)
+            // Filter based on this serialized string
+            return getMongoCollection(collection).countDocuments(Filters.eq(ID_FIELD, dbString)) > 0
         } catch (ex: MongoException) {
             collection.getLoggerService().info(ex, "MongoDB error check if Store exists in MongoDB Layer: ${collection.keyToString(key)}")
             return false
@@ -175,8 +185,11 @@ class MongoStorage : StorageService() {
 
     override fun <K, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean {
         try {
-            val query = Filters.eq(JacksonUtil.ID_FIELD, collection.keyToString(key))
-            return getMongoCollection(collection).deleteMany(query).deletedCount > 0
+            // Mimic an ID FieldWrapper so we can reproduce the serialized result
+            val field = RequiredField.of(ID_FIELD, collection.keyToString(key), String::class.java)
+            val dbString = JacksonUtil.serializeFieldProvider(field)
+            // Filter based on this serialized string
+            return getMongoCollection(collection).deleteMany(Filters.eq(ID_FIELD, dbString)).deletedCount > 0
         } catch (ex: MongoException) {
             collection.getLoggerService().info(ex, "MongoDB error removing Store from MongoDB Layer: ${collection.keyToString(key)}")
         } catch (expected: Exception) {
@@ -198,11 +211,21 @@ class MongoStorage : StorageService() {
 
     override fun <K, X : Store<X, K>> getKeys(collection: Collection<K, X>): Iterable<K> {
         // Fetch all documents, but use Projection to only retrieve the ID field
-        val docs = getMongoCollection(collection).find().projection(Projections.include(JacksonUtil.ID_FIELD)).iterator()
+        val docs = getMongoCollection(collection).find().projection(Projections.include(ID_FIELD)).iterator()
         // We know where the id is located, and we can fetch it as a string, there is no need to deserialize the entire object
         return Iterable {
-            TransformingIterator(docs) {
-                doc: Document -> collection.keyFromString(doc.getString(JacksonUtil.ID_FIELD))
+            TransformingIterator(docs) { doc: Document ->
+                val dbValue = doc.getString(ID_FIELD)
+                collection.keyFromString(doc.getString(ID_FIELD))
+
+                // Mimic an ID FieldWrapper so we can reproduce the serialized result
+                val field = OptionalField.of(ID_FIELD, null, String::class.java)
+                val fakeDocument = Document()
+                fakeDocument[field.name] = dbValue
+                // Deserialize the dbValue into our field
+                JacksonUtil.deserializeFieldProvider(field, fakeDocument)
+                // Convert the id field string back into a key
+                collection.keyFromString(field.get() ?: throw IllegalStateException("ID Field is null"))
             }
         }
     }
@@ -327,10 +350,14 @@ class MongoStorage : StorageService() {
         index: IndexedField<X, T>,
         value: T
     ): K? {
+        // Mimic a FieldWrapper so we can reproduce the serialized result
+        val field = RequiredField.of(index.name, value, index.getValueType())
+        val dbString = JacksonUtil.serializeFieldProvider(field)
         // Fetch an object with the given index value, projecting only the ID and the index field
-        val query = Filters.eq(index.name, value)
+        //   (Filter based on this serialized string)
+        val query = Filters.eq(index.name, dbString)
         val doc = getMongoCollection(collection).find(query)
-            .projection(Projections.include(JacksonUtil.ID_FIELD, index.name))
+            .projection(Projections.include(ID_FIELD, index.name))
             .first()
             ?: return null
         val store: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)

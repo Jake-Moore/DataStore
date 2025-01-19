@@ -18,4 +18,6 @@ abstract class IndexedField<X : Store<X, *>, T>(
     abstract fun toString(value: Any): String
 
     abstract fun fromString(value: String): T
+
+    abstract fun getValueType(): Class<T>
 }

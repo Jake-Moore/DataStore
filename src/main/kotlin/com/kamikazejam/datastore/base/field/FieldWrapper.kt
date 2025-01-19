@@ -1,6 +1,8 @@
 package com.kamikazejam.datastore.base.field
 
 import com.kamikazejam.datastore.base.Store
+import com.kamikazejam.datastore.util.JacksonUtil
+import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
 
@@ -18,7 +20,7 @@ sealed interface FieldWrapper<T> : FieldProvider {
     fun getNullable(): T?
     
     fun setNotNull(value: T)
-    
+
     override val fieldWrapper: FieldWrapper<*>
         get() = this
 }

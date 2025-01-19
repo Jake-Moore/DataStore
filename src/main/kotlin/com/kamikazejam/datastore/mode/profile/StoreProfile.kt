@@ -8,6 +8,8 @@ import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.OptionalField
 import com.kamikazejam.datastore.base.field.RequiredField
+import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
+import com.kamikazejam.datastore.util.JacksonUtil.VERSION_FIELD
 import com.kamikazejam.datastore.util.PlayerUtil
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
@@ -25,8 +27,8 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // ----------------------------------------------------- //
     // The id of this object (a player uuid)
     @Id
-    override val idField: OptionalField<UUID> = OptionalField.of("_id", null, UUID::class.java)
-    override val versionField: RequiredField<Long> = RequiredField.of("version", 0L, Long::class.java)
+    override val idField: OptionalField<UUID> = OptionalField.of(ID_FIELD, null, UUID::class.java)
+    override val versionField: RequiredField<Long> = RequiredField.of(VERSION_FIELD, 0L, Long::class.java)
     val usernameField: OptionalField<String> = OptionalField.of("username", null, String::class.java)
 
     // ----------------------------------------------------- //
