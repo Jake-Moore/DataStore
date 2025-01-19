@@ -12,10 +12,7 @@ import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.OptionalField
 import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.util.jackson.JacksonSpigotModule
-import de.undercouch.bson4jackson.BsonFactory
-import de.undercouch.bson4jackson.BsonGenerator
 import org.bson.Document
-import java.io.ByteArrayOutputStream
 
 @Suppress("unused")
 object JacksonUtil {
@@ -26,50 +23,32 @@ object JacksonUtil {
     val objectMapper: ObjectMapper
         get() {
             _objectMapper?.let { return it }
-            val factory = BsonFactory()
-            factory.enable(BsonGenerator.Feature.ENABLE_STREAMING)
-            val m = ObjectMapper(factory)
+            val m = ObjectMapper()
             _objectMapper = m
 
             // Don't fail on empty POJOs
             m.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-
-            // to prevent exception when encountering unknown property:
-            //  i.e. if the json has a property no longer in the class
+            // to prevent exception when encountering unknown property
             m.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 
-            // Configure Jackson to only use fields for serialization (ignoring transient fields)
+            // Configure Jackson to only use fields for serialization
             val check = VisibilityChecker.Std(
-                JsonAutoDetect.Visibility.NONE,  // don't use getters for field mapping
-                JsonAutoDetect.Visibility.NONE,  // don't use getters for field mapping
-                JsonAutoDetect.Visibility.NONE,  // don't use setters for field mapping
+                JsonAutoDetect.Visibility.NONE,  // don't use getters
+                JsonAutoDetect.Visibility.NONE,  // don't use getters
+                JsonAutoDetect.Visibility.NONE,  // don't use setters
                 JsonAutoDetect.Visibility.NONE,  // don't use creators
-                JsonAutoDetect.Visibility.ANY // any field
+                JsonAutoDetect.Visibility.ANY    // any field
             )
             m.setVisibility(check)
 
             // Enable serialization of null and empty values
             m.setSerializationInclusion(JsonInclude.Include.ALWAYS)
 
-            // Add Basic Spigot Types Module, for handling basic types
+            // Add Basic Spigot Types Module
             m.registerModule(JacksonSpigotModule())
 
             return m
         }
-
-    fun <T> toJson(wrapper: FieldWrapper<T>): String {
-        Preconditions.checkNotNull(wrapper, "wrapper cannot be null")
-        return when (wrapper) {
-            is OptionalField<*> -> objectMapper.writeValueAsString(wrapper.get())
-            is RequiredField<*> -> objectMapper.writeValueAsString(wrapper.get())
-        }
-    }
-
-    fun <T> fromJson(wrapper: FieldWrapper<T>, json: String): T {
-        Preconditions.checkNotNull(json, "json cannot be null")
-        Preconditions.checkNotNull(wrapper, "wrapper cannot be null")
-        return objectMapper.readValue(json, wrapper.getFieldType())
-    }
 
     fun <K, T : Store<T, K>> serializeToDocument(store: T): Document {
         val doc = Document()
@@ -77,12 +56,16 @@ object JacksonUtil {
             val field = provider.fieldWrapper
             val value = field.getNullable()
             if (value != null) {
-                // Serialize to BSON bytes
-                val byteArray = ByteArrayOutputStream()
-                objectMapper.writeValue(byteArray, value)
-                // Parse bytes into Document
-                val bsonValue = Document.parse(byteArray.toString("UTF-8"))
-                doc[field.name] = if (bsonValue.size == 1) bsonValue.values.first() else bsonValue
+                try {
+                    // Simply serialize to JSON string
+                    val jsonString = objectMapper.writeValueAsString(value)
+                    doc[field.name] = jsonString
+                } catch (e: Exception) {
+                    kotlin.runCatching {
+                        store.getCollection().getLoggerService().error("Debug - Error serializing field '${field.name}': ${e.message}")
+                    }
+                    throw e
+                }
             } else {
                 doc[field.name] = null
             }
@@ -94,11 +77,11 @@ object JacksonUtil {
         Preconditions.checkNotNull(doc, "Document cannot be null")
 
         try {
-            val entity = storeClass.getDeclaredConstructor().newInstance() ?: throw RuntimeException("Failed to create new instance of $storeClass")
+            val entity = storeClass.getDeclaredConstructor().newInstance() 
+                ?: throw RuntimeException("Failed to create new instance of $storeClass")
             entity.initialize()
             entity.readOnly = false
 
-            // Deserialize each FieldWrapper from its contents in the BSON document
             for (provider in entity.allFields) {
                 val field = provider.fieldWrapper
                 deserializeFieldWrapper(field, doc)
@@ -116,19 +99,19 @@ object JacksonUtil {
         if (doc.containsKey(fieldName)) {
             val rawValue = doc[fieldName]
             if (rawValue != null) {
-                // Convert to BSON bytes first
-                val byteArray = ByteArrayOutputStream()
-                objectMapper.writeValue(byteArray, rawValue)
-                // Read value directly from bytes
-                val value = objectMapper.readValue(byteArray.toByteArray(), field.getFieldType())
-                
-                when (field) {
-                    is OptionalField<V> -> field.set(value)
-                    is RequiredField<V> -> field.set(value)
+                try {
+                    // Deserialize from JSON string
+                    val value = objectMapper.readValue(rawValue as String, field.getFieldType())
+                    when (field) {
+                        is OptionalField<V> -> field.set(value)
+                        is RequiredField<V> -> field.set(value)
+                    }
+                } catch (e: Exception) {
+                    println("Debug - Error deserializing field '${field.name}': ${e.message}")
+                    throw e
                 }
                 return
             } else {
-                // If we have OptionalField, we can set null
                 if (field is OptionalField<V>) {
                     field.set(null)
                     return
@@ -136,7 +119,6 @@ object JacksonUtil {
             }
         }
 
-        // Use default if there was nothing serialized or it was null
         when (field) {
             is OptionalField<V> -> field.set(field.defaultValue)
             is RequiredField<V> -> field.set(field.defaultValue)
