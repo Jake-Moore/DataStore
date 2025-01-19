@@ -7,7 +7,7 @@ interface FieldWrapperSet<E> : MutableSet<E>, FieldProvider {
     
     companion object {
         @JvmStatic
-        fun <E> of(name: String, defaultValue: Set<E> = HashSet(), elementType: Class<E>): FieldWrapperSet<E> =
+        fun <E> of(name: String, elementType: Class<E>, defaultValue: Set<E> = mutableSetOf()): FieldWrapperSet<E> =
             FieldWrapperSetImpl(name, defaultValue, elementType)
     }
 }

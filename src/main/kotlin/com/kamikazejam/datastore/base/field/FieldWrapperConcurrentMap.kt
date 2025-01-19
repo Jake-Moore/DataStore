@@ -11,7 +11,7 @@ interface FieldWrapperConcurrentMap<K : Any, V : Any> : ConcurrentMap<K, V>, Fie
     
     companion object {
         @JvmStatic
-        fun <K : Any, V : Any> of(name: String, defaultValue: ConcurrentMap<K, V> = ConcurrentHashMap(), keyType: Class<K>, valueType: Class<V>): FieldWrapperConcurrentMap<K, V> =
+        fun <K : Any, V : Any> of(name: String, keyType: Class<K>, valueType: Class<V>, defaultValue: ConcurrentMap<K, V> = ConcurrentHashMap()): FieldWrapperConcurrentMap<K, V> =
             FieldWrapperConcurrentMapImpl(name, defaultValue, keyType, valueType)
     }
 }

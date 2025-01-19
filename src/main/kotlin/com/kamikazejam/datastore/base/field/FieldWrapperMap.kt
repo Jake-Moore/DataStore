@@ -8,7 +8,7 @@ interface FieldWrapperMap<K, V> : MutableMap<K, V>, FieldProvider {
     
     companion object {
         @JvmStatic
-        fun <K, V> of(name: String, defaultValue: Map<K, V> = HashMap(), keyType: Class<K>, valueType: Class<V>): FieldWrapperMap<K, V> =
+        fun <K, V> of(name: String, keyType: Class<K>, valueType: Class<V>, defaultValue: Map<K, V> = mutableMapOf()): FieldWrapperMap<K, V> =
             FieldWrapperMapImpl(name, defaultValue, keyType, valueType)
     }
 }

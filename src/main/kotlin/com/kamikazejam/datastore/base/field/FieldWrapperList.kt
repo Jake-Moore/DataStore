@@ -6,7 +6,7 @@ interface FieldWrapperList<E> : MutableList<E>, FieldProvider {
     val elementType: Class<*>
     companion object {
         @JvmStatic
-        fun <E> of(name: String, defaultValue: List<E> = ArrayList(), elementType: Class<E>): FieldWrapperList<E> =
+        fun <E> of(name: String, elementType: Class<E>, defaultValue: List<E> = mutableListOf()): FieldWrapperList<E> =
             FieldWrapperListImpl(name, defaultValue, elementType)
     }
 }
