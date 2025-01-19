@@ -3,6 +3,7 @@ package com.kamikazejam.datastore.util
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.introspect.VisibilityChecker
@@ -230,8 +231,13 @@ object JacksonUtil {
         // Clear existing map and rebuild it with properly deserialized elements
         wrapper.clear()
         map.forEach { (key, value) ->
-            val deserializedKey = objectMapper.convertValue(key, wrapper.keyType)
-            val deserializedValue = objectMapper.convertValue(value, wrapper.valueType)
+            // Parse the JSON strings into JsonNode to preserve structure
+            val keyNode: JsonNode = objectMapper.readTree(key as String)
+            val valueNode: JsonNode = objectMapper.readTree(value as String)
+            
+            // Convert from JsonNode to the correct types
+            val deserializedKey = objectMapper.treeToValue(keyNode, wrapper.keyType)
+            val deserializedValue = objectMapper.treeToValue(valueNode, wrapper.valueType)
             typedMap[deserializedKey] = deserializedValue
         }
         (wrapper.fieldWrapper as RequiredField<Any>).set(typedMap)
@@ -245,8 +251,13 @@ object JacksonUtil {
         // Clear existing map and rebuild it with properly deserialized elements
         wrapper.clear()
         map.forEach { (key, value) ->
-            val deserializedKey = objectMapper.convertValue(key, wrapper.keyType)
-            val deserializedValue = objectMapper.convertValue(value, wrapper.valueType)
+            // Parse the JSON strings into JsonNode to preserve structure
+            val keyNode: JsonNode = objectMapper.readTree(key as String)
+            val valueNode: JsonNode = objectMapper.readTree(value as String)
+            
+            // Convert from JsonNode to the correct types
+            val deserializedKey = objectMapper.treeToValue(keyNode, wrapper.keyType)
+            val deserializedValue = objectMapper.treeToValue(valueNode, wrapper.valueType)
             typedMap[deserializedKey] = deserializedValue
         }
         (wrapper.fieldWrapper as RequiredField<Any>).set(typedMap)
