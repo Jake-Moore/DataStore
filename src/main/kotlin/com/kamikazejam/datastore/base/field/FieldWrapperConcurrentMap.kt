@@ -6,16 +6,21 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
 interface FieldWrapperConcurrentMap<K : Any, V : Any> : ConcurrentMap<K, V>, FieldProvider {
+    val keyType: Class<K>
+    val valueType: Class<V>
+    
     companion object {
         @JvmStatic
-        fun <K : Any, V : Any> of(name: String, defaultValue: ConcurrentMap<K, V> = ConcurrentHashMap()): FieldWrapperConcurrentMap<K, V> =
-            FieldWrapperConcurrentMapImpl(name, defaultValue)
+        fun <K : Any, V : Any> of(name: String, defaultValue: ConcurrentMap<K, V> = ConcurrentHashMap(), keyType: Class<K>, valueType: Class<V>): FieldWrapperConcurrentMap<K, V> =
+            FieldWrapperConcurrentMapImpl(name, defaultValue, keyType, valueType)
     }
 }
 
 private class FieldWrapperConcurrentMapImpl<K : Any, V : Any>(
     name: String,
-    defaultValue: ConcurrentMap<K, V>
+    defaultValue: ConcurrentMap<K, V>,
+    override val keyType: Class<K>,
+    override val valueType: Class<V>
 ) : FieldWrapperConcurrentMap<K, V> {
     private var wrapper = RequiredField.of(
         name,

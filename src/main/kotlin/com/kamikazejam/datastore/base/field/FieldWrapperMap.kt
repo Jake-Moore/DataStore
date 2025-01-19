@@ -3,16 +3,21 @@
 package com.kamikazejam.datastore.base.field
 
 interface FieldWrapperMap<K, V> : MutableMap<K, V>, FieldProvider {
+    val keyType: Class<K>
+    val valueType: Class<V>
+    
     companion object {
         @JvmStatic
-        fun <K, V> of(name: String, defaultValue: Map<K, V> = HashMap()): FieldWrapperMap<K, V> =
-            FieldWrapperMapImpl(name, defaultValue)
+        fun <K, V> of(name: String, defaultValue: Map<K, V> = HashMap(), keyType: Class<K>, valueType: Class<V>): FieldWrapperMap<K, V> =
+            FieldWrapperMapImpl(name, defaultValue, keyType, valueType)
     }
 }
 
 private class FieldWrapperMapImpl<K, V>(
     name: String,
-    defaultValue: Map<K, V>
+    defaultValue: Map<K, V>,
+    override val keyType: Class<K>,
+    override val valueType: Class<V>
 ) : FieldWrapperMap<K, V> {
     private var wrapper = RequiredField.of(
         name,

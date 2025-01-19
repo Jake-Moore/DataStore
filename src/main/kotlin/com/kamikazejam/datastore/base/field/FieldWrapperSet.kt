@@ -3,16 +3,19 @@
 package com.kamikazejam.datastore.base.field
 
 interface FieldWrapperSet<E> : MutableSet<E>, FieldProvider {
+    val elementType: Class<E>
+    
     companion object {
         @JvmStatic
-        fun <E> of(name: String, defaultValue: Set<E> = HashSet()): FieldWrapperSet<E> =
-            FieldWrapperSetImpl(name, defaultValue)
+        fun <E> of(name: String, defaultValue: Set<E> = HashSet(), elementType: Class<E>): FieldWrapperSet<E> =
+            FieldWrapperSetImpl(name, defaultValue, elementType)
     }
 }
 
 private class FieldWrapperSetImpl<E>(
     name: String,
-    defaultValue: Set<E>
+    defaultValue: Set<E>,
+    override val elementType: Class<E>
 ) : FieldWrapperSet<E> {
     private var wrapper = RequiredField.of(
         name,

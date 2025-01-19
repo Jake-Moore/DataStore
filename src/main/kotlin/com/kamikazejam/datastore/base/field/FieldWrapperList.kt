@@ -3,16 +3,18 @@
 package com.kamikazejam.datastore.base.field
 
 interface FieldWrapperList<E> : MutableList<E>, FieldProvider {
+    val elementType: Class<*>
     companion object {
         @JvmStatic
-        fun <E> of(name: String, defaultValue: List<E> = ArrayList()): FieldWrapperList<E> =
-            FieldWrapperListImpl(name, defaultValue)
+        fun <E> of(name: String, defaultValue: List<E> = ArrayList(), elementType: Class<E>): FieldWrapperList<E> =
+            FieldWrapperListImpl(name, defaultValue, elementType)
     }
 }
 
 private class FieldWrapperListImpl<E>(
     name: String,
-    defaultValue: List<E>
+    defaultValue: List<E>,
+    override val elementType: Class<E>
 ) : FieldWrapperList<E> {
     private var wrapper = RequiredField.of(
         name,

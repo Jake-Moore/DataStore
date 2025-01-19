@@ -9,7 +9,6 @@ import java.util.*
 sealed interface FieldWrapper<T> : FieldProvider {
     val name: String
     val valueType: Class<T>
-    val elementType: Class<*>?
     val isWriteable: Boolean
     
     @ApiStatus.Internal
@@ -63,7 +62,6 @@ private class RequiredFieldImpl<T>(
     override val name: String,
     override val defaultValue: T,
     override val valueType: Class<T>,
-    override val elementType: Class<*>? = null
 ) : RequiredField<T> {
     private var value: T = defaultValue
     private var parent: Store<*, *>? = null
@@ -114,7 +112,6 @@ private class OptionalFieldImpl<T>(
     override val name: String,
     override val defaultValue: T?,
     override val valueType: Class<T>,
-    override val elementType: Class<*>? = null
 ) : OptionalField<T> {
     private var value: T? = defaultValue
     private var parent: Store<*, *>? = null
