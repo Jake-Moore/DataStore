@@ -20,13 +20,14 @@ repositories {
     maven("https://repo.luxiouslabs.net/repository/maven-public/")
 }
 
+val jacksonVer = "2.18.2"
 dependencies {
     // Spigot
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
     // Dependencies
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.+")
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVer")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVer")
     implementation("org.mongodb:mongodb-driver-sync:5.3.0")
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
