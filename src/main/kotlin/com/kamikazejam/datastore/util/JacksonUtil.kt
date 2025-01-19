@@ -122,14 +122,6 @@ object JacksonUtil {
         return serializeValue(value)
     }
 
-    private fun serializeMapWithJsonKeys(map: Map<*, *>): String {
-        val jsonMap = map.entries.associate { (key, value) ->
-            // Serialize both key and value as proper JSON objects
-            objectMapper.writeValueAsString(key) to objectMapper.writeValueAsString(value)
-        }
-        return objectMapper.writeValueAsString(jsonMap)
-    }
-
     fun <K, T : Store<T, K>> deserializeFromDocument(storeClass: Class<T>, doc: Document): T {
         Preconditions.checkNotNull(doc, "Document cannot be null")
 
