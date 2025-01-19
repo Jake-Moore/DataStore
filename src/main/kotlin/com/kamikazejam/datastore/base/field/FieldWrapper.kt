@@ -1,5 +1,6 @@
 package com.kamikazejam.datastore.base.field
 
+import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Store
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
@@ -76,19 +77,24 @@ private class RequiredFieldImpl<T>(
     }
 
     override fun get(): T {
-        checkNotNull(parent) { "[RequiredField#get] Field not registered with a parent document" }
+        Preconditions.checkState(parent != null, "[RequiredField#get] Field not registered with a parent document")
         return value
     }
 
     override fun set(value: T) {
-        check(isWriteable) { "Cannot modify field '$name' in read-only mode" }
+        Preconditions.checkState(isWriteable, "Cannot modify field '$name' in read-only mode")
+        Preconditions.checkState(
+            value == null || valueType.isInstance(value),
+            "Value $value (${value?.let { it::class.java }}) is not an instance of the field type"
+        )
         this.value = value
     }
 
     override val isWriteable: Boolean
         get() {
             val p = this.parent
-            checkNotNull(p) { "[RequiredField#isWriteable] Field not registered with a parent document" }
+            Preconditions.checkState(p != null, "[RequiredField#isWriteable] Field not registered with a parent document")
+            checkNotNull(p)
             return !p.readOnly
         }
 
@@ -122,7 +128,10 @@ private class OptionalFieldImpl<T>(
     }
 
     override fun get(): T? {
-        checkNotNull(parent) { "[OptionalField#get] Field not registered with a parent document" }
+        Preconditions.checkState(
+            parent != null,
+            "[OptionalField#get] Field not registered with a parent document"
+        )
         return value
     }
 
@@ -131,14 +140,19 @@ private class OptionalFieldImpl<T>(
     }
 
     override fun set(value: T?) {
-        check(isWriteable) { "Cannot modify field '$name' in read-only mode" }
+        Preconditions.checkState(isWriteable, "Cannot modify field '$name' in read-only mode")
+        Preconditions.checkState(
+            value == null || valueType.isInstance(value),
+            "Value $value (${value?.let { it::class.java }}) is not an instance of the field type"
+        )
         this.value = value
     }
 
     override val isWriteable: Boolean
         get() {
             val p = this.parent
-            checkNotNull(p) { "[OptionalField#isWriteable] Field not registered with a parent document" }
+            Preconditions.checkState(p != null, "[OptionalField#isWriteable] Field not registered with a parent document")
+            checkNotNull(p)
             return !p.readOnly
         }
 
