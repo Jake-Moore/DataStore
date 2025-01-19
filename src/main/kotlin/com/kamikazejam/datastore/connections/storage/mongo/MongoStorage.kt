@@ -28,7 +28,6 @@ import com.mongodb.connection.ServerSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import org.bson.Document
@@ -215,16 +214,15 @@ class MongoStorage : StorageService() {
         return@withContext 0
     }
 
-    override suspend fun <K, X : Store<X, K>> getAll(collection: Collection<K, X>): Flow<X> = flow {
-        withContext(Dispatchers.IO) {
-            for (doc: Document in getMongoCollection(collection).find().iterator()) {
-                val store: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
-                // Make sure to cache indexes when a store is loaded from the database
-                collection.cacheIndexes(store, true)
-                emit(store)
-            }
+    override suspend fun <K, X : Store<X, K>> getAll(collection: Collection<K, X>): Flow<X> = channelFlow {
+        // Fetch all documents from MongoDB
+        for (doc: Document in getMongoCollection(collection).find().iterator()) {
+            val store: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
+            // Make sure to cache indexes when a store is loaded from the database
+            collection.cacheIndexes(store, true)
+            send(store)
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     override suspend fun <K, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> = channelFlow {
         // Fetch all documents, but use Projection to only retrieve the ID field
