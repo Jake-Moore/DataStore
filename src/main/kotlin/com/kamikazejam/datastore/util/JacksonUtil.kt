@@ -75,8 +75,14 @@ object JacksonUtil {
         val value = field.getNullable()
         return if (value != null) {
             try {
-                // Simply serialize to JSON string
-                serializeValue(value)
+                when (provider) {
+                    is FieldWrapperList<*> -> serializeFieldWrapperList(provider)
+                    is FieldWrapperMap<*, *> -> serializeFieldWrapperMap(provider)
+                    is FieldWrapperSet<*> -> serializeFieldWrapperSet(provider)
+                    is FieldWrapperConcurrentMap<*, *> -> serializeFieldWrapperConcurrentMap(provider)
+                    is FieldWrapper<*> -> serializeFieldWrapperValue(value)
+                    else -> throw IllegalStateException("Unknown FieldProvider type: ${provider.javaClass.simpleName}")
+                }
             } catch (e: Exception) {
                 kotlin.runCatching {
                     DataStoreSource.colorLogger.error("[JacksonUtil] Error serializing field '${field.name}': ${e.message}")
@@ -86,6 +92,42 @@ object JacksonUtil {
         } else {
             null
         }
+    }
+
+    private fun serializeFieldWrapperList(wrapper: FieldWrapperList<*>): String {
+        return serializeValue(wrapper.toList())
+    }
+
+    private fun serializeFieldWrapperSet(wrapper: FieldWrapperSet<*>): String {
+        return serializeValue(wrapper.toSet())
+    }
+
+    private fun serializeFieldWrapperMap(wrapper: FieldWrapperMap<*, *>): String {
+        val map = wrapper.entries.associate { entry ->
+            // Serialize both key and value as proper JSON objects
+            objectMapper.writeValueAsString(entry.key) to objectMapper.writeValueAsString(entry.value)
+        }
+        return objectMapper.writeValueAsString(map)
+    }
+
+    private fun serializeFieldWrapperConcurrentMap(wrapper: FieldWrapperConcurrentMap<*, *>): String {
+        val map = wrapper.entries.associate { entry ->
+            // Serialize both key and value as proper JSON objects
+            objectMapper.writeValueAsString(entry.key) to objectMapper.writeValueAsString(entry.value)
+        }
+        return objectMapper.writeValueAsString(map)
+    }
+
+    private fun serializeFieldWrapperValue(value: Any): String {
+        return serializeValue(value)
+    }
+
+    private fun serializeMapWithJsonKeys(map: Map<*, *>): String {
+        val jsonMap = map.entries.associate { (key, value) ->
+            // Serialize both key and value as proper JSON objects
+            objectMapper.writeValueAsString(key) to objectMapper.writeValueAsString(value)
+        }
+        return objectMapper.writeValueAsString(jsonMap)
     }
 
     fun <K, T : Store<T, K>> deserializeFromDocument(storeClass: Class<T>, doc: Document): T {
