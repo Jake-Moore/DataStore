@@ -12,21 +12,24 @@ import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.OptionalField
 import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.util.jackson.JacksonSpigotModule
+import de.undercouch.bson4jackson.BsonFactory
+import de.undercouch.bson4jackson.BsonGenerator
 import org.bson.Document
+import java.io.ByteArrayOutputStream
 
 @Suppress("unused")
 object JacksonUtil {
     const val ID_FIELD: String = "_id"
 
-    private var mapper: ObjectMapper? = null
+    private var _objectMapper: ObjectMapper? = null
+
     val objectMapper: ObjectMapper
         get() {
-            mapper?.let { return it }
-            val m = ObjectMapper()
-            mapper = m
-
-            // Optional: enable pretty printing
-            // mapper.enable(SerializationFeature.INDENT_OUTPUT);
+            _objectMapper?.let { return it }
+            val factory = BsonFactory()
+            factory.enable(BsonGenerator.Feature.ENABLE_STREAMING)
+            val m = ObjectMapper(factory)
+            _objectMapper = m
 
             // Don't fail on empty POJOs
             m.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
@@ -36,15 +39,13 @@ object JacksonUtil {
             m.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 
             // Configure Jackson to only use fields for serialization (ignoring transient fields)
-            //   We have to disable setters and getters, otherwise a transient getter or setter will cause it to be serialized
-            val check =
-                VisibilityChecker.Std(
-                    JsonAutoDetect.Visibility.NONE,  // don't use getters for field mapping
-                    JsonAutoDetect.Visibility.NONE,  // don't use getters for field mapping
-                    JsonAutoDetect.Visibility.NONE,  // don't use setters for field mapping
-                    JsonAutoDetect.Visibility.NONE,  // don't use creators
-                    JsonAutoDetect.Visibility.ANY // any field
-                )
+            val check = VisibilityChecker.Std(
+                JsonAutoDetect.Visibility.NONE,  // don't use getters for field mapping
+                JsonAutoDetect.Visibility.NONE,  // don't use getters for field mapping
+                JsonAutoDetect.Visibility.NONE,  // don't use setters for field mapping
+                JsonAutoDetect.Visibility.NONE,  // don't use creators
+                JsonAutoDetect.Visibility.ANY // any field
+            )
             m.setVisibility(check)
 
             // Enable serialization of null and empty values
@@ -70,20 +71,18 @@ object JacksonUtil {
         return objectMapper.readValue(json, wrapper.getFieldType())
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun <K, T : Store<T, K>> serializeToDocument(store: T): Document {
         val doc = Document()
         for (provider in store.allFields) {
             val field = provider.fieldWrapper
             val value = field.getNullable()
             if (value != null) {
-                // Convert the value to a MongoDB-compatible format using Jackson
-                var convertedValue: Any = objectMapper.convertValue(value, Any::class.java)
-                // If the converted value is a Map, convert it to a (sub) Document
-                if (convertedValue is Map<*, *>) {
-                    convertedValue = Document(convertedValue as Map<String?, Any?>)
-                }
-                doc[field.name] = convertedValue
+                // Serialize to BSON bytes
+                val byteArray = ByteArrayOutputStream()
+                objectMapper.writeValue(byteArray, value)
+                // Parse bytes into Document
+                val bsonValue = Document.parse(byteArray.toString("UTF-8"))
+                doc[field.name] = if (bsonValue.size == 1) bsonValue.values.first() else bsonValue
             } else {
                 doc[field.name] = null
             }
@@ -117,15 +116,18 @@ object JacksonUtil {
         if (doc.containsKey(fieldName)) {
             val rawValue = doc[fieldName]
             if (rawValue != null) {
-                // Convert the MongoDB value to the proper type using Jackson
-                val value = objectMapper.convertValue(rawValue, field.getFieldType())
-
+                // Convert to BSON bytes first
+                val byteArray = ByteArrayOutputStream()
+                objectMapper.writeValue(byteArray, rawValue)
+                // Read value directly from bytes
+                val value = objectMapper.readValue(byteArray.toByteArray(), field.getFieldType())
+                
                 when (field) {
                     is OptionalField<V> -> field.set(value)
                     is RequiredField<V> -> field.set(value)
                 }
                 return
-            }else {
+            } else {
                 // If we have OptionalField, we can set null
                 if (field is OptionalField<V>) {
                     field.set(null)
@@ -134,7 +136,7 @@ object JacksonUtil {
             }
         }
 
-        // Use default is there was nothing serialized or it was null
+        // Use default if there was nothing serialized or it was null
         when (field) {
             is OptionalField<V> -> field.set(field.defaultValue)
             is RequiredField<V> -> field.set(field.defaultValue)
