@@ -27,7 +27,9 @@ import com.mongodb.connection.ServerDescription
 import com.mongodb.connection.ServerSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import org.bson.Document
 import org.bson.UuidRepresentation
@@ -224,24 +226,22 @@ class MongoStorage : StorageService() {
         }
     }
 
-    override suspend fun <K, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> = flow {
-        withContext(Dispatchers.IO) {
-            // Fetch all documents, but use Projection to only retrieve the ID field
-            for (doc: Document in getMongoCollection(collection).find().projection(Projections.include(ID_FIELD)).iterator()) {
-                // We know where the id is located, and we can fetch it as a string, there is no need to deserialize the entire object
-                val dbValue = doc.getString(ID_FIELD)
+    override suspend fun <K, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> = channelFlow {
+        // Fetch all documents, but use Projection to only retrieve the ID field
+        for (doc: Document in getMongoCollection(collection).find().projection(Projections.include(ID_FIELD)).iterator()) {
+            // We know where the id is located, and we can fetch it as a string, there is no need to deserialize the entire object
+            val dbValue = doc.getString(ID_FIELD)
 
-                // Parse the Key from the serialized dbValue
-                val key = dbValue?.let {
-                    deserializeValue(dbValue, collection.getKeyType())
-                }
-
-                // Convert the id field string back into a key
-                key ?: throw IllegalStateException("ID Field is null")
-                emit(key)
+            // Parse the Key from the serialized dbValue
+            val key = dbValue?.let {
+                deserializeValue(dbValue, collection.getKeyType())
             }
+
+            // Convert the id field string back into a key
+            key ?: throw IllegalStateException("ID Field is null")
+            send(key)
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     override fun canWrite(): Boolean {
         // just check that MongoDB is connected
