@@ -135,7 +135,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
                     originalEntity
                 }
-                is ReadResult.Failure -> throw readResult.exception
+                is ReadResult.Failure -> throw readResult.error
                 is ReadResult.Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
             }
         }
@@ -427,7 +427,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
                     }
                     return@AsyncReadHandler readResult.value
                 }
-                is ReadResult.Failure -> throw readResult.exception
+                is ReadResult.Failure -> throw readResult.error
                 is ReadResult.Empty -> return@AsyncReadHandler null
             }
         }

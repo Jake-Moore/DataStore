@@ -23,11 +23,11 @@ fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Cons
     return AsyncCreateHandler(this) {
         when (val readResult = read(key).await()) {
             is ReadResult.Success -> return@AsyncCreateHandler readResult.value
-            is ReadResult.Failure -> throw readResult.exception
+            is ReadResult.Failure -> throw readResult.error
             is ReadResult.Empty -> {
                 when (val createResult = create(key, initializer).await()) {
                     is CreateResult.Success -> return@AsyncCreateHandler createResult.value
-                    is CreateResult.Failure -> throw createResult.exception
+                    is CreateResult.Failure -> throw createResult.error
                 }
             }
         }

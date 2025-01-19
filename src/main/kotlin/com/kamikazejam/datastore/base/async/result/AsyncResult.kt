@@ -19,7 +19,7 @@ sealed interface AsyncResult<T>
 
 sealed interface StoreResult<K, X : Store<X, K>> : AsyncResult<X> {
     data class Success<K, X : Store<X, K>>(val value: X) : StoreResult<K, X>
-    data class Failure<K, X : Store<X, K>>(val exception: AsyncHandlerException) : StoreResult<K, X>
+    data class Failure<K, X : Store<X, K>>(val error: AsyncHandlerException) : StoreResult<K, X>
 
     fun getOrNull(): X? {
         return when (this) {
@@ -31,18 +31,18 @@ sealed interface StoreResult<K, X : Store<X, K>> : AsyncResult<X> {
 
 sealed interface ReadResult<K, X : Store<X, K>> : StoreResult<K, X> {
     data class Success<K, X : Store<X, K>>(val value: X) : ReadResult<K, X>
-    data class Failure<K, X : Store<X, K>>(val exception: AsyncHandlerException) : ReadResult<K, X>
+    data class Failure<K, X : Store<X, K>>(val error: AsyncHandlerException) : ReadResult<K, X>
     class Empty<K, X : Store<X, K>> : ReadResult<K, X>
 }
 
 sealed interface CreateResult<K, X : Store<X, K>> : StoreResult<K, X> {
     data class Success<K, X : Store<X, K>>(val value: X) : CreateResult<K, X>
-    data class Failure<K, X : Store<X, K>>(val exception: AsyncHandlerException) : CreateResult<K, X>
+    data class Failure<K, X : Store<X, K>>(val error: AsyncHandlerException) : CreateResult<K, X>
 }
 
 sealed interface UpdateResult<K, X : Store<X, K>> : StoreResult<K, X> {
     data class Success<K, X : Store<X, K>>(val value: X) : UpdateResult<K, X>
-    data class Failure<K, X : Store<X, K>>(val exception: AsyncHandlerException) : UpdateResult<K, X>
+    data class Failure<K, X : Store<X, K>>(val error: AsyncHandlerException) : UpdateResult<K, X>
 }
 
 
@@ -53,7 +53,7 @@ sealed interface UpdateResult<K, X : Store<X, K>> : StoreResult<K, X> {
 
 sealed interface DeleteResult : AsyncResult<Boolean> {
     data class Success(val value: Boolean) : DeleteResult
-    data class Failure(val exception: AsyncHandlerException) : DeleteResult
+    data class Failure(val error: AsyncHandlerException) : DeleteResult
 
     fun get(def: Boolean = false): Boolean {
         return when (this) {
@@ -70,7 +70,7 @@ sealed interface DeleteResult : AsyncResult<Boolean> {
 // ------------------------------------------------------------ //
 sealed interface BoolResult : AsyncResult<Boolean> {
     data class Success(val value: Boolean) : BoolResult
-    data class Failure(val exception: AsyncHandlerException) : BoolResult
+    data class Failure(val error: AsyncHandlerException) : BoolResult
 
     fun get(def: Boolean = false): Boolean {
         return when (this) {
@@ -82,7 +82,7 @@ sealed interface BoolResult : AsyncResult<Boolean> {
 
 sealed interface ReadIdResult<K> : AsyncResult<K> {
     data class Success<K>(val value: K) : ReadIdResult<K>
-    data class Failure<K>(val exception: AsyncHandlerException) : ReadIdResult<K>
+    data class Failure<K>(val error: AsyncHandlerException) : ReadIdResult<K>
     class Empty<K> : ReadIdResult<K>
 
     fun getOrNull(): K? {
