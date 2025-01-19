@@ -1,5 +1,3 @@
-@file:Suppress("MemberVisibilityCanBePrivate")
-
 package com.kamikazejam.datastore.util
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect
@@ -11,7 +9,6 @@ import com.fasterxml.jackson.databind.introspect.VisibilityChecker
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Store
-import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.OptionalField
@@ -26,7 +23,19 @@ object JacksonUtil {
 
     private var _objectMapper: ObjectMapper? = null
 
-    val objectMapper: ObjectMapper
+    fun loadObjectMapper() {
+        objectMapper
+    }
+
+    fun serializeValue(value: Any): String {
+        return objectMapper.writeValueAsString(value)
+    }
+
+    fun <T> deserializeValue(json: String, clazz: Class<T>): T {
+        return objectMapper.readValue(json, clazz)
+    }
+
+    private val objectMapper: ObjectMapper
         get() {
             _objectMapper?.let { return it }
             val m = ObjectMapper()
@@ -66,13 +75,13 @@ object JacksonUtil {
         return doc
     }
 
-    fun serializeFieldProvider(provider: FieldProvider) : String? {
+    private fun serializeFieldProvider(provider: FieldProvider) : String? {
         val field = provider.fieldWrapper
         val value = field.getNullable()
         return if (value != null) {
             try {
                 // Simply serialize to JSON string
-                objectMapper.writeValueAsString(value)
+                serializeValue(value)
             } catch (e: Exception) {
                 kotlin.runCatching {
                     DataStoreSource.colorLogger.error("[JacksonUtil] Error serializing field '${field.name}': ${e.message}")
@@ -94,7 +103,8 @@ object JacksonUtil {
             entity.readOnly = false
 
             for (provider in entity.allFields) {
-                deserializeFieldProvider(provider, doc)
+                val field = provider.fieldWrapper
+                deserializeFieldWrapper(field, doc)
             }
 
             entity.readOnly = true
@@ -104,11 +114,6 @@ object JacksonUtil {
         }
     }
 
-    fun deserializeFieldProvider(provider: FieldProvider, doc: Document) {
-        val field = provider.fieldWrapper
-        deserializeFieldWrapper(field, doc)
-    }
-
     private fun <V> deserializeFieldWrapper(field: FieldWrapper<V>, doc: Document) {
         val fieldName = field.name
         if (doc.containsKey(fieldName)) {
@@ -116,7 +121,7 @@ object JacksonUtil {
             if (rawValue != null) {
                 try {
                     // Deserialize from JSON string
-                    val value = objectMapper.readValue(rawValue as String, field.getFieldType())
+                    val value = deserializeValue(rawValue as String, field.getFieldType())
                     when (field) {
                         is OptionalField<V> -> field.set(value)
                         is RequiredField<V> -> field.set(value)

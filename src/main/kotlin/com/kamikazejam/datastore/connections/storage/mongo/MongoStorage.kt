@@ -5,8 +5,6 @@ import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.StoreCollection
-import com.kamikazejam.datastore.base.field.OptionalField
-import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.connections.config.MongoConfig
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor
@@ -15,6 +13,8 @@ import com.kamikazejam.datastore.connections.storage.iterator.TransformingIterat
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.kamikazejam.datastore.util.JacksonUtil
 import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
+import com.kamikazejam.datastore.util.JacksonUtil.deserializeValue
+import com.kamikazejam.datastore.util.JacksonUtil.serializeValue
 import com.mongodb.*
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
@@ -33,7 +33,6 @@ import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitTask
 import java.util.function.Consumer
 import java.util.stream.StreamSupport
-import kotlin.collections.HashMap
 
 @Suppress("unused")
 class MongoStorage : StorageService() {
@@ -55,7 +54,7 @@ class MongoStorage : StorageService() {
     override fun start(): Boolean {
         this.debug("Connecting to MongoDB")
         // Load Mapper on start-up
-        JacksonUtil.objectMapper
+        JacksonUtil.loadObjectMapper()
 
         val mongo = this.connectMongo()
         this.running = true
@@ -94,9 +93,10 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     override fun <K, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? {
         try {
-            // Mimic an ID FieldWrapper so we can reproduce the serialized result
-            val field = RequiredField.of(ID_FIELD, collection.keyToString(key), String::class.java)
-            val dbString = JacksonUtil.serializeFieldProvider(field)
+            // Serialize the value using Jackson, since the value in the db is also a serialized string
+            //  and we need to compare the serialized strings in our Filter
+            val dbString = serializeValue(collection.keyToString(key))
+
             // Filter based on this serialized string
             val doc = getMongoCollection(collection).find().filter(Filters.eq(ID_FIELD, dbString)).first() ?: return null
 
@@ -165,9 +165,9 @@ class MongoStorage : StorageService() {
 
     override fun <K, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean {
         try {
-            // Mimic an ID FieldWrapper so we can reproduce the serialized result
-            val field = RequiredField.of(ID_FIELD, collection.keyToString(key), String::class.java)
-            val dbString = JacksonUtil.serializeFieldProvider(field)
+            // Serialize the value using Jackson, since the value in the db is also a serialized string
+            //  and we need to compare the serialized strings in our Filter
+            val dbString = serializeValue(collection.keyToString(key))
             // Filter based on this serialized string
             return getMongoCollection(collection).countDocuments(Filters.eq(ID_FIELD, dbString)) > 0
         } catch (ex: MongoException) {
@@ -185,9 +185,9 @@ class MongoStorage : StorageService() {
 
     override fun <K, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean {
         try {
-            // Mimic an ID FieldWrapper so we can reproduce the serialized result
-            val field = RequiredField.of(ID_FIELD, collection.keyToString(key), String::class.java)
-            val dbString = JacksonUtil.serializeFieldProvider(field)
+            // Serialize the value using Jackson, since the value in the db is also a serialized string
+            //  and we need to compare the serialized strings in our Filter
+            val dbString = serializeValue(collection.keyToString(key))
             // Filter based on this serialized string
             return getMongoCollection(collection).deleteMany(Filters.eq(ID_FIELD, dbString)).deletedCount > 0
         } catch (ex: MongoException) {
@@ -216,16 +216,14 @@ class MongoStorage : StorageService() {
         return Iterable {
             TransformingIterator(docs) { doc: Document ->
                 val dbValue = doc.getString(ID_FIELD)
-                collection.keyFromString(doc.getString(ID_FIELD))
 
-                // Mimic an ID FieldWrapper so we can reproduce the serialized result
-                val field = OptionalField.of(ID_FIELD, null, String::class.java)
-                val fakeDocument = Document()
-                fakeDocument[field.name] = dbValue
-                // Deserialize the dbValue into our field
-                JacksonUtil.deserializeFieldProvider(field, fakeDocument)
+                // Parse the Key from the serialized dbValue
+                val key = dbValue?.let {
+                    deserializeValue(dbValue, collection.getKeyType())
+                }
+
                 // Convert the id field string back into a key
-                collection.keyFromString(field.get() ?: throw IllegalStateException("ID Field is null"))
+                key ?: throw IllegalStateException("ID Field is null")
             }
         }
     }
@@ -350,11 +348,10 @@ class MongoStorage : StorageService() {
         index: IndexedField<X, T>,
         value: T
     ): K? {
-        // Mimic a FieldWrapper so we can reproduce the serialized result
-        val field = RequiredField.of(index.name, value, index.getValueType())
-        val dbString = JacksonUtil.serializeFieldProvider(field)
-        // Fetch an object with the given index value, projecting only the ID and the index field
-        //   (Filter based on this serialized string)
+        // Serialize the value using Jackson, since the value in the db is also a serialized string
+        //  and we need to compare the serialized strings in our Filter
+        val dbString = serializeValue(value as Any)
+
         val query = Filters.eq(index.name, dbString)
         val doc = getMongoCollection(collection).find(query)
             .projection(Projections.include(ID_FIELD, index.name))

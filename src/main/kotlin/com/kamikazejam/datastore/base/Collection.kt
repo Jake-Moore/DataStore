@@ -196,6 +196,11 @@ interface Collection<K, X : Store<X, K>> : Service, DataStoreScope {
     fun keyFromString(key: String): K
 
     /**
+     * Gets the Class type of the key for this Collection.
+     */
+    fun getKeyType(): Class<K>
+
+    /**
      * Add a dependency on another Collection. This Collection will be loaded after the dependency.
      */
     fun addDepend(collection: Collection<*, *>)

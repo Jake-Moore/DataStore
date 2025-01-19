@@ -4,12 +4,12 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
-import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.connections.storage.exception.TransactionRetryLimitExceededException
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.kamikazejam.datastore.util.JacksonUtil
 import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
 import com.kamikazejam.datastore.util.JacksonUtil.VERSION_FIELD
+import com.kamikazejam.datastore.util.JacksonUtil.serializeValue
 import com.mongodb.MongoCommandException
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoCollection
@@ -113,10 +113,8 @@ object MongoTransactionHelper {
 
                 // Generate the dbStrings that we need to search for, by mirroring the serialization logic
                 // of the FieldWrapper that created the strings
-                val idField = RequiredField.of(ID_FIELD, id, String::class.java)
-                val verField = RequiredField.of(VERSION_FIELD, currentVersion, Long::class.java)
-                val idDbString = JacksonUtil.serializeFieldProvider(idField)
-                val verDbString = JacksonUtil.serializeFieldProvider(verField)
+                val idDbString = serializeValue(id)
+                val verDbString = serializeValue(currentVersion)
 
                 val result = mongoColl.replaceOne(
                     session,
