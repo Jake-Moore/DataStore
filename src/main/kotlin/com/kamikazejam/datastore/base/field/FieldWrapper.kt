@@ -23,6 +23,9 @@ sealed interface FieldWrapper<D : StoreData<Any>> : FieldProvider {
 
     override val fieldWrapper: FieldWrapper<*>
         get() = this
+
+    override fun equals(other: Any?): Boolean
+    override fun hashCode(): Int
 }
 
 sealed interface RequiredField<D : StoreData<Any>> : FieldWrapper<D> {

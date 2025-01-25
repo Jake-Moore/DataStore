@@ -1,7 +1,6 @@
 package com.kamikazejam.datastore.base.data
 
 import com.google.common.base.Preconditions
-import com.kamikazejam.datastore.base.data.impl.StoreDataUUID
 import org.bson.Document
 
 /**
@@ -41,7 +40,7 @@ abstract class SimpleStoreData<T : Any>(private var value: T) : StoreData<T>() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is StoreDataUUID) return false
+        if (other !is SimpleStoreData<*>) return false
         return get() == other.get()
     }
 

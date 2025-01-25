@@ -14,4 +14,8 @@ interface FieldProvider {
      * @return The FieldWrapper instance
      */
     val fieldWrapper: FieldWrapper<*>
+
+    override fun equals(other: Any?): Boolean
+
+    override fun hashCode(): Int
 }

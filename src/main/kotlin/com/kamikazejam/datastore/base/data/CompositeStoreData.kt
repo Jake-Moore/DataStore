@@ -14,4 +14,14 @@ abstract class CompositeStoreData<T : Any>: StoreData<T>() {
     final override fun getType(): Companion.Type {
         return Companion.Type.COMPOSITE
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CompositeStoreData<*>) return false
+        return getCustomFields() == other.getCustomFields()
+    }
+
+    override fun hashCode(): Int {
+        return getCustomFields().hashCode()
+    }
 }
