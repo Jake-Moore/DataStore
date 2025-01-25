@@ -25,4 +25,16 @@ sealed class StoreData<T : Any>(protected var parent: Store<*, *>? = null) {
     abstract override fun equals(other: Any?): Boolean
 
     abstract override fun hashCode(): Int
+
+    abstract fun getType(): Type
+
+    companion object {
+        const val TYPE_KEY = "type"
+        const val CONTENT_KEY = "content"
+
+        enum class Type {
+            SIMPLE,
+            COMPOSITE,
+        }
+    }
 }

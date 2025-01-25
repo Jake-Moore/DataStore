@@ -3,22 +3,22 @@ package com.kamikazejam.datastore.base.data.impl
 import com.kamikazejam.datastore.base.data.SimpleStoreData
 import org.bson.Document
 
-class StringData(val string: String) : SimpleStoreData<String>(value = string) {
+class StringData(string: String) : SimpleStoreData<String>(value = string) {
     override fun serializeToBSON(): Any {
-        return string
+        return get()
     }
 
-    override fun deserializeFromBSON(bson: Document, key: String): String {
-        return bson.getString(key)
+    override fun deserializeFromBSON(bson: Document, key: String) {
+        this.set(bson.getString(key))
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is StringData) return false
-        return string == other.string
+        return get() == other.get()
     }
 
     override fun hashCode(): Int {
-        return string.hashCode()
+        return get().hashCode()
     }
 }

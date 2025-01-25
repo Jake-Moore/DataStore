@@ -32,5 +32,9 @@ abstract class SimpleStoreData<T : Any>(private var value: T) : StoreData<T>() {
      *
      * Use [key] to obtain the value from the [bson] document.
      */
-    abstract fun deserializeFromBSON(bson: Document, key: String): T
+    abstract fun deserializeFromBSON(bson: Document, key: String)
+
+    final override fun getType(): Companion.Type {
+        return Companion.Type.SIMPLE
+    }
 }

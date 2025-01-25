@@ -11,6 +11,8 @@ import java.util.*
 sealed interface FieldWrapper<T : Any, D : StoreData<T>> : FieldProvider {
     val name: String
     val isWriteable: Boolean
+    // we need a creator function that can create an instance of D
+    val creator: () -> D
 
     @ApiStatus.Internal
     fun setParent(parent: Store<*, *>)
@@ -32,13 +34,13 @@ sealed interface RequiredField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
 
     companion object {
         @JvmStatic
-        fun <T : Any, D : StoreData<T>> of(name: String, defaultValue: D): RequiredField<T, D> =
-            RequiredFieldImpl(name, defaultValue)
+        fun <T : Any, D : StoreData<T>> of(name: String, defaultValue: D, creator: () -> D = { defaultValue }): RequiredField<T, D> =
+            RequiredFieldImpl(name, defaultValue, creator)
     }
 }
 
 sealed interface OptionalField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
-    val defaultValue: StoreData<T>?
+    val defaultValue: D?
     fun get(): D?
     fun getOrDefault(default: D): D
     fun set(data: D?)
@@ -49,8 +51,8 @@ sealed interface OptionalField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
 
     companion object {
         @JvmStatic
-        fun <T : Any, D : StoreData<T>> of(name: String, defaultValue: D?): OptionalField<T, D> =
-            OptionalFieldImpl(name, defaultValue)
+        fun <T : Any, D : StoreData<T>> of(name: String, defaultValue: D?, creator: () -> D): OptionalField<T, D> =
+            OptionalFieldImpl(name, defaultValue, creator)
     }
 }
 
@@ -58,6 +60,7 @@ sealed interface OptionalField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
 private class RequiredFieldImpl<T : Any, D : StoreData<T>>(
     override val name: String,
     override val defaultValue: D,
+    override val creator: () -> D = { defaultValue }
 ) : RequiredField<T, D> {
     private var data: D = defaultValue
     private var parent: Store<*, *>? = null
@@ -109,6 +112,7 @@ private class RequiredFieldImpl<T : Any, D : StoreData<T>>(
 private class OptionalFieldImpl<T : Any, D : StoreData<T>>(
     override val name: String,
     override val defaultValue: D?,
+    override val creator: () -> D
 ) : OptionalField<T, D> {
     private var data: D? = defaultValue
     private var parent: Store<*, *>? = null

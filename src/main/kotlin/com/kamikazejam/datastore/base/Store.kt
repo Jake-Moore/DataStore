@@ -5,7 +5,6 @@ import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
-import com.kamikazejam.datastore.base.field.FieldWrapperMap
 import com.kamikazejam.datastore.base.field.RequiredField
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.NonBlocking

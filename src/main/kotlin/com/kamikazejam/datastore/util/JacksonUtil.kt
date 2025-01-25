@@ -3,7 +3,6 @@ package com.kamikazejam.datastore.util
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.introspect.VisibilityChecker
@@ -13,10 +12,10 @@ import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.data.CompositeStoreData
 import com.kamikazejam.datastore.base.data.SimpleStoreData
+import com.kamikazejam.datastore.base.data.StoreData
 import com.kamikazejam.datastore.base.field.*
 import com.kamikazejam.datastore.util.jackson.JacksonSpigotModule
 import org.bson.Document
-import java.util.concurrent.ConcurrentHashMap
 
 @Suppress("unused", "DuplicatedCode")
 object JacksonUtil {
@@ -63,6 +62,10 @@ object JacksonUtil {
             return m
         }
 
+
+    // ------------------------------------------------------------ //
+    //                         SERIALIZATION                        //
+    // ------------------------------------------------------------ //
     fun <K, X : Store<X, K>> serializeToDocument(store: X): Document {
         val doc = Document()
         for (provider in store.allFields) {
@@ -82,18 +85,23 @@ object JacksonUtil {
         }
 
         // Case 2 - Data is not null -> serialize the data by what kind of data it is
+        val subDocument = Document()
+        subDocument[StoreData.TYPE_KEY] = data.getType().name
         when (data) {
             is SimpleStoreData<*> -> {
                 // Just use the serialized value (assumes StoreData returns values compatible BSON)
                 // If not, that's the responsibility of the StoreData implementation, and errors will be thrown by MongoDB
-                doc[field.name] = data.serializeToBSON()
+                subDocument[StoreData.CONTENT_KEY] = data.serializeToBSON()
+                doc[field.name] = subDocument
             }
             is CompositeStoreData<*> -> {
                 // We have multiple fields to serialize, so handle each by their own provider
-                val subDocument = Document()
+                val innerDoc = Document()
                 for (subProvider in data.getCustomFields()) {
-                    appendFieldProvider(subDocument, subProvider)
+                    appendFieldProvider(innerDoc, subProvider)
                 }
+
+                subDocument[StoreData.CONTENT_KEY] = innerDoc
                 doc[field.name] = subDocument
             }
         }
@@ -101,37 +109,9 @@ object JacksonUtil {
 
 
 
-
-
-
-    private fun serializeFieldWrapperList(wrapper: FieldWrapperList<*>): String {
-        return serializeValue(wrapper.toList())
-    }
-
-    private fun serializeFieldWrapperSet(wrapper: FieldWrapperSet<*>): String {
-        return serializeValue(wrapper.toSet())
-    }
-
-    private fun serializeFieldWrapperMap(wrapper: FieldWrapperMap<*, *>): String {
-        val map = wrapper.entries.associate { entry ->
-            // Serialize both key and value as proper JSON objects
-            objectMapper.writeValueAsString(entry.key) to objectMapper.writeValueAsString(entry.value)
-        }
-        return objectMapper.writeValueAsString(map)
-    }
-
-    private fun serializeFieldWrapperConcurrentMap(wrapper: FieldWrapperConcurrentMap<*, *>): String {
-        val map = wrapper.entries.associate { entry ->
-            // Serialize both key and value as proper JSON objects
-            objectMapper.writeValueAsString(entry.key) to objectMapper.writeValueAsString(entry.value)
-        }
-        return objectMapper.writeValueAsString(map)
-    }
-
-    private fun serializeFieldWrapperValue(value: Any): String {
-        return serializeValue(value)
-    }
-
+    // ------------------------------------------------------------ //
+    //                        DESERIALIZATION                       //
+    // ------------------------------------------------------------ //
     fun <K, X : Store<X, K>> deserializeFromDocument(storeClass: Class<X>, doc: Document): X {
         Preconditions.checkNotNull(doc, "Document cannot be null")
 
@@ -143,7 +123,7 @@ object JacksonUtil {
 
             for (provider in entity.allFields) {
                 try {
-                    deserializeFieldProvider<Any>(provider, doc)
+                    deserializeIntoFieldProvider<Any, StoreData<Any>>(provider, doc)
                 } catch (e: Exception) {
                     DataStoreSource.colorLogger.error("[JacksonUtil] Error deserializing field '${provider.fieldWrapper.name}': ${e.message}")
                     throw e
@@ -158,128 +138,55 @@ object JacksonUtil {
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun <T : Any, D : StoreData<T>> deserializeIntoFieldProvider(provider: FieldProvider, doc: Document) {
+        val field = provider.fieldWrapper as FieldWrapper<T,D>
+
+        // DEFAULT CASE - Field not found in document -> use default value
+        if (!doc.containsKey(field.name)) {
+            when (field) {
+                is OptionalField<T,D> -> field.set(field.defaultValue)
+                is RequiredField<T,D> -> field.set(field.defaultValue)
+            }
+            return
+        }
+
+        // CASE 1 - We have data, we need to deserialize it
+        val subDoc: Document = doc[field.name] as Document
+        val type = StoreData.Companion.Type.valueOf(subDoc.getString(StoreData.TYPE_KEY))
+
+        val data: D = field.creator.invoke()
+        when (type) {
+            StoreData.Companion.Type.SIMPLE -> {
+                if (data !is SimpleStoreData<*>) throw IllegalStateException("Field '${field.name}' is not a SimpleStoreData")
+
+                // Deserialize the data in the CONTENT_KEY, using the data class itself
+                data.deserializeFromBSON(subDoc, StoreData.CONTENT_KEY)
+            }
+            StoreData.Companion.Type.COMPOSITE -> {
+                if (data !is CompositeStoreData<*>) throw IllegalStateException("Field '${field.name}' is not a CompositeStoreData")
+
+                // Handle Composite Type
+                val innerDoc: Document = subDoc[StoreData.CONTENT_KEY] as Document
+                for (subProvider in data.getCustomFields()) {
+                    deserializeIntoFieldProvider<Any, StoreData<Any>>(subProvider, innerDoc)
+                }
+            }
+        }
+
+        when (field) {
+            is OptionalField<T,D> -> field.set(data)
+            is RequiredField<T,D> -> field.set(data)
+        }
+    }
+
+
+
+    // ------------------------------------------------------------ //
+    //                             UTIL                             //
+    // ------------------------------------------------------------ //
     fun <K, X : Store<X, K>> deepCopy(store: X): X {
         val json = serializeToDocument(store).toJson()
         return deserializeFromDocument(store.javaClass, Document.parse(json))
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <V : Any> deserializeFieldProvider(provider: FieldProvider, doc: Document) {
-        val field = provider.fieldWrapper as FieldWrapper<V>
-        val fieldName = field.name
-
-        // DEFAULT CASE - Field not found in document -> use default value
-        if (!doc.containsKey(fieldName)) {
-            when (field) {
-                is OptionalField<V> -> field.set(field.defaultValue)
-                is RequiredField<V> -> field.set(field.defaultValue)
-            }
-            return
-        }
-
-        // NULL CASE - Use null for optional fields, use default value for required fields
-        val rawString = doc.getString(fieldName)
-        if (rawString == null) {
-            when (field) {
-                is OptionalField<V> -> field.set(null)
-                is RequiredField<V> -> field.set(field.defaultValue)
-            }
-            return
-        }
-
-        // DATA CASE - We must handle this by individual provider types
-        try {
-            when (provider) {
-                is FieldWrapperList<*> -> deserializeFieldWrapperList(provider, rawString)
-                is FieldWrapperMap<*, *> -> deserializeFieldWrapperMap(provider, rawString)
-                is FieldWrapperSet<*> -> deserializeFieldWrapperSet(provider, rawString)
-                is FieldWrapperConcurrentMap<*, *> -> deserializeFieldWrapperConcurrentMap(provider, rawString)
-                is FieldWrapper<*> -> deserializeFieldWrapper(provider, rawString)
-                else -> throw IllegalStateException("Unknown FieldProvider type: ${provider.javaClass.simpleName}")
-            }
-        } catch (e: Exception) {
-            println("Debug - Error deserializing field '${field.name}': ${e.message}")
-            throw e
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun deserializeFieldWrapperList(wrapper: FieldWrapperList<*>, rawString: String) {
-        val list = objectMapper.readValue(rawString, List::class.java) as List<*>
-        val typedList = ArrayList<Any>()
-
-        // Clear existing list and rebuild it with properly deserialized elements
-        wrapper.clear()
-        list.forEach { element ->
-            // We know the elementType, we need to ensure that all elements got loaded as the correct type
-            val deserializedElement = objectMapper.convertValue(element, wrapper.elementType)
-            typedList.add(deserializedElement)
-        }
-        (wrapper.fieldWrapper as RequiredField<Any>).set(typedList)
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun deserializeFieldWrapperSet(wrapper: FieldWrapperSet<*>, rawString: String) {
-        val set = objectMapper.readValue(rawString, Set::class.java) as Set<*>
-        val typedSet = HashSet<Any>()
-
-        // Clear existing set and rebuild it with properly deserialized elements
-        wrapper.clear()
-        set.forEach { element ->
-            val deserializedElement = objectMapper.convertValue(element, wrapper.elementType) ?: throw IllegalStateException("Failed to deserialize element in set")
-            typedSet.add(deserializedElement)
-        }
-        (wrapper.fieldWrapper as RequiredField<Any>).set(typedSet)
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun deserializeFieldWrapperMap(wrapper: FieldWrapperMap<*, *>, rawString: String) {
-        val map = objectMapper.readValue(rawString, Map::class.java) as Map<*, *>
-        val typedMap = HashMap<Any?, Any?>()
-
-        // Clear existing map and rebuild it with properly deserialized elements
-        wrapper.clear()
-        map.forEach { (key, value) ->
-            // Parse the JSON strings into JsonNode to preserve structure
-            val keyNode: JsonNode = objectMapper.readTree(key as String)
-            val valueNode: JsonNode = objectMapper.readTree(value as String)
-            
-            // Convert from JsonNode to the correct types
-            val deserializedKey = objectMapper.treeToValue(keyNode, wrapper.keyType)
-            val deserializedValue = objectMapper.treeToValue(valueNode, wrapper.valueType)
-            typedMap[deserializedKey] = deserializedValue
-        }
-        (wrapper.fieldWrapper as RequiredField<Any>).set(typedMap)
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun deserializeFieldWrapperConcurrentMap(wrapper: FieldWrapperConcurrentMap<*, *>, rawString: String) {
-        val map = objectMapper.readValue(rawString, Map::class.java) as Map<*, *>
-        val typedMap = ConcurrentHashMap<Any?, Any?>()
-
-        // Clear existing map and rebuild it with properly deserialized elements
-        wrapper.clear()
-        map.forEach { (key, value) ->
-            // Parse the JSON strings into JsonNode to preserve structure
-            val keyNode: JsonNode = objectMapper.readTree(key as String)
-            val valueNode: JsonNode = objectMapper.readTree(value as String)
-            
-            // Convert from JsonNode to the correct types
-            val deserializedKey = objectMapper.treeToValue(keyNode, wrapper.keyType)
-            val deserializedValue = objectMapper.treeToValue(valueNode, wrapper.valueType)
-            typedMap[deserializedKey] = deserializedValue
-        }
-        (wrapper.fieldWrapper as RequiredField<Any>).set(typedMap)
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <V : Any> deserializeFieldWrapper(wrapper: FieldWrapper<V>, rawString: String) {
-        // Handle regular fields
-        val field = wrapper.fieldWrapper as FieldWrapper<V>
-        val value = deserializeValue(rawString, field.getDataType())
-        when (field) {
-            is OptionalField<V> -> field.set(value)
-            is RequiredField<V> -> field.set(value)
-        }
     }
 }

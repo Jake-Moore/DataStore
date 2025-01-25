@@ -5,7 +5,7 @@ import com.kamikazejam.datastore.base.Store
 /**
  * Represents any object that can provide a [FieldWrapper].
  *
- * This is used to allow both plain [FieldWrapper] classes and wrapper classes (like [FieldWrapperMap])
+ * This is used to allow all implementations like [OptionalField], [RequiredField], etc.
  * to be returned in [Store.getCustomFields]
  */
 interface FieldProvider {
