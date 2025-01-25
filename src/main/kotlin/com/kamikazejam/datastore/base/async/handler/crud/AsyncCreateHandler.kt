@@ -4,21 +4,23 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.async.exception.AsyncHandlerException
 import com.kamikazejam.datastore.base.async.handler.AsyncHandler
-import com.kamikazejam.datastore.base.async.result.CreateResult
+import com.kamikazejam.datastore.base.async.result.DefiniteResult
+import com.kamikazejam.datastore.base.async.result.Failure
+import com.kamikazejam.datastore.base.async.result.Success
 
 @Suppress("unused")
 class AsyncCreateHandler<K, X : Store<X, K>>(
     collection: Collection<*, *>,
     block: suspend () -> X?
-) : AsyncHandler<X, CreateResult<K, X>>(collection, block) {
+) : AsyncHandler<X, DefiniteResult<X>>(collection, block) {
 
-    override fun wrapResult(result: Result<X?>): CreateResult<K, X> = result.fold(
+    override fun wrapResult(result: Result<X?>): DefiniteResult<X> = result.fold(
         onSuccess = { store -> 
-            if (store != null) CreateResult.Success(store)
-            else CreateResult.Failure(AsyncHandlerException("Create operation failed",
+            if (store != null) Success(store)
+            else Failure(AsyncHandlerException("Create operation failed",
                 IllegalStateException("Create operation returned null")
             ))
         },
-        onFailure = { ex -> CreateResult.Failure(AsyncHandlerException("Create operation failed", ex)) }
+        onFailure = { ex -> Failure(AsyncHandlerException("Create operation failed", ex)) }
     )
 }

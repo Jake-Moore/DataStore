@@ -1,7 +1,7 @@
 package com.kamikazejam.datastore.base.async.handler
 
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.base.async.result.AsyncResult
+import com.kamikazejam.datastore.base.async.result.BaseResult
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
  * both async and sync completions in the Bukkit/Spigot environment.
 */
 @Suppress("unused")
-abstract class AsyncHandler<T, R : AsyncResult<T>>(
+abstract class AsyncHandler<T, R : BaseResult<T>>(
     protected val collection: Collection<*, *>,
     protected val block: suspend () -> T?
 ) : DataStoreScope {

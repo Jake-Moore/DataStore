@@ -7,8 +7,9 @@ import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
-import com.kamikazejam.datastore.base.async.result.CreateResult
-import com.kamikazejam.datastore.base.async.result.ReadResult
+import com.kamikazejam.datastore.base.async.result.Empty
+import com.kamikazejam.datastore.base.async.result.Failure
+import com.kamikazejam.datastore.base.async.result.Success
 import org.jetbrains.annotations.NonBlocking
 import java.util.function.Consumer
 
@@ -22,12 +23,12 @@ import java.util.function.Consumer
 fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Consumer<X> = Consumer {}): AsyncCreateHandler<K, X> {
     return AsyncCreateHandler(this) {
         when (val readResult = read(key).await()) {
-            is ReadResult.Success -> return@AsyncCreateHandler readResult.value
-            is ReadResult.Failure -> throw readResult.error
-            is ReadResult.Empty -> {
+            is Success -> return@AsyncCreateHandler readResult.value
+            is Failure -> throw readResult.error
+            is Empty -> {
                 when (val createResult = create(key, initializer).await()) {
-                    is CreateResult.Success -> return@AsyncCreateHandler createResult.value
-                    is CreateResult.Failure -> throw createResult.error
+                    is Success -> return@AsyncCreateHandler createResult.value
+                    is Failure -> throw createResult.error
                 }
             }
         }

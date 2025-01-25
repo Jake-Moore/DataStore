@@ -3,18 +3,20 @@ package com.kamikazejam.datastore.base.async.handler.impl
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.exception.AsyncHandlerException
 import com.kamikazejam.datastore.base.async.handler.AsyncHandler
-import com.kamikazejam.datastore.base.async.result.BoolResult
+import com.kamikazejam.datastore.base.async.result.DefiniteResult
+import com.kamikazejam.datastore.base.async.result.Failure
+import com.kamikazejam.datastore.base.async.result.Success
 
 @Suppress("unused")
 class AsyncHasKeyHandler(
     collection: Collection<*, *>,
     block: suspend () -> Boolean
-) : AsyncHandler<Boolean, BoolResult>(collection, block) {
+) : AsyncHandler<Boolean, DefiniteResult<Boolean>>(collection, block) {
 
-    override fun wrapResult(result: Result<Boolean?>): BoolResult = result.fold(
+    override fun wrapResult(result: Result<Boolean?>): DefiniteResult<Boolean> = result.fold(
         onSuccess = { b ->
-            return BoolResult.Success(b ?: false)
+            return Success(b ?: false)
         },
-        onFailure = { ex -> BoolResult.Failure(AsyncHandlerException("hasKey operation failed", ex)) }
+        onFailure = { ex -> Failure(AsyncHandlerException("hasKey operation failed", ex)) }
     )
 }

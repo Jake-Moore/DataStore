@@ -4,21 +4,23 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.async.exception.AsyncHandlerException
 import com.kamikazejam.datastore.base.async.handler.AsyncHandler
-import com.kamikazejam.datastore.base.async.result.UpdateResult
+import com.kamikazejam.datastore.base.async.result.DefiniteResult
+import com.kamikazejam.datastore.base.async.result.Failure
+import com.kamikazejam.datastore.base.async.result.Success
 
 @Suppress("unused")
 class AsyncUpdateHandler<K, X : Store<X, K>>(
     collection: Collection<*, *>,
     block: suspend () -> X?
-) : AsyncHandler<X, UpdateResult<K, X>>(collection, block) {
+) : AsyncHandler<X, DefiniteResult<X>>(collection, block) {
 
-    override fun wrapResult(result: Result<X?>): UpdateResult<K, X> = result.fold(
+    override fun wrapResult(result: Result<X?>): DefiniteResult<X> = result.fold(
         onSuccess = { store -> 
-            if (store != null) UpdateResult.Success(store)
-            else UpdateResult.Failure(AsyncHandlerException("Update operation failed",
+            if (store != null) Success(store)
+            else Failure(AsyncHandlerException("Update operation failed",
                 IllegalStateException("Update operation returned null")
             ))
         },
-        onFailure = { ex -> UpdateResult.Failure(AsyncHandlerException("Update operation failed", ex)) }
+        onFailure = { ex -> Failure(AsyncHandlerException("Update operation failed", ex)) }
     )
 }

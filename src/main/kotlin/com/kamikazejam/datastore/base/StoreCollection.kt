@@ -10,7 +10,9 @@ import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncHasKeyHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
-import com.kamikazejam.datastore.base.async.result.ReadResult
+import com.kamikazejam.datastore.base.async.result.Empty
+import com.kamikazejam.datastore.base.async.result.Failure
+import com.kamikazejam.datastore.base.async.result.Success
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.OptionalField
@@ -130,7 +132,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
         return AsyncUpdateHandler(this) {
             when (val readResult = read(key).await()) {
-                is ReadResult.Success -> {
+                is Success -> {
                     val originalEntity = readResult.value
                     check(this.databaseStore.updateSync(originalEntity, updateFunction)) {
                         "[StoreCollection#update] Failed to update store with key: ${this.keyToString(key)}"
@@ -138,8 +140,8 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
                     originalEntity
                 }
-                is ReadResult.Failure -> throw readResult.error
-                is ReadResult.Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
+                is Failure -> throw readResult.error
+                is Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
             }
         }
     }
@@ -415,7 +417,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
 
             // 3. -> Obtain the Profile by its ID
             when (val readResult = this.read(id).await()) {
-                is ReadResult.Success -> {
+                is Success -> {
                     if (!field.equals(value, field.getValue(readResult.value))) {
                         // This can happen if:
                         //    The local copy had its field changed
@@ -425,8 +427,8 @@ abstract class StoreCollection<K, X : Store<X, K>>(
                     }
                     return@AsyncReadHandler readResult.value
                 }
-                is ReadResult.Failure -> throw readResult.error
-                is ReadResult.Empty -> return@AsyncReadHandler null
+                is Failure -> throw readResult.error
+                is Empty -> return@AsyncReadHandler null
             }
         }
     }
