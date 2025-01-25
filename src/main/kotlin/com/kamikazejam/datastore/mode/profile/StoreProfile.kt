@@ -28,7 +28,7 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // The id of this object (a player uuid)
     @Id
     override val idField: OptionalField<UUID> = OptionalField.of(ID_FIELD, null, UUID::class.java)
-    override val versionField: RequiredField<Long> = RequiredField.of(VERSION_FIELD, 0L, Long::class.java)
+    override val versionField: RequiredField<Long> = RequiredField.of(VERSION_FIELD, 0L)
     val usernameField: OptionalField<String> = OptionalField.of("username", null, String::class.java)
 
     // ----------------------------------------------------- //

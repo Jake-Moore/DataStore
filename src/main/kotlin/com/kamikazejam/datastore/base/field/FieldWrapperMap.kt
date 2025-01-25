@@ -21,8 +21,7 @@ private class FieldWrapperMapImpl<K, V>(
 ) : FieldWrapperMap<K, V> {
     private var wrapper = RequiredField.of(
         name,
-        defaultValue.let { HashMap(it) },
-        HashMap::class.java as Class<HashMap<K, V>>
+        defaultValue.let { HashMap(it) }
     )
 
     override val fieldWrapper: FieldWrapper<*>

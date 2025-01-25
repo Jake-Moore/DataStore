@@ -19,8 +19,7 @@ private class FieldWrapperSetImpl<E>(
 ) : FieldWrapperSet<E> {
     private var wrapper = RequiredField.of(
         name,
-        defaultValue.let { HashSet(it) },
-        HashSet::class.java as Class<HashSet<E>>
+        defaultValue.let { HashSet(it) }
     )
 
     override val fieldWrapper: FieldWrapper<*>

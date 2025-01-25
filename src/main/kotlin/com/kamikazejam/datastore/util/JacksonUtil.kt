@@ -155,7 +155,7 @@ object JacksonUtil {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun <V> deserializeFieldProvider(provider: FieldProvider, doc: Document) {
+    private fun <V : Any> deserializeFieldProvider(provider: FieldProvider, doc: Document) {
         val field = provider.fieldWrapper as FieldWrapper<V>
         val fieldName = field.name
 
@@ -264,10 +264,10 @@ object JacksonUtil {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun <V> deserializeFieldWrapper(wrapper: FieldWrapper<V>, rawString: String) {
+    private fun <V : Any> deserializeFieldWrapper(wrapper: FieldWrapper<V>, rawString: String) {
         // Handle regular fields
         val field = wrapper.fieldWrapper as FieldWrapper<V>
-        val value = deserializeValue(rawString, field.getFieldType())
+        val value = deserializeValue(rawString, field.getDataType())
         when (field) {
             is OptionalField<V> -> field.set(value)
             is RequiredField<V> -> field.set(value)

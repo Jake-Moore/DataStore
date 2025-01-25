@@ -18,8 +18,7 @@ private class FieldWrapperListImpl<E>(
 ) : FieldWrapperList<E> {
     private var wrapper = RequiredField.of(
         name,
-        ArrayList(defaultValue),
-        ArrayList::class.java as Class<ArrayList<E>>
+        ArrayList(defaultValue)
     )
 
     override val fieldWrapper: FieldWrapper<*>

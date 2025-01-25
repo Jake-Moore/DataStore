@@ -24,8 +24,7 @@ private class FieldWrapperConcurrentMapImpl<K : Any, V : Any>(
 ) : FieldWrapperConcurrentMap<K, V> {
     private var wrapper = RequiredField.of(
         name,
-        ConcurrentHashMap(defaultValue),
-        ConcurrentHashMap::class.java as Class<ConcurrentHashMap<K, V>>
+        ConcurrentHashMap(defaultValue)
     )
 
     override val fieldWrapper: FieldWrapper<*>

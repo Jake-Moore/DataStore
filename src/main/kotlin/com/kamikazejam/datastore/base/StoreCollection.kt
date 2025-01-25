@@ -350,7 +350,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
             }else {
                 // For some reason our update didn't have a value for this field
                 // can't do much, just leave the value as is
-                getLoggerService().warn("Update store didn't have a value for field: ${storeProvider.fieldWrapper.name}, class: ${storeProvider.fieldWrapper.getFieldType()}")
+                getLoggerService().warn("Update store didn't have a value for field: ${storeProvider.fieldWrapper.name}, class: ${storeProvider.fieldWrapper.getDataType()}")
             }
         }
 
