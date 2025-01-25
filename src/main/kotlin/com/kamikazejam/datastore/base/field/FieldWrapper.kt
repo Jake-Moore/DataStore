@@ -13,6 +13,7 @@ sealed interface FieldWrapper<D : StoreData<Any>> : FieldProvider {
     val isWriteable: Boolean
     // we need a creator function that can create an instance of D
     val creator: () -> D
+    var parent: Store<*, *>?
 
     @ApiStatus.Internal
     fun setParent(parent: Store<*, *>)
@@ -64,7 +65,7 @@ private class RequiredFieldImpl<D : StoreData<Any>>(
     override val creator: () -> D = { defaultValue }
 ) : RequiredField<D> {
     private var data: D = defaultValue
-    private var parent: Store<*, *>? = null
+    override var parent: Store<*, *>? = null
 
     override fun getData(): D {
         Preconditions.checkState(parent != null, "[RequiredField#get] Field not registered with a parent document")
@@ -115,7 +116,7 @@ private class OptionalFieldImpl<D : StoreData<Any>>(
     override val creator: () -> D
 ) : OptionalField<D> {
     private var data: D? = defaultValue
-    private var parent: Store<*, *>? = null
+    override var parent: Store<*, *>? = null
 
     override fun getData(): D? {
         val d = this.data

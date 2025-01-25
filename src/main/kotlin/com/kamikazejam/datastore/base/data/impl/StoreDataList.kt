@@ -44,9 +44,8 @@ class StoreDataList<T : StoreData<*>>(
         
         // Read each element by its index
         for (i in 0 until size) {
-            val data = JacksonUtil.deserializeIntoStoreData(i.toString(), bson, elementCreator)
+            val data = JacksonUtil.deserializeIntoStoreData(i.toString(), bson, parent, elementCreator)
                 ?: throw IllegalStateException("Failed to deserialize element at index $i")
-            data.setParent(parent)
             internalList.add(data)
         }
     }

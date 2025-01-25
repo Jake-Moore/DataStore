@@ -147,7 +147,7 @@ object JacksonUtil {
     @Suppress("UNCHECKED_CAST")
     fun <D : StoreData<Any>> deserializeIntoFieldProvider(provider: FieldProvider, doc: Document) {
         val field = provider.fieldWrapper as FieldWrapper<D>
-        val data = deserializeIntoStoreData(field.name, doc, field.creator)
+        val data = deserializeIntoStoreData(field.name, doc, field.parent, field.creator)
         if (data == null) {
             // CASE 1 - Field not found in document -> use default value
             when (field) {
@@ -163,7 +163,7 @@ object JacksonUtil {
         }
     }
 
-    fun <D : StoreData<Any>> deserializeIntoStoreData(key: String, doc: Document, creator: () -> D): D? {
+    fun <D : StoreData<Any>> deserializeIntoStoreData(key: String, doc: Document, parent: Store<*,*>?, creator: () -> D): D? {
         if (!doc.containsKey(key)) {
             return null
         }
@@ -173,6 +173,7 @@ object JacksonUtil {
         val type = StoreData.Companion.Type.valueOf(subDoc.getString(StoreData.TYPE_KEY))
 
         val data = creator.invoke()
+        data.setParent(parent)
         when (type) {
             StoreData.Companion.Type.SIMPLE -> {
                 if (data !is SimpleStoreData<*>) throw IllegalStateException("Field '${key}' is not a SimpleStoreData")
