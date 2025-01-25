@@ -6,7 +6,7 @@ import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
-import com.kamikazejam.datastore.base.data.Wrapper
+import com.kamikazejam.datastore.base.data.impl.StoreDataUUID
 import com.kamikazejam.datastore.base.extensions.read
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
@@ -82,7 +82,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
                 store.readOnly = false
 
                 // Set the id first (allowing the initializer to change it if necessary)
-                store.idField.setData(Wrapper(key))
+                store.idField.setData(StoreDataUUID(key))
                 // Initialize the store
                 initializer.accept(store)
                 // Enforce Version 0 for creation

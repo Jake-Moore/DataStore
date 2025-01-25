@@ -5,8 +5,9 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
-import com.kamikazejam.datastore.base.data.Wrapper
 import com.kamikazejam.datastore.base.data.impl.StoreDataUUID
+import com.kamikazejam.datastore.base.data.impl.bson.StoreDataLong
+import com.kamikazejam.datastore.base.data.impl.bson.StoreDataString
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.OptionalField
 import com.kamikazejam.datastore.base.field.RequiredField
@@ -29,9 +30,9 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // ----------------------------------------------------- //
     // The id of this object (a player uuid)
     @Id
-    override val idField: OptionalField<StoreDataUUID> = OptionalField.of(ID_FIELD, null) { Wrapper(UUID.randomUUID()) }
-    override val versionField: RequiredField<StoreDataLong> = RequiredField.of(VERSION_FIELD, Wrapper(0L))
-    val usernameField: OptionalField<StoreDataString> = OptionalField.of("username", null) { Wrapper("") }
+    override val idField: OptionalField<StoreDataUUID> = OptionalField.of(ID_FIELD, null) { StoreDataUUID(UUID.randomUUID()) }
+    override val versionField: RequiredField<StoreDataLong> = RequiredField.of(VERSION_FIELD, StoreDataLong(0L))
+    val usernameField: OptionalField<StoreDataString> = OptionalField.of("username", null) { StoreDataString("") }
 
     // ----------------------------------------------------- //
     //                      Transients                       //
@@ -185,7 +186,7 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
             // Try to get the name from our IdUtil, and update the object if possible
             val oPlayer: OfflinePlayer? = Bukkit.getOfflinePlayer(this.uniqueId)
             if (oPlayer?.name != null) {
-                getCollection().update(this.id) { profile: T -> profile.usernameField.setData(Wrapper(oPlayer.name)) }
+                getCollection().update(this.id) { profile: T -> profile.usernameField.setData(StoreDataString(oPlayer.name)) }
                 return oPlayer.name
             }
         }
