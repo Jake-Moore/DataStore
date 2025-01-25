@@ -4,7 +4,6 @@ import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import com.kamikazejam.datastore.base.data.SimpleStoreData
-import com.kamikazejam.datastore.base.data.impl.StoreDataLong
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.field.OptionalField

@@ -7,8 +7,6 @@ import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.data.Wrapper
-import com.kamikazejam.datastore.base.data.impl.StoreDataLong
-import com.kamikazejam.datastore.base.data.impl.StoreDataString
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD

@@ -1,7 +1,5 @@
 package com.kamikazejam.datastore.base.data
 
-import com.kamikazejam.datastore.base.data.impl.StoreDataLong
-import com.kamikazejam.datastore.base.data.impl.StoreDataString
 import com.kamikazejam.datastore.base.data.impl.StoreDataUUID
 import java.util.*
 

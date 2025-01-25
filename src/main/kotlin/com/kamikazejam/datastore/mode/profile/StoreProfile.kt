@@ -6,8 +6,6 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.data.Wrapper
-import com.kamikazejam.datastore.base.data.impl.StoreDataLong
-import com.kamikazejam.datastore.base.data.impl.StoreDataString
 import com.kamikazejam.datastore.base.data.impl.StoreDataUUID
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.OptionalField
