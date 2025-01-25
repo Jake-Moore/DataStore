@@ -72,7 +72,7 @@ private class RequiredFieldImpl<D : StoreData<Any>>(
     @ApiStatus.Internal
     override fun setParent(parent: Store<*, *>) {
         this.parent = parent
-        this.data.parent = parent
+        this.data.setParent(parent)
     }
 
     override fun setData(data: D) {
@@ -82,7 +82,7 @@ private class RequiredFieldImpl<D : StoreData<Any>>(
             "Data $data (${data.let { it::class.java }}) is not an instance of the field type (${defaultValue::class.java})"
         )
         this.data = data
-        this.data.parent = parent
+        this.data.setParent(parent)
     }
 
     override val isWriteable: Boolean
@@ -124,7 +124,7 @@ private class OptionalFieldImpl<D : StoreData<Any>>(
     @ApiStatus.Internal
     override fun setParent(parent: Store<*, *>) {
         this.parent = parent
-        this.data?.parent = parent
+        this.data?.setParent(parent)
     }
 
     override fun getDataOrDefault(default: D): D {
@@ -134,7 +134,7 @@ private class OptionalFieldImpl<D : StoreData<Any>>(
     override fun setData(data: D?) {
         Preconditions.checkState(isWriteable, "Cannot modify field '$name' in read-only mode")
         this.data = data
-        this.data?.parent = parent
+        this.data?.setParent(parent)
     }
 
     override val isWriteable: Boolean
