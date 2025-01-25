@@ -13,7 +13,10 @@ import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.data.CompositeStoreData
 import com.kamikazejam.datastore.base.data.SimpleStoreData
 import com.kamikazejam.datastore.base.data.StoreData
-import com.kamikazejam.datastore.base.field.*
+import com.kamikazejam.datastore.base.field.FieldProvider
+import com.kamikazejam.datastore.base.field.FieldWrapper
+import com.kamikazejam.datastore.base.field.OptionalField
+import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.util.jackson.JacksonSpigotModule
 import org.bson.Document
 
@@ -66,7 +69,7 @@ object JacksonUtil {
     // ------------------------------------------------------------ //
     //                         SERIALIZATION                        //
     // ------------------------------------------------------------ //
-    fun <K, X : Store<X, K>> serializeToDocument(store: X): Document {
+    fun <K : Any, X : Store<X, K>> serializeToDocument(store: X): Document {
         val doc = Document()
         for (provider in store.allFields) {
             appendFieldProvider(doc, provider)
@@ -74,11 +77,11 @@ object JacksonUtil {
         return doc
     }
 
-    private fun appendFieldProvider(doc: Document, provider: FieldProvider) {
+    fun appendFieldProvider(doc: Document, provider: FieldProvider) {
         val field = provider.fieldWrapper
 
         // Case 1 - Data is null -> just store null in the json
-        val data = field.getNullable()
+        val data = field.getData()
         if (data == null) {
             doc[field.name] = null
             return
@@ -112,7 +115,7 @@ object JacksonUtil {
     // ------------------------------------------------------------ //
     //                        DESERIALIZATION                       //
     // ------------------------------------------------------------ //
-    fun <K, X : Store<X, K>> deserializeFromDocument(storeClass: Class<X>, doc: Document): X {
+    fun <K : Any, X : Store<X, K>> deserializeFromDocument(storeClass: Class<X>, doc: Document): X {
         Preconditions.checkNotNull(doc, "Document cannot be null")
 
         try {
@@ -139,14 +142,14 @@ object JacksonUtil {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun <T : Any, D : StoreData<T>> deserializeIntoFieldProvider(provider: FieldProvider, doc: Document) {
+    fun <T : Any, D : StoreData<T>> deserializeIntoFieldProvider(provider: FieldProvider, doc: Document) {
         val field = provider.fieldWrapper as FieldWrapper<T,D>
 
         // DEFAULT CASE - Field not found in document -> use default value
         if (!doc.containsKey(field.name)) {
             when (field) {
-                is OptionalField<T,D> -> field.set(field.defaultValue)
-                is RequiredField<T,D> -> field.set(field.defaultValue)
+                is OptionalField<T,D> -> field.setData(field.defaultValue)
+                is RequiredField<T,D> -> field.setData(field.defaultValue)
             }
             return
         }
@@ -175,8 +178,8 @@ object JacksonUtil {
         }
 
         when (field) {
-            is OptionalField<T,D> -> field.set(data)
-            is RequiredField<T,D> -> field.set(data)
+            is OptionalField<T,D> -> field.setData(data)
+            is RequiredField<T,D> -> field.setData(data)
         }
     }
 
@@ -185,7 +188,7 @@ object JacksonUtil {
     // ------------------------------------------------------------ //
     //                             UTIL                             //
     // ------------------------------------------------------------ //
-    fun <K, X : Store<X, K>> deepCopy(store: X): X {
+    fun <K : Any, X : Store<X, K>> deepCopy(store: X): X {
         val json = serializeToDocument(store).toJson()
         return deserializeFromDocument(store.javaClass, Document.parse(json))
     }

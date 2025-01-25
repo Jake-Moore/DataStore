@@ -10,7 +10,7 @@ import com.kamikazejam.datastore.base.async.result.OptionalResult
 import com.kamikazejam.datastore.base.async.result.Success
 
 @Suppress("unused")
-class AsyncReadHandler<K, X : Store<X, K>>(
+class AsyncReadHandler<K : Any, X : Store<X, K>>(
     collection: Collection<*, *>,
     block: suspend () -> X?
 ) : AsyncHandler<X, OptionalResult<X>>(collection, block) {

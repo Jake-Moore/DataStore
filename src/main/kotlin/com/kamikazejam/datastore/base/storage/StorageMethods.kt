@@ -9,7 +9,7 @@ import org.jetbrains.annotations.ApiStatus
  * Methods that all storage layers must implement.
  */
 @Suppress("unused")
-interface StorageMethods<K, X : Store<X, K>> {
+interface StorageMethods<K : Any, X : Store<X, K>> {
     /**
      * Retrieve a Store from this database.
      */

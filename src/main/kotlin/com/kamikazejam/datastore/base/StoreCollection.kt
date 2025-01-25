@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreAPI
 import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
@@ -13,32 +12,32 @@ import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
 import com.kamikazejam.datastore.base.async.result.Empty
 import com.kamikazejam.datastore.base.async.result.Failure
 import com.kamikazejam.datastore.base.async.result.Success
+import com.kamikazejam.datastore.base.data.StoreData
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.field.FieldWrapper
-import com.kamikazejam.datastore.base.field.OptionalField
-import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
 import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
-import com.mongodb.*
-import kotlinx.coroutines.flow.*
+import com.kamikazejam.datastore.util.JacksonUtil
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
+import org.bson.Document
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.IllegalPluginAccessException
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
-import java.util.*
 import java.util.function.Consumer
 
 /**
  * The abstract backbone of all Store Collection systems.
  * All Caching modes (profile, object, simple) extend this class.
  */
-abstract class StoreCollection<K, X : Store<X, K>>(
+abstract class StoreCollection<K : Any, X : Store<X, K>>(
     override var instantiator: StoreInstantiator<K, X>,
     override val name: String,
     protected val keyClass: Class<K>,
@@ -79,41 +78,6 @@ abstract class StoreCollection<K, X : Store<X, K>>(
                     cache(store)
                 }
                 return@AsyncReadHandler store
-            }
-        }
-    }
-
-    @Throws(DuplicateKeyException::class)
-    override fun create(key: K, initializer: Consumer<X>): AsyncCreateHandler<K, X> {
-        Preconditions.checkNotNull(initializer, "Initializer cannot be null")
-
-        return AsyncCreateHandler(this) {
-            try {
-                // Create a new instance in modifiable state
-                val store: X = instantiator.instantiate()
-                store.initialize()
-                store.readOnly = false
-
-                // Set the id first (allowing the initializer to change it if necessary)
-                store.idField.setNotNull(key)
-                // Initialize the store
-                initializer.accept(store)
-                // Enforce Version 0 for creation
-                store.versionField.set(0L)
-
-                store.readOnly = true
-
-                // Save the store to our database implementation & cache
-                // DO DATABASE SAVE FIRST SO ANY EXCEPTIONS ARE THROWN PRIOR TO MODIFYING LOCAL CACHE
-                this.databaseStore.save(store)
-                this.cache(store)
-                return@AsyncCreateHandler store
-            } catch (d: DuplicateKeyException) {
-                getLoggerService().severe("Failed to create Store: Duplicate Key...")
-                throw d
-            } catch (e: Exception) {
-                // promote upwards, it will catch the errors
-                throw e
             }
         }
     }
@@ -350,7 +314,7 @@ abstract class StoreCollection<K, X : Store<X, K>>(
             }else {
                 // For some reason our update didn't have a value for this field
                 // can't do much, just leave the value as is
-                getLoggerService().warn("Update store didn't have a value for field: ${storeProvider.fieldWrapper.name}, class: ${storeProvider.fieldWrapper.getDataType()}")
+                getLoggerService().warn("Update store didn't have a value for field: ${storeProvider.fieldWrapper.name}, class: ${storeProvider.fieldWrapper.javaClass}")
             }
         }
 
@@ -360,20 +324,12 @@ abstract class StoreCollection<K, X : Store<X, K>>(
     /**
      * Helper method to safely copy values between field wrappers of the same type
      */
-    @Suppress("UNCHECKED_CAST")
-    private fun copyFieldValue(target: FieldWrapper<*>, source: FieldWrapper<*>) {
-        val targetAny = (target as FieldWrapper<Any>)
-        val sourceAny = (source as FieldWrapper<Any>)
-        if (targetAny is OptionalField<Any> && sourceAny is OptionalField<Any>) {
-            targetAny.set(sourceAny.get())
-        } else if (targetAny is RequiredField<Any> && sourceAny is RequiredField<Any>) {
-            targetAny.set(sourceAny.get())
-        } else {
-            throw IllegalArgumentException(
-                "FieldWrappers must be of the same type to copy values, found: "
-                        + "${targetAny::class.java.simpleName} and ${sourceAny::class.java.simpleName}"
-            )
-        }
+    private fun copyFieldValue(target: FieldWrapper<*,*>, source: FieldWrapper<*,*>) {
+        // use our serialization helpers to do this
+        // By serializing into a document, then back out of it
+        val doc = Document()
+        JacksonUtil.appendFieldProvider(doc, source)
+        JacksonUtil.deserializeIntoFieldProvider<Any, StoreData<Any>>(target, doc)
     }
 
     // ------------------------------------------------- //

@@ -39,7 +39,7 @@ object MongoTransactionHelper {
      * @param updateFunction The function to apply updates
      * @return Whether the update was successful
      */
-    fun <K, X : Store<X, K>> executeUpdate(
+    fun <K : Any, X : Store<X, K>> executeUpdate(
         mongoClient: MongoClient,
         mongoColl: MongoCollection<Document>,
         collection: Collection<K, X>,
@@ -72,7 +72,7 @@ object MongoTransactionHelper {
 
     // If no error is thrown, this method succeeded
     @Throws(TransactionRetryLimitExceededException::class)
-    private fun <K, X : Store<X, K>> executeUpdateInternal(
+    private fun <K : Any, X : Store<X, K>> executeUpdateInternal(
         mongoClient: MongoClient,
         mongoColl: MongoCollection<Document>,
         collection: Collection<K, X>,
@@ -101,12 +101,12 @@ object MongoTransactionHelper {
                 workingCopy.readOnly = false
 
                 // Fetch Version prior to updates
-                val currentVersion = workingCopy.versionField.get()
+                val currentVersion = workingCopy.versionField.getData().get()
 
                 // Apply updates to the copy
                 updateFunction.accept(workingCopy)
                 // Increment version (Optimistic Versioning)
-                workingCopy.versionField.set(currentVersion + 1)
+                workingCopy.versionField.getData().set(currentVersion + 1)
 
                 val id = collection.keyToString(workingCopy.id)
                 val doc = JacksonUtil.serializeToDocument(workingCopy)

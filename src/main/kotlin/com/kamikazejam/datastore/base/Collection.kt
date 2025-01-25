@@ -31,7 +31,7 @@ import java.util.function.Consumer
  * [ObjectCollection] and [ProfileCollection]
  */
 @Suppress("unused")
-interface Collection<K, X : Store<X, K>> : Service, DataStoreScope {
+interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
 
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //

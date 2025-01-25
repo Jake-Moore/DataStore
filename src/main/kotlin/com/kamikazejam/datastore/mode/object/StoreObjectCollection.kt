@@ -70,6 +70,41 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     //                          CRUD                         //
     // ----------------------------------------------------- //
     @Throws(DuplicateKeyException::class)
+    override fun create(key: String, initializer: Consumer<X>): AsyncCreateHandler<String, X> {
+        Preconditions.checkNotNull(initializer, "Initializer cannot be null")
+
+        return AsyncCreateHandler(this) {
+            try {
+                // Create a new instance in modifiable state
+                val store: X = instantiator.instantiate()
+                store.initialize()
+                store.readOnly = false
+
+                // Set the id first (allowing the initializer to change it if necessary)
+                store.idField.getData().set(key)
+                // Initialize the store
+                initializer.accept(store)
+                // Enforce Version 0 for creation
+                store.versionField.getData().set(0L)
+
+                store.readOnly = true
+
+                // Save the store to our database implementation & cache
+                // DO DATABASE SAVE FIRST SO ANY EXCEPTIONS ARE THROWN PRIOR TO MODIFYING LOCAL CACHE
+                this.databaseStore.save(store)
+                this.cache(store)
+                return@AsyncCreateHandler store
+            } catch (d: DuplicateKeyException) {
+                getLoggerService().severe("Failed to create Store: Duplicate Key...")
+                throw d
+            } catch (e: Exception) {
+                // promote upwards, it will catch the errors
+                throw e
+            }
+        }
+    }
+
+    @Throws(DuplicateKeyException::class)
     override fun create(initializer: Consumer<X>): AsyncCreateHandler<String, X> {
         return this.create(UUID.randomUUID().toString(), initializer)
     }
@@ -102,8 +137,8 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
             // If we want to cache, and have a local store that's newer -> update the local store
             // Note, if not caching then we won't update any local stores and won't cache the db store
-            val dbVer = dbStore.versionField.get()
-            val localVer = local?.versionField?.get() ?: 0
+            val dbVer = dbStore.versionField.getData().get()
+            val localVer = local?.versionField?.getData()?.get() ?: 0
             if (cacheStores && local != null && dbVer >= localVer) {
                 this@StoreObjectCollection.updateStoreFromNewer(local, dbStore)
                 this@StoreObjectCollection.cache(dbStore)

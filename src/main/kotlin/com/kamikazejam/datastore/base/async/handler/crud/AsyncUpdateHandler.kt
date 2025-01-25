@@ -9,7 +9,7 @@ import com.kamikazejam.datastore.base.async.result.Failure
 import com.kamikazejam.datastore.base.async.result.Success
 
 @Suppress("unused")
-class AsyncUpdateHandler<K, X : Store<X, K>>(
+class AsyncUpdateHandler<K : Any, X : Store<X, K>>(
     collection: Collection<*, *>,
     block: suspend () -> X?
 ) : AsyncHandler<X, DefiniteResult<X>>(collection, block) {

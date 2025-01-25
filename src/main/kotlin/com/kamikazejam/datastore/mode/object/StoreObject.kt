@@ -6,6 +6,9 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
+import com.kamikazejam.datastore.base.data.Wrapper
+import com.kamikazejam.datastore.base.data.impl.StoreDataLong
+import com.kamikazejam.datastore.base.data.impl.StoreDataString
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
@@ -24,8 +27,8 @@ abstract class StoreObject<X : StoreObject<X>> private constructor(
     // ----------------------------------------------------- //
     // The id of this object (as a user-defined String)
     @Id
-    override val idField: RequiredField<String> = RequiredField.of(ID_FIELD, UUID.randomUUID().toString())
-    override val versionField: RequiredField<Long> = RequiredField.of(VERSION_FIELD, 0L)
+    override val idField: RequiredField<String, StoreDataString> = RequiredField.of(ID_FIELD, Wrapper(UUID.randomUUID().toString()))
+    override val versionField: RequiredField<Long, StoreDataLong> = RequiredField.of(VERSION_FIELD, Wrapper(0L))
 
 
     // ----------------------------------------------------- //

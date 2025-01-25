@@ -17,7 +17,9 @@ sealed interface FieldWrapper<T : Any, D : StoreData<T>> : FieldProvider {
     @ApiStatus.Internal
     fun setParent(parent: Store<*, *>)
 
-    fun getNullable(): D?
+    fun getData(): D?
+
+    fun setDataNotNull(data: D)
 
     override val fieldWrapper: FieldWrapper<*,*>
         get() = this
@@ -25,12 +27,10 @@ sealed interface FieldWrapper<T : Any, D : StoreData<T>> : FieldProvider {
 
 sealed interface RequiredField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
     val defaultValue: D
-    fun get(): D
-    fun set(data: D)
+    fun setData(data: D)
+    override fun setDataNotNull(data: D) = setData(data)
 
-    override fun getNullable(): D = get()
-
-    fun getData(): D
+    override fun getData(): D
 
     companion object {
         @JvmStatic
@@ -41,13 +41,11 @@ sealed interface RequiredField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
 
 sealed interface OptionalField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
     val defaultValue: D?
-    fun get(): D?
-    fun getOrDefault(default: D): D
-    fun set(data: D?)
+    fun getDataOrDefault(default: D): D
+    fun setData(data: D?)
+    override fun setDataNotNull(data: D) = setData(data)
 
-    override fun getNullable(): D? = get()
-
-    fun getData(): D?
+    override fun getData(): D?
 
     companion object {
         @JvmStatic
@@ -66,26 +64,25 @@ private class RequiredFieldImpl<T : Any, D : StoreData<T>>(
     private var parent: Store<*, *>? = null
 
     override fun getData(): D {
+        Preconditions.checkState(parent != null, "[RequiredField#get] Field not registered with a parent document")
+        Preconditions.checkState(data.parent != null, "[RequiredField#get] Data not registered with a parent document")
         return data
     }
 
     @ApiStatus.Internal
     override fun setParent(parent: Store<*, *>) {
         this.parent = parent
+        this.data.parent = parent
     }
 
-    override fun get(): D {
-        Preconditions.checkState(parent != null, "[RequiredField#get] Field not registered with a parent document")
-        return data
-    }
-
-    override fun set(data: D) {
+    override fun setData(data: D) {
         Preconditions.checkState(isWriteable, "Cannot modify field '$name' in read-only mode")
         Preconditions.checkState(
             defaultValue::class.isInstance(data),
             "Data $data (${data.let { it::class.java }}) is not an instance of the field type (${defaultValue::class.java})"
         )
         this.data = data
+        this.data.parent = parent
     }
 
     override val isWriteable: Boolean
@@ -96,7 +93,7 @@ private class RequiredFieldImpl<T : Any, D : StoreData<T>>(
                 "[RequiredField#isWriteable] Field not registered with a parent document"
             )
             checkNotNull(p)
-            return !p.readOnly
+            return !p.readOnly && data.isWriteable
         }
 
     override fun equals(other: Any?): Boolean {
@@ -118,29 +115,26 @@ private class OptionalFieldImpl<T : Any, D : StoreData<T>>(
     private var parent: Store<*, *>? = null
 
     override fun getData(): D? {
-        return data
+        val d = this.data
+        Preconditions.checkState(parent != null, "[OptionalField#get] Field not registered with a parent document")
+        Preconditions.checkState((d == null || d.parent != null), "[OptionalField#get] Data not registered with a parent document")
+        return d
     }
 
     @ApiStatus.Internal
     override fun setParent(parent: Store<*, *>) {
         this.parent = parent
+        this.data?.parent = parent
     }
 
-    override fun get(): D? {
-        Preconditions.checkState(
-            parent != null,
-            "[OptionalField#get] Field not registered with a parent document"
-        )
-        return data
+    override fun getDataOrDefault(default: D): D {
+        return getData() ?: default
     }
 
-    override fun getOrDefault(default: D): D {
-        return get() ?: default
-    }
-
-    override fun set(data: D?) {
+    override fun setData(data: D?) {
         Preconditions.checkState(isWriteable, "Cannot modify field '$name' in read-only mode")
         this.data = data
+        this.data?.parent = parent
     }
 
     override val isWriteable: Boolean
@@ -151,7 +145,7 @@ private class OptionalFieldImpl<T : Any, D : StoreData<T>>(
                 "[OptionalField#isWriteable] Field not registered with a parent document"
             )
             checkNotNull(p)
-            return !p.readOnly
+            return !p.readOnly && (data?.isWriteable ?: true)
         }
 
     override fun equals(other: Any?): Boolean {

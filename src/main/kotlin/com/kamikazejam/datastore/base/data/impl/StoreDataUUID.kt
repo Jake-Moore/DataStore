@@ -2,19 +2,20 @@ package com.kamikazejam.datastore.base.data.impl
 
 import com.kamikazejam.datastore.base.data.SimpleStoreData
 import org.bson.Document
+import java.util.*
 
-class StringData(string: String) : SimpleStoreData<String>(value = string) {
+class StoreDataUUID(uuid: UUID) : SimpleStoreData<UUID>(value = uuid) {
     override fun serializeToBSON(): Any {
-        return get()
+        return get().toString()
     }
 
     override fun deserializeFromBSON(bson: Document, key: String) {
-        this.set(bson.getString(key))
+        this.set(UUID.fromString(bson.getString(key)))
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is StringData) return false
+        if (other !is StoreDataUUID) return false
         return get() == other.get()
     }
 

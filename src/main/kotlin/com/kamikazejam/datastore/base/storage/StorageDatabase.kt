@@ -12,7 +12,7 @@ import java.util.function.Consumer
  *
  * @param <X>
 </X> */
-abstract class StorageDatabase<K, X : Store<X, K>>(collection: Collection<K, X>) : StorageDatabaseAdapter<K, X>(collection) {
+abstract class StorageDatabase<K : Any, X : Store<X, K>>(collection: Collection<K, X>) : StorageDatabaseAdapter<K, X>(collection) {
     private val storageService = DataStoreSource.storageService
 
     // ---------------------------------------------------------------- //

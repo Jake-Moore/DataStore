@@ -2,6 +2,7 @@ package com.kamikazejam.datastore.mode.profile
 
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
+import com.kamikazejam.datastore.base.data.Wrapper
 import com.kamikazejam.datastore.base.extensions.update
 import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
@@ -138,7 +139,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
             // Update their username
             if (username != null && store.getUsername() != username) {
                 // Attempt to save the new username
-                collection.update(store) { x: X -> x.usernameField.set(username) }
+                collection.update(store) { x: X -> x.usernameField.setData(Wrapper(username)) }
             }
         }
         return store
@@ -159,10 +160,13 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
             // Initialize the store
             initializer.accept(store)
             // Enforce Version 0 for creation
-            store.idField.set(uuid)
-            store.versionField.set(0L)
-            store.usernameField.set(username)
-
+            store.idField.setData(Wrapper(uuid))
+            store.versionField.getData().set(0L)
+            if (username == null) {
+                store.usernameField.setData(null)
+            }else {
+                store.usernameField.setData(Wrapper(username))
+            }
             store.readOnly = true
 
             // Save the store to our database implementation & cache

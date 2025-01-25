@@ -6,7 +6,7 @@ import com.kamikazejam.datastore.util.DataStoreFileLogger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
-abstract class StorageLocal<K, X : Store<X, K>> {
+abstract class StorageLocal<K : Any, X : Store<X, K>> {
     val localStorage: ConcurrentMap<K, X> = ConcurrentHashMap()
 
     // ----------------------------------------------------- //

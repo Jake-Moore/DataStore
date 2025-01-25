@@ -5,6 +5,10 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.data.Wrapper
+import com.kamikazejam.datastore.base.data.impl.StoreDataLong
+import com.kamikazejam.datastore.base.data.impl.StoreDataString
+import com.kamikazejam.datastore.base.data.impl.StoreDataUUID
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.OptionalField
 import com.kamikazejam.datastore.base.field.RequiredField
@@ -27,9 +31,9 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // ----------------------------------------------------- //
     // The id of this object (a player uuid)
     @Id
-    override val idField: OptionalField<UUID> = OptionalField.of(ID_FIELD, null, UUID::class.java)
-    override val versionField: RequiredField<Long> = RequiredField.of(VERSION_FIELD, 0L)
-    val usernameField: OptionalField<String> = OptionalField.of("username", null, String::class.java)
+    override val idField: OptionalField<UUID, StoreDataUUID> = OptionalField.of(ID_FIELD, null) { Wrapper(UUID.randomUUID()) }
+    override val versionField: RequiredField<Long, StoreDataLong> = RequiredField.of(VERSION_FIELD, Wrapper(0L))
+    val usernameField: OptionalField<String, StoreDataString> = OptionalField.of("username", null) { Wrapper("") }
 
     // ----------------------------------------------------- //
     //                      Transients                       //
@@ -179,15 +183,15 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
      * Get the Name of the Player
      */
     fun getUsername(): String? {
-        if (usernameField.get() == null) {
+        if (usernameField.getData()?.get() == null) {
             // Try to get the name from our IdUtil, and update the object if possible
             val oPlayer: OfflinePlayer? = Bukkit.getOfflinePlayer(this.uniqueId)
             if (oPlayer?.name != null) {
-                getCollection().update(this.id) { profile: T -> profile.usernameField.set(oPlayer.name) }
+                getCollection().update(this.id) { profile: T -> profile.usernameField.setData(Wrapper(oPlayer.name)) }
                 return oPlayer.name
             }
         }
-        return usernameField.get()
+        return usernameField.getData()?.get()
     }
 
     /**

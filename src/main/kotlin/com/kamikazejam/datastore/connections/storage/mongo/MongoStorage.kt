@@ -96,7 +96,7 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     //                StorageService                     //
     // ------------------------------------------------- //
-    override suspend fun <K, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? = withContext(Dispatchers.IO) {
         try {
             // Serialize the value using Jackson, since the value in the db is also a serialized string
             //  and we need to compare the serialized strings in our Filter
@@ -119,7 +119,7 @@ class MongoStorage : StorageService() {
         }
     }
 
-    override suspend fun <K, X : Store<X, K>> save(collection: Collection<K, X>, store: X): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> save(collection: Collection<K, X>, store: X): Boolean = withContext(Dispatchers.IO) {
         // Save to database with a transaction & only 1 attempt
         val client = mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
         client.startSession().use { session ->
@@ -148,7 +148,7 @@ class MongoStorage : StorageService() {
     // If two threads enter this method for the same object, only one will succeed in updating the object.
     //  and the other will have its query fail and will automatically retry.
     // (MongoDB provides the document-level locking already)
-    override suspend fun <K, X : Store<X, K>> updateSync(
+    override suspend fun <K : Any, X : Store<X, K>> updateSync(
         collection: Collection<K, X>,
         store: X,
         updateFunction: Consumer<X>
@@ -168,7 +168,7 @@ class MongoStorage : StorageService() {
         }
     }
 
-    override suspend fun <K, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Serialize the value using Jackson, since the value in the db is also a serialized string
             //  and we need to compare the serialized strings in our Filter
@@ -184,11 +184,11 @@ class MongoStorage : StorageService() {
         }
     }
 
-    override suspend fun <K, X : Store<X, K>> size(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> size(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
         return@withContext getMongoCollection(collection).countDocuments()
     }
 
-    override suspend fun <K, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Serialize the value using Jackson, since the value in the db is also a serialized string
             //  and we need to compare the serialized strings in our Filter
@@ -203,7 +203,7 @@ class MongoStorage : StorageService() {
         return@withContext false
     }
 
-    override suspend fun <K, X : Store<X, K>> removeAll(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> removeAll(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
         try {
             // Delete All Documents in Mongo
             return@withContext getMongoCollection(collection).deleteMany(Filters.empty()).deletedCount
@@ -215,7 +215,7 @@ class MongoStorage : StorageService() {
         return@withContext 0
     }
 
-    override suspend fun <K, X : Store<X, K>> getAll(collection: Collection<K, X>): Flow<X> = channelFlow {
+    override suspend fun <K : Any, X : Store<X, K>> getAll(collection: Collection<K, X>): Flow<X> = channelFlow {
         // Fetch all documents from MongoDB
         for (doc: Document in getMongoCollection(collection).find().iterator()) {
             val store: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
@@ -225,7 +225,7 @@ class MongoStorage : StorageService() {
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun <K, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> = channelFlow {
+    override suspend fun <K : Any, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> = channelFlow {
         // Fetch all documents, but use Projection to only retrieve the ID field
         for (doc: Document in getMongoCollection(collection).find().projection(Projections.include(ID_FIELD)).iterator()) {
             // We know where the id is located, and we can fetch it as a string, there is no need to deserialize the entire object
@@ -247,7 +247,7 @@ class MongoStorage : StorageService() {
         return mongoConnected
     }
 
-    override fun <K, X : Store<X, K>> onRegisteredCollection(collection: Collection<K, X>?) {
+    override fun <K : Any, X : Store<X, K>> onRegisteredCollection(collection: Collection<K, X>?) {
         // do nothing -> MongoDB handles it
     }
 
@@ -313,7 +313,7 @@ class MongoStorage : StorageService() {
     // Map<DatabaseName.CollectionName, MongoCollection<Document>>
     private val collMap: MutableMap<String, MongoCollection<Document>> = ConcurrentHashMap()
 
-    private fun <K, X : Store<X, K>> getMongoCollection(collection: Collection<K, X>): MongoCollection<Document> {
+    private fun <K : Any, X : Store<X, K>> getMongoCollection(collection: Collection<K, X>): MongoCollection<Document> {
         val client = this.mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
         val collKey = collection.databaseName + "." + collection.name
 
@@ -343,7 +343,7 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    override suspend fun <K, X : Store<X, K>, T> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, T>) = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>, T> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, T>) = withContext(Dispatchers.IO) {
         getMongoCollection(collection).createIndex(
             Document(index.name, 1),
             IndexOptions().unique(true)
@@ -351,15 +351,15 @@ class MongoStorage : StorageService() {
         Unit
     }
 
-    override suspend fun <K, X : Store<X, K>> cacheIndexes(collection: StoreCollection<K, X>, store: X, updateFile: Boolean) = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> cacheIndexes(collection: StoreCollection<K, X>, store: X, updateFile: Boolean) = withContext(Dispatchers.IO) {
         // do nothing -> MongoDB handles this
     }
 
-    override suspend fun <K, X : Store<X, K>> saveIndexCache(collection: StoreCollection<K, X>) = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> saveIndexCache(collection: StoreCollection<K, X>) = withContext(Dispatchers.IO) {
         // do nothing -> MongoDB handles this
     }
 
-    override suspend fun <K, X : Store<X, K>, T> getStoreIdByIndex(
+    override suspend fun <K : Any, X : Store<X, K>, T> getStoreIdByIndex(
         collection: StoreCollection<K, X>,
         index: IndexedField<X, T>,
         value: T
@@ -381,7 +381,7 @@ class MongoStorage : StorageService() {
         return@withContext store.id
     }
 
-    override suspend fun <K, X : Store<X, K>> invalidateIndexes(collection: StoreCollection<K, X>, key: K, updateFile: Boolean) = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> invalidateIndexes(collection: StoreCollection<K, X>, key: K, updateFile: Boolean) = withContext(Dispatchers.IO) {
         // do nothing -> MongoDB handles this
     }
 

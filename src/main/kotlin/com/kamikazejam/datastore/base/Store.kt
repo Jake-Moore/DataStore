@@ -3,8 +3,11 @@ package com.kamikazejam.datastore.base
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
+import com.kamikazejam.datastore.base.data.SimpleStoreData
+import com.kamikazejam.datastore.base.data.impl.StoreDataLong
 import com.kamikazejam.datastore.base.field.FieldProvider
 import com.kamikazejam.datastore.base.field.FieldWrapper
+import com.kamikazejam.datastore.base.field.OptionalField
 import com.kamikazejam.datastore.base.field.RequiredField
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.NonBlocking
@@ -15,7 +18,7 @@ import java.util.function.Consumer
  * Generics: K = Identifier Object Type (i.e. String, UUID)
  */
 @Suppress("unused")
-interface Store<X : Store<X, K>, K> : DataStoreScope {
+interface Store<X : Store<X, K>, K : Any> : DataStoreScope {
 
     // ----------------------------------------------------- //
     //                  User Defined Methods                 //
@@ -23,7 +26,7 @@ interface Store<X : Store<X, K>, K> : DataStoreScope {
     /**
      * Get all unique fields the Store object should serialize into its json data.
      *
-     * You may return simple [FieldWrapper] objects and/or special fields like [FieldWrapperMap]
+     * You may return simple [FieldWrapper] objects like [RequiredField] or [OptionalField].
      */
     fun getCustomFields(): Set<FieldProvider>
 
@@ -64,7 +67,7 @@ interface Store<X : Store<X, K>, K> : DataStoreScope {
      * @return K Identifier
      */
     val id: K
-        get() = idField.getNullable() ?: throw IllegalStateException("idField is null")
+        get() = idField.getData()?.get() ?: throw IllegalStateException("idField is null")
 
     /**
      * Gets the Collection associated with this Store object.
@@ -82,12 +85,12 @@ interface Store<X : Store<X, K>, K> : DataStoreScope {
     /**
      * Gets the optimistic versioning FieldWrapper
      */
-    val versionField: RequiredField<Long>
+    val versionField: RequiredField<Long, StoreDataLong>
 
     /**
      * Gets the id FieldWrapper
      */
-    val idField: FieldWrapper<K>
+    val idField: FieldWrapper<K, out SimpleStoreData<K>>
 
     /**
      * @return If this Store is read-only right now

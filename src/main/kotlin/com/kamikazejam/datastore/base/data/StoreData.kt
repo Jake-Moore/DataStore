@@ -9,7 +9,7 @@ import com.kamikazejam.datastore.base.Store
  * This allows null values, where internally they are handled as null StoreData, not a null internal value.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-sealed class StoreData<T : Any>(protected var parent: Store<*, *>? = null) {
+sealed class StoreData<T : Any>(var parent: Store<*, *>? = null) {
 
     val isWriteable: Boolean
         get() {

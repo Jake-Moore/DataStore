@@ -20,7 +20,7 @@ import java.util.function.Consumer
  * @param initializer The initializer for the Store if it doesn't exist.
  * @return The Store object. (READ-ONLY) (fetched or created)
  */
-fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Consumer<X> = Consumer {}): AsyncCreateHandler<K, X> {
+fun <K : Any, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Consumer<X> = Consumer {}): AsyncCreateHandler<K, X> {
     return AsyncCreateHandler(this) {
         when (val readResult = read(key).await()) {
             is Success -> return@AsyncCreateHandler readResult.value
@@ -41,7 +41,7 @@ fun <K, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Cons
  * @return The updated Store object. (READ-ONLY)
  */
 @NonBlocking
-fun <K, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: Consumer<X>): AsyncUpdateHandler<K, X> {
+fun <K : Any, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: Consumer<X>): AsyncUpdateHandler<K, X> {
     return this.update(store.id, updateFunction)
 }
 
@@ -49,6 +49,6 @@ fun <K, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: Consu
  * Deletes a Store by ID (removes from both cache and database collection)
  * @return True if the Store was deleted, false if it was not found (does not exist)
  */
-fun <K, X : Store<X, K>> Collection<K, X>.delete(store: X): AsyncDeleteHandler {
+fun <K : Any, X : Store<X, K>> Collection<K, X>.delete(store: X): AsyncDeleteHandler {
     return this.delete(store.id)
 }

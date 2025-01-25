@@ -9,7 +9,7 @@ import java.util.function.Consumer
 /**
  * Middleware class to adapt [StorageDatabase] methods (which include a [Collection] param) to a simpler api (without the [Collection] param).
  */
-abstract class StorageDatabaseAdapter<K, X : Store<X, K>>(protected val collection: Collection<K, X>) {
+abstract class StorageDatabaseAdapter<K : Any, X : Store<X, K>>(protected val collection: Collection<K, X>) {
     // ---------------------------------------------------------------- //
     //                     Abstraction Conversion                       //
     // ---------------------------------------------------------------- //

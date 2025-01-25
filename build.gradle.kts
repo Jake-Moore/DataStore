@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.kamikazejam"
-version = "1.0.0.beta.12-SNAPSHOT"
+version = "0.1.0.alpha.1-SNAPSHOT"
 description = "Simple Data Storage Solution using MongoDB"
 
 

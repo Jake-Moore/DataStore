@@ -50,7 +50,7 @@ class CmdCollection : SubCommand() {
             .toList()
     }
 
-    private fun <K, T : Store<T, K>> getSomeKeyStrings(c: Collection<K, T>): List<String> {
+    private fun <K : Any, T : Store<T, K>> getSomeKeyStrings(c: Collection<K, T>): List<String> {
         return c.localStore.getKeyStrings(c).stream()
             .limit(10)
             .toList()
