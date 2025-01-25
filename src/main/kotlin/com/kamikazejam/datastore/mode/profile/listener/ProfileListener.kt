@@ -98,22 +98,21 @@ class ProfileListener : Listener {
                 collections.add(c as StoreProfileCollection<X>)
             }
         }
-        val executor = AsyncCollectionsExecutor(collections, { collection ->
-                val loader: StoreProfileLoader<X> = collection.loader(uniqueId)
-                loader.login(username)
-                loader.fetch(true)
-                if (loader.denyJoin) {
-                    // For the first 100 seconds, don't give the nasty loader reason, but a pretty server start error
-                    val message = if (System.currentTimeMillis() - DataStoreSource.onEnableTime < 100000L)
-                        Color.t("&cServer is starting, please wait.")
-                    else
-                        loader.joinDenyReason
+        val executor = AsyncCollectionsExecutor(collections, timeoutSec) {
+            val loader: StoreProfileLoader<X> = it.loader(uniqueId)
+            loader.login(username)
+            loader.fetch(true)
+            if (loader.denyJoin) {
+                // For the first 100 seconds, don't give the nasty loader reason, but a pretty server start error
+                val message = if (System.currentTimeMillis() - DataStoreSource.onEnableTime < 100000L)
+                    Color.t("&cServer is starting, please wait.")
+                else
+                    loader.joinDenyReason
 
-                    // If denied, throw an exception (will be caught by original join event)
-                    throw ProfileDenyJoinError(message)
-                }
-            }, timeoutSec
-        )
+                // If denied, throw an exception (will be caught by original join event)
+                throw ProfileDenyJoinError(message)
+            }
+        }
 
         // Execute the collection list in order
         return executor.executeInOrder()

@@ -4,9 +4,7 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import kotlinx.coroutines.*
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Executes a List of collections in smart order from their dependencies, as parallel as possible.
@@ -14,11 +12,11 @@ import kotlin.collections.HashSet
 </T> */
 class AsyncCollectionsExecutor<T : Collection<*, *>>(
     var collections: List<T>,
-    private val execution: suspend (T) -> Unit,
     private val timeoutSec: Long,
+    private val execution: suspend (T) -> Unit,
 ) : DataStoreScope {
 
-    private val queue: MutableMap<String, T> = HashMap() // Note: only remove from queue when T is completed
+    private val queue: MutableMap<String, T> = ConcurrentHashMap() // Note: only remove from queue when T is completed
     private val activeJobs: MutableList<Job> = ArrayList()
     private val completed: MutableSet<String> = HashSet()
     private val executed: MutableSet<String> = HashSet()
