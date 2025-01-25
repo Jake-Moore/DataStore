@@ -79,11 +79,14 @@ object JacksonUtil {
 
     fun appendFieldProvider(doc: Document, provider: FieldProvider) {
         val field = provider.fieldWrapper
-
-        // Case 1 - Data is null -> just store null in the json
         val data = field.getData()
+        appendDataIntoDocumentKey(field.name, data, doc)
+    }
+
+    fun appendDataIntoDocumentKey(key: String, data: StoreData<Any>?, doc: Document) {
+        // Case 1 - Data is null -> just store null in the json
         if (data == null) {
-            doc[field.name] = null
+            doc[key] = null
             return
         }
 
@@ -95,7 +98,7 @@ object JacksonUtil {
                 // Just use the serialized value (assumes StoreData returns values compatible BSON)
                 // If not, that's the responsibility of the StoreData implementation, and errors will be thrown by MongoDB
                 subDocument[StoreData.CONTENT_KEY] = data.serializeToBSON()
-                doc[field.name] = subDocument
+                doc[key] = subDocument
             }
             is CompositeStoreData<*> -> {
                 // We have multiple fields to serialize, so handle each by their own provider
@@ -105,7 +108,7 @@ object JacksonUtil {
                 }
 
                 subDocument[StoreData.CONTENT_KEY] = innerDoc
-                doc[field.name] = subDocument
+                doc[key] = subDocument
             }
         }
     }
@@ -144,30 +147,41 @@ object JacksonUtil {
     @Suppress("UNCHECKED_CAST")
     fun <D : StoreData<Any>> deserializeIntoFieldProvider(provider: FieldProvider, doc: Document) {
         val field = provider.fieldWrapper as FieldWrapper<D>
-
-        // DEFAULT CASE - Field not found in document -> use default value
-        if (!doc.containsKey(field.name)) {
+        val data = deserializeIntoStoreData(field.name, doc, field.creator)
+        if (data == null) {
+            // CASE 1 - Field not found in document -> use default value
             when (field) {
                 is OptionalField<D> -> field.setData(field.defaultValue)
                 is RequiredField<D> -> field.setData(field.defaultValue)
             }
-            return
+        }else {
+            // CASE 2 - Field found in document -> set the data
+            when (field) {
+                is OptionalField<D> -> field.setData(data)
+                is RequiredField<D> -> field.setData(data)
+            }
+        }
+    }
+
+    fun <D : StoreData<Any>> deserializeIntoStoreData(key: String, doc: Document, creator: () -> D): D? {
+        if (!doc.containsKey(key)) {
+            return null
         }
 
         // CASE 1 - We have data, we need to deserialize it
-        val subDoc: Document = doc[field.name] as Document
+        val subDoc: Document = doc[key] as Document
         val type = StoreData.Companion.Type.valueOf(subDoc.getString(StoreData.TYPE_KEY))
 
-        val data: D = field.creator.invoke()
+        val data = creator.invoke()
         when (type) {
             StoreData.Companion.Type.SIMPLE -> {
-                if (data !is SimpleStoreData<*>) throw IllegalStateException("Field '${field.name}' is not a SimpleStoreData")
+                if (data !is SimpleStoreData<*>) throw IllegalStateException("Field '${key}' is not a SimpleStoreData")
 
                 // Deserialize the data in the CONTENT_KEY, using the data class itself
-                data.deserializeFromBSON(subDoc, StoreData.CONTENT_KEY)
+                (data as SimpleStoreData<*>).deserializeFromBSON(subDoc, StoreData.CONTENT_KEY)
             }
             StoreData.Companion.Type.COMPOSITE -> {
-                if (data !is CompositeStoreData<*>) throw IllegalStateException("Field '${field.name}' is not a CompositeStoreData")
+                if (data !is CompositeStoreData<*>) throw IllegalStateException("Field '${key}' is not a CompositeStoreData")
 
                 // Handle Composite Type
                 val innerDoc: Document = subDoc[StoreData.CONTENT_KEY] as Document
@@ -177,10 +191,7 @@ object JacksonUtil {
             }
         }
 
-        when (field) {
-            is OptionalField<D> -> field.setData(data)
-            is RequiredField<D> -> field.setData(data)
-        }
+        return data
     }
 
 

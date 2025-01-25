@@ -9,7 +9,9 @@ import com.kamikazejam.datastore.base.Store
  * This allows null values, where internally they are handled as null StoreData, not a null internal value.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-sealed class StoreData<out T : Any>(var parent: Store<*, *>? = null) {
+sealed class StoreData<out T : Any> {
+    var parent: Store<*, *>? = null
+        private set
 
     val isWriteable: Boolean
         get() {
@@ -21,6 +23,12 @@ sealed class StoreData<out T : Any>(var parent: Store<*, *>? = null) {
             checkNotNull(p)
             return !p.readOnly
         }
+
+    open fun setParent(parent: Store<*, *>?) {
+        // Ensure the passed parent is not null
+        Preconditions.checkArgument(parent != null, "Parent cannot be null")
+        this.parent = parent
+    }
 
     abstract override fun equals(other: Any?): Boolean
 
