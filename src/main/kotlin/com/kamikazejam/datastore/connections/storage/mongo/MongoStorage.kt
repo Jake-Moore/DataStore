@@ -355,6 +355,10 @@ class MongoStorage : StorageService() {
     ): K? = withContext(Dispatchers.IO) {
         // Filter is a serialized BSON Document that should match the serialization and structure of the BSON in MongoDB
         val filterDoc = Document()
+        // TODO, the "value" here has to be passed by wrapping whatever "Any" StoreData type the user wants
+        //   This will typically be handled by passing something like: StoreDataString("myIndexValue")
+        //   The issue, is that this newly created StoreData object has no parent
+        //   So the serialization below throws an error because it tries to read the StoreData, and internally throws a no parent error
         JacksonUtil.serializeDataIntoDocumentKey(index.name, value, filterDoc)
         val query = Filters.eq(filterDoc)
 

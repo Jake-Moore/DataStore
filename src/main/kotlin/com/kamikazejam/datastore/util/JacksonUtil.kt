@@ -19,6 +19,8 @@ import com.kamikazejam.datastore.base.field.OptionalField
 import com.kamikazejam.datastore.base.field.RequiredField
 import com.kamikazejam.datastore.util.jackson.JacksonSpigotModule
 import org.bson.Document
+import org.bukkit.Bukkit
+
 
 @Suppress("unused", "DuplicatedCode")
 object JacksonUtil {
@@ -193,7 +195,13 @@ object JacksonUtil {
     //                             UTIL                             //
     // ------------------------------------------------------------ //
     fun <K : Any, X : Store<X, K>> deepCopy(store: X): X {
-        val json = serializeToDocument(store).toJson()
-        return deserializeFromDocument(store.javaClass, Document.parse(json))
+        val doc: Document = serializeToDocument(store)
+        // WARNING: DO NOT CONVERT THE DOCUMENT TO A JSON STRING, AS THE METHOD IMPLIES THIS GENERATES A JSON STRING
+        //  AND NOT A BSON STRING, MEANING ANY CUSTOM BSON TYPES LIKE LONG WILL BE LOST AND IRRETRIEVABLE (LONG BECOMES JSON INT)
+        // We must deep-copy the document byte array to ensure that the data is not lost, and that we truly deep copy the document
+
+        // Deep copy by serializing to BSON and deserializing it back
+        val deepCopyDoc = DocumentSerializer.deepCopyDocument(doc)
+        return deserializeFromDocument(store.javaClass, deepCopyDoc)
     }
 }
