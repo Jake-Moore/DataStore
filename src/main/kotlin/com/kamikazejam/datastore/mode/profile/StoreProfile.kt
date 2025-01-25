@@ -73,9 +73,6 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // ----------------------------------------------------- //
     @Internal
     override fun initialize() {
-        if (initialized) {
-            return
-        }
         initialized = true // Must set before calling getAllFields because it will want it to be true
         // Set parent reference for all fields (including id and version)
         allFields.forEach { provider: FieldProvider ->

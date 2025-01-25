@@ -70,9 +70,6 @@ abstract class StoreObject<X : StoreObject<X>> private constructor(
     // ----------------------------------------------------- //
     @ApiStatus.Internal
     override fun initialize() {
-        if (initialized) {
-            return
-        }
         initialized = true // Must set before calling getAllFields because it will want it to be true
         // Set parent reference for all fields (including id and version)
         allFields.forEach { provider: FieldProvider ->
@@ -81,7 +78,7 @@ abstract class StoreObject<X : StoreObject<X>> private constructor(
     }
 
     private fun ensureValid() {
-        check(initialized) { "Document not initialized. Call initialize() after construction." }
+        check(initialized) { "Document not initialized!" }
         this.validateDuplicateFields() // may throw error
     }
 

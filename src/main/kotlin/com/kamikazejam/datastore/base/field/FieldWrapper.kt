@@ -140,7 +140,7 @@ private class OptionalFieldImpl<D : StoreData<Any>>(
             val p = this.parent
             Preconditions.checkState(
                 p != null,
-                "[OptionalField#isWriteable] Field not registered with a parent document"
+                "[OptionalField#isWriteable] Field '$name' not registered with a parent document"
             )
             checkNotNull(p)
             return !p.readOnly && (data?.isWriteable ?: true)

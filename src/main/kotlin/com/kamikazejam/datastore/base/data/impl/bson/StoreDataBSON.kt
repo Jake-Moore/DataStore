@@ -4,6 +4,9 @@ package com.kamikazejam.datastore.base.data.impl.bson
 
 import com.kamikazejam.datastore.base.data.SimpleStoreData
 
+// TODO, we should be able to read (get) from anything even if there is a null parent (because reading is safe and does not mutate)
+//  HOWEVER, we should NOT be able to write without a parent, because if we write with a null parent, we will lose the data
+
 sealed class StoreDataBSON<T : Any>(value: T) : SimpleStoreData<T>(value = value) {
     override fun serializeToBSON(): Any {
         // The classes permitted to extend this StoreDataBSON class are expected to be BSON compliant
