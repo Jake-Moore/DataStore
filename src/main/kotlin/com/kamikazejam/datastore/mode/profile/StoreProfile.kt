@@ -31,9 +31,9 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     // ----------------------------------------------------- //
     // The id of this object (a player uuid)
     @Id
-    override val idField: OptionalField<UUID, StoreDataUUID> = OptionalField.of(ID_FIELD, null) { Wrapper(UUID.randomUUID()) }
-    override val versionField: RequiredField<Long, StoreDataLong> = RequiredField.of(VERSION_FIELD, Wrapper(0L))
-    val usernameField: OptionalField<String, StoreDataString> = OptionalField.of("username", null) { Wrapper("") }
+    override val idField: OptionalField<StoreDataUUID> = OptionalField.of(ID_FIELD, null) { Wrapper(UUID.randomUUID()) }
+    override val versionField: RequiredField<StoreDataLong> = RequiredField.of(VERSION_FIELD, Wrapper(0L))
+    val usernameField: OptionalField<StoreDataString> = OptionalField.of("username", null) { Wrapper("") }
 
     // ----------------------------------------------------- //
     //                      Transients                       //

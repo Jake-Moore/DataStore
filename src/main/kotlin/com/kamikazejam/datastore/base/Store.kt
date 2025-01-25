@@ -85,12 +85,12 @@ interface Store<X : Store<X, K>, K : Any> : DataStoreScope {
     /**
      * Gets the optimistic versioning FieldWrapper
      */
-    val versionField: RequiredField<Long, StoreDataLong>
+    val versionField: RequiredField<StoreDataLong>
 
     /**
      * Gets the id FieldWrapper
      */
-    val idField: FieldWrapper<K, out SimpleStoreData<K>>
+    val idField: FieldWrapper<out SimpleStoreData<K>>
 
     /**
      * @return If this Store is read-only right now

@@ -324,12 +324,12 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
     /**
      * Helper method to safely copy values between field wrappers of the same type
      */
-    private fun copyFieldValue(target: FieldWrapper<*,*>, source: FieldWrapper<*,*>) {
+    private fun copyFieldValue(target: FieldWrapper<*>, source: FieldWrapper<*>) {
         // use our serialization helpers to do this
         // By serializing into a document, then back out of it
         val doc = Document()
         JacksonUtil.appendFieldProvider(doc, source)
-        JacksonUtil.deserializeIntoFieldProvider<Any, StoreData<Any>>(target, doc)
+        JacksonUtil.deserializeIntoFieldProvider<StoreData<Any>>(target, doc)
     }
 
     // ------------------------------------------------- //

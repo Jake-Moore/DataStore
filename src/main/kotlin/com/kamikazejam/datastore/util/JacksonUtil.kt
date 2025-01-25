@@ -126,7 +126,7 @@ object JacksonUtil {
 
             for (provider in entity.allFields) {
                 try {
-                    deserializeIntoFieldProvider<Any, StoreData<Any>>(provider, doc)
+                    deserializeIntoFieldProvider<StoreData<Any>>(provider, doc)
                 } catch (e: Exception) {
                     DataStoreSource.colorLogger.error("[JacksonUtil] Error deserializing field '${provider.fieldWrapper.name}': ${e.message}")
                     throw e
@@ -142,14 +142,14 @@ object JacksonUtil {
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any, D : StoreData<T>> deserializeIntoFieldProvider(provider: FieldProvider, doc: Document) {
-        val field = provider.fieldWrapper as FieldWrapper<T,D>
+    fun <D : StoreData<Any>> deserializeIntoFieldProvider(provider: FieldProvider, doc: Document) {
+        val field = provider.fieldWrapper as FieldWrapper<D>
 
         // DEFAULT CASE - Field not found in document -> use default value
         if (!doc.containsKey(field.name)) {
             when (field) {
-                is OptionalField<T,D> -> field.setData(field.defaultValue)
-                is RequiredField<T,D> -> field.setData(field.defaultValue)
+                is OptionalField<D> -> field.setData(field.defaultValue)
+                is RequiredField<D> -> field.setData(field.defaultValue)
             }
             return
         }
@@ -172,14 +172,14 @@ object JacksonUtil {
                 // Handle Composite Type
                 val innerDoc: Document = subDoc[StoreData.CONTENT_KEY] as Document
                 for (subProvider in data.getCustomFields()) {
-                    deserializeIntoFieldProvider<Any, StoreData<Any>>(subProvider, innerDoc)
+                    deserializeIntoFieldProvider<StoreData<Any>>(subProvider, innerDoc)
                 }
             }
         }
 
         when (field) {
-            is OptionalField<T,D> -> field.setData(data)
-            is RequiredField<T,D> -> field.setData(data)
+            is OptionalField<D> -> field.setData(data)
+            is RequiredField<D> -> field.setData(data)
         }
     }
 

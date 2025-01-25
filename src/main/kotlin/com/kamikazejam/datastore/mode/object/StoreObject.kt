@@ -27,8 +27,8 @@ abstract class StoreObject<X : StoreObject<X>> private constructor(
     // ----------------------------------------------------- //
     // The id of this object (as a user-defined String)
     @Id
-    override val idField: RequiredField<String, StoreDataString> = RequiredField.of(ID_FIELD, Wrapper(UUID.randomUUID().toString()))
-    override val versionField: RequiredField<Long, StoreDataLong> = RequiredField.of(VERSION_FIELD, Wrapper(0L))
+    override val idField: RequiredField<StoreDataString> = RequiredField.of(ID_FIELD, Wrapper(UUID.randomUUID().toString()))
+    override val versionField: RequiredField<StoreDataLong> = RequiredField.of(VERSION_FIELD, Wrapper(0L))
 
 
     // ----------------------------------------------------- //

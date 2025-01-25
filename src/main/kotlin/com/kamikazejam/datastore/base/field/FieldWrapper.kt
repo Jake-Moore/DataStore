@@ -8,7 +8,7 @@ import com.kamikazejam.datastore.base.data.StoreData
 import org.jetbrains.annotations.ApiStatus
 import java.util.*
 
-sealed interface FieldWrapper<T : Any, D : StoreData<T>> : FieldProvider {
+sealed interface FieldWrapper<D : StoreData<Any>> : FieldProvider {
     val name: String
     val isWriteable: Boolean
     // we need a creator function that can create an instance of D
@@ -21,11 +21,11 @@ sealed interface FieldWrapper<T : Any, D : StoreData<T>> : FieldProvider {
 
     fun setDataNotNull(data: D)
 
-    override val fieldWrapper: FieldWrapper<*,*>
+    override val fieldWrapper: FieldWrapper<*>
         get() = this
 }
 
-sealed interface RequiredField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
+sealed interface RequiredField<D : StoreData<Any>> : FieldWrapper<D> {
     val defaultValue: D
     fun setData(data: D)
     override fun setDataNotNull(data: D) = setData(data)
@@ -34,12 +34,12 @@ sealed interface RequiredField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
 
     companion object {
         @JvmStatic
-        fun <T : Any, D : StoreData<T>> of(name: String, defaultValue: D, creator: () -> D = { defaultValue }): RequiredField<T, D> =
+        fun <D : StoreData<Any>> of(name: String, defaultValue: D, creator: () -> D = { defaultValue }): RequiredField<D> =
             RequiredFieldImpl(name, defaultValue, creator)
     }
 }
 
-sealed interface OptionalField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
+sealed interface OptionalField<D : StoreData<Any>> : FieldWrapper<D> {
     val defaultValue: D?
     fun getDataOrDefault(default: D): D
     fun setData(data: D?)
@@ -49,17 +49,17 @@ sealed interface OptionalField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
 
     companion object {
         @JvmStatic
-        fun <T : Any, D : StoreData<T>> of(name: String, defaultValue: D?, creator: () -> D): OptionalField<T, D> =
+        fun <D : StoreData<Any>> of(name: String, defaultValue: D?, creator: () -> D): OptionalField<D> =
             OptionalFieldImpl(name, defaultValue, creator)
     }
 }
 
 @Suppress("DuplicatedCode")
-private class RequiredFieldImpl<T : Any, D : StoreData<T>>(
+private class RequiredFieldImpl<D : StoreData<Any>>(
     override val name: String,
     override val defaultValue: D,
     override val creator: () -> D = { defaultValue }
-) : RequiredField<T, D> {
+) : RequiredField<D> {
     private var data: D = defaultValue
     private var parent: Store<*, *>? = null
 
@@ -97,7 +97,7 @@ private class RequiredFieldImpl<T : Any, D : StoreData<T>>(
         }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is RequiredFieldImpl<*,*>) return false
+        if (other !is RequiredFieldImpl<*>) return false
         return data == other.data && name == other.name
     }
 
@@ -106,11 +106,11 @@ private class RequiredFieldImpl<T : Any, D : StoreData<T>>(
     }
 }
 
-private class OptionalFieldImpl<T : Any, D : StoreData<T>>(
+private class OptionalFieldImpl<D : StoreData<Any>>(
     override val name: String,
     override val defaultValue: D?,
     override val creator: () -> D
-) : OptionalField<T, D> {
+) : OptionalField<D> {
     private var data: D? = defaultValue
     private var parent: Store<*, *>? = null
 
@@ -149,7 +149,7 @@ private class OptionalFieldImpl<T : Any, D : StoreData<T>>(
         }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is OptionalFieldImpl<*, *>) return false
+        if (other !is OptionalFieldImpl<*>) return false
         return data == other.data && name == other.name
     }
 
