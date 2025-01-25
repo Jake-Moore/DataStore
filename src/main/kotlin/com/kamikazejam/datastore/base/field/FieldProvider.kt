@@ -13,5 +13,5 @@ interface FieldProvider {
      * Gets the underlying FieldWrapper that this object provides or represents.
      * @return The FieldWrapper instance
      */
-    val fieldWrapper: FieldWrapper<*>
+    val fieldWrapper: FieldWrapper<*,*>
 }

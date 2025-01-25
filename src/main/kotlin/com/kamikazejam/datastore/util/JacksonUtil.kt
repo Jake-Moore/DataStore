@@ -11,6 +11,8 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Store
+import com.kamikazejam.datastore.base.data.CompositeStoreData
+import com.kamikazejam.datastore.base.data.SimpleStoreData
 import com.kamikazejam.datastore.base.field.*
 import com.kamikazejam.datastore.util.jackson.JacksonSpigotModule
 import org.bson.Document
@@ -61,39 +63,46 @@ object JacksonUtil {
             return m
         }
 
-    fun <K, T : Store<T, K>> serializeToDocument(store: T): Document {
+    fun <K, X : Store<X, K>> serializeToDocument(store: X): Document {
         val doc = Document()
         for (provider in store.allFields) {
-            val field = provider.fieldWrapper
-            val str = serializeFieldProvider(provider)
-            doc[field.name] = str
+            appendFieldProvider(doc, provider)
         }
         return doc
     }
 
-    private fun serializeFieldProvider(provider: FieldProvider) : String? {
+    private fun appendFieldProvider(doc: Document, provider: FieldProvider) {
         val field = provider.fieldWrapper
-        val value = field.getNullable()
-        return if (value != null) {
-            try {
-                when (provider) {
-                    is FieldWrapperList<*> -> serializeFieldWrapperList(provider)
-                    is FieldWrapperMap<*, *> -> serializeFieldWrapperMap(provider)
-                    is FieldWrapperSet<*> -> serializeFieldWrapperSet(provider)
-                    is FieldWrapperConcurrentMap<*, *> -> serializeFieldWrapperConcurrentMap(provider)
-                    is FieldWrapper<*> -> serializeFieldWrapperValue(value)
-                    else -> throw IllegalStateException("Unknown FieldProvider type: ${provider.javaClass.simpleName}")
-                }
-            } catch (e: Exception) {
-                kotlin.runCatching {
-                    DataStoreSource.colorLogger.error("[JacksonUtil] Error serializing field '${field.name}': ${e.message}")
-                }
-                throw e
+
+        // Case 1 - Data is null -> just store null in the json
+        val data = field.getNullable()
+        if (data == null) {
+            doc[field.name] = null
+            return
+        }
+
+        // Case 2 - Data is not null -> serialize the data by what kind of data it is
+        when (data) {
+            is SimpleStoreData<*> -> {
+                // Just use the serialized value (assumes StoreData returns values compatible BSON)
+                // If not, that's the responsibility of the StoreData implementation, and errors will be thrown by MongoDB
+                doc[field.name] = data.serializeToBSON()
             }
-        } else {
-            null
+            is CompositeStoreData<*> -> {
+                // We have multiple fields to serialize, so handle each by their own provider
+                val subDocument = Document()
+                for (subProvider in data.getCustomFields()) {
+                    appendFieldProvider(subDocument, subProvider)
+                }
+                doc[field.name] = subDocument
+            }
         }
     }
+
+
+
+
+
 
     private fun serializeFieldWrapperList(wrapper: FieldWrapperList<*>): String {
         return serializeValue(wrapper.toList())
@@ -123,7 +132,7 @@ object JacksonUtil {
         return serializeValue(value)
     }
 
-    fun <K, T : Store<T, K>> deserializeFromDocument(storeClass: Class<T>, doc: Document): T {
+    fun <K, X : Store<X, K>> deserializeFromDocument(storeClass: Class<X>, doc: Document): X {
         Preconditions.checkNotNull(doc, "Document cannot be null")
 
         try {
@@ -149,7 +158,7 @@ object JacksonUtil {
         }
     }
 
-    fun <K, T : Store<T, K>> deepCopy(store: T): T {
+    fun <K, X : Store<X, K>> deepCopy(store: X): X {
         val json = serializeToDocument(store).toJson()
         return deserializeFromDocument(store.javaClass, Document.parse(json))
     }
