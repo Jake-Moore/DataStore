@@ -13,10 +13,8 @@ sealed interface FieldWrapper<D : StoreData<Any>> : FieldProvider {
     val isWriteable: Boolean
     // we need a creator function that can create an instance of D
     val creator: () -> D
+    @set:ApiStatus.Internal
     var parent: Store<*, *>?
-
-    @ApiStatus.Internal
-    fun setParent(parent: Store<*, *>)
 
     fun getData(): D?
 
@@ -66,17 +64,15 @@ private class RequiredFieldImpl<D : StoreData<Any>>(
 ) : RequiredField<D> {
     private var data: D = defaultValue
     override var parent: Store<*, *>? = null
+        set(value) {
+            field = value
+            data.setParent(value)
+        }
 
     override fun getData(): D {
         Preconditions.checkState(parent != null, "[RequiredField#get] Field not registered with a parent document")
         Preconditions.checkState(data.parent != null, "[RequiredField#get] Data not registered with a parent document")
         return data
-    }
-
-    @ApiStatus.Internal
-    override fun setParent(parent: Store<*, *>) {
-        this.parent = parent
-        this.data.setParent(parent)
     }
 
     override fun setData(data: D) {
@@ -117,18 +113,16 @@ private class OptionalFieldImpl<D : StoreData<Any>>(
 ) : OptionalField<D> {
     private var data: D? = defaultValue
     override var parent: Store<*, *>? = null
+        set(value) {
+            field = value
+            data?.setParent(value)
+        }
 
     override fun getData(): D? {
         val d = this.data
         Preconditions.checkState(parent != null, "[OptionalField#get] Field not registered with a parent document")
         Preconditions.checkState((d == null || d.parent != null), "[OptionalField#get] Data not registered with a parent document")
         return d
-    }
-
-    @ApiStatus.Internal
-    override fun setParent(parent: Store<*, *>) {
-        this.parent = parent
-        this.data?.setParent(parent)
     }
 
     override fun getDataOrDefault(default: D): D {

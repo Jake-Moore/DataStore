@@ -79,7 +79,7 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
         initialized = true // Must set before calling getAllFields because it will want it to be true
         // Set parent reference for all fields (including id and version)
         allFields.forEach { provider: FieldProvider ->
-            provider.fieldWrapper.setParent(this)
+            provider.fieldWrapper.parent = this
         }
     }
 
