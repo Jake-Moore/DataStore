@@ -9,7 +9,7 @@ abstract class CompositeStoreData<T : Any>: StoreData<T>() {
     /**
      * Override this method to provide the nested fields this composite data contains
      */
-    abstract fun getCustomFields(): Set<FieldProvider>
+    abstract fun getCustomFields(): List<FieldProvider>
 
     final override fun getType(): Companion.Type {
         return Companion.Type.COMPOSITE

@@ -28,7 +28,7 @@ interface Store<X : Store<X, K>, K : Any> : DataStoreScope {
      *
      * You may return simple [FieldWrapper] objects like [RequiredField] or [OptionalField].
      */
-    fun getCustomFields(): Set<FieldProvider>
+    fun getCustomFields(): List<FieldProvider>
 
     // ----------------------------------------------------- //
     //                 CRUD Helpers (Async)                  //
@@ -55,7 +55,7 @@ interface Store<X : Store<X, K>, K : Any> : DataStoreScope {
     fun initialize()
 
     @get:ApiStatus.Internal
-    val allFields: Set<FieldProvider>
+    val allFields: List<FieldProvider>
 
     @get:ApiStatus.Internal
     val allFieldsMap: Map<String, FieldProvider>

@@ -20,6 +20,7 @@ import org.bukkit.entity.Player
 import org.jetbrains.annotations.ApiStatus.Internal
 import java.util.*
 import javax.persistence.Id
+import kotlin.collections.ArrayList
 
 @Suppress("unused")
 abstract class StoreProfile<T : StoreProfile<T>> private constructor(
@@ -92,11 +93,10 @@ abstract class StoreProfile<T : StoreProfile<T>> private constructor(
     }
 
     @get:Internal
-    override val allFields: Set<FieldProvider>
+    override val allFields: List<FieldProvider>
         get() {
             this.ensureValid()
-            val fields: MutableSet<FieldProvider> =
-                HashSet(getCustomFields())
+            val fields: MutableList<FieldProvider> = ArrayList(getCustomFields())
             fields.add(idField)
             fields.add(versionField)
             fields.add(usernameField)
