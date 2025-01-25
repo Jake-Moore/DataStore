@@ -15,8 +15,6 @@ sealed interface FieldWrapper<T : Any, D : StoreData<T>> : FieldProvider {
     @ApiStatus.Internal
     fun setParent(parent: Store<*, *>)
 
-    fun getDataType(): Class<T>
-
     fun getNullable(): D?
 
     override val fieldWrapper: FieldWrapper<*,*>
@@ -51,8 +49,8 @@ sealed interface OptionalField<T : Any, D : StoreData<T>> : FieldWrapper<T, D> {
 
     companion object {
         @JvmStatic
-        fun <T : Any, D : StoreData<T>> of(name: String, defaultValue: D?, dataType: Class<T>): OptionalField<T, D> =
-            OptionalFieldImpl(name, defaultValue, dataType)
+        fun <T : Any, D : StoreData<T>> of(name: String, defaultValue: D?): OptionalField<T, D> =
+            OptionalFieldImpl(name, defaultValue)
     }
 }
 
@@ -66,10 +64,6 @@ private class RequiredFieldImpl<T : Any, D : StoreData<T>>(
 
     override fun getData(): D {
         return data
-    }
-
-    override fun getDataType(): Class<T> {
-        return data.dataType
     }
 
     @ApiStatus.Internal
@@ -104,28 +98,23 @@ private class RequiredFieldImpl<T : Any, D : StoreData<T>>(
 
     override fun equals(other: Any?): Boolean {
         if (other !is RequiredFieldImpl<*,*>) return false
-        return data == other.data && name == other.name && data.dataType == other.data.dataType
+        return data == other.data && name == other.name
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(data, name, data.dataType)
+        return Objects.hash(data, name)
     }
 }
 
 private class OptionalFieldImpl<T : Any, D : StoreData<T>>(
     override val name: String,
     override val defaultValue: D?,
-    val dateType: Class<T>,
 ) : OptionalField<T, D> {
     private var data: D? = defaultValue
     private var parent: Store<*, *>? = null
 
     override fun getData(): D? {
         return data
-    }
-
-    override fun getDataType(): Class<T> {
-        return dateType
     }
 
     @ApiStatus.Internal
@@ -147,10 +136,6 @@ private class OptionalFieldImpl<T : Any, D : StoreData<T>>(
 
     override fun set(data: D?) {
         Preconditions.checkState(isWriteable, "Cannot modify field '$name' in read-only mode")
-        Preconditions.checkState(
-            data == null || dateType.isInstance(data) || dateType::class.java.isInstance(data),
-            "Value $data (${data?.let { it::class.java }}) is not an instance of the field type (${dateType::class.java})"
-        )
         this.data = data
     }
 
@@ -167,10 +152,10 @@ private class OptionalFieldImpl<T : Any, D : StoreData<T>>(
 
     override fun equals(other: Any?): Boolean {
         if (other !is OptionalFieldImpl<*, *>) return false
-        return data == other.data && name == other.name && dateType == other.dateType
+        return data == other.data && name == other.name
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(data, name, dateType)
+        return Objects.hash(data, name)
     }
 }

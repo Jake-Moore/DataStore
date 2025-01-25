@@ -3,7 +3,7 @@ package com.kamikazejam.datastore.base.data.impl
 import com.kamikazejam.datastore.base.data.SimpleStoreData
 import org.bson.Document
 
-class StringData(val string: String) : SimpleStoreData<String>(dataType = String::class.java, value = string) {
+class StringData(val string: String) : SimpleStoreData<String>(value = string) {
     override fun serializeToBSON(): Any {
         return string
     }
