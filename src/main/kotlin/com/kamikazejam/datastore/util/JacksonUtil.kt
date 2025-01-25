@@ -27,14 +27,6 @@ object JacksonUtil {
 
     private var _objectMapper: ObjectMapper? = null
 
-    fun serializeValue(value: Any): String {
-        return objectMapper.writeValueAsString(value)
-    }
-
-    fun <T> deserializeValue(json: String, clazz: Class<T>): T {
-        return objectMapper.readValue(json, clazz)
-    }
-
     val objectMapper: ObjectMapper
         get() {
             _objectMapper?.let { return it }
@@ -72,18 +64,18 @@ object JacksonUtil {
     fun <K : Any, X : Store<X, K>> serializeToDocument(store: X): Document {
         val doc = Document()
         for (provider in store.allFields) {
-            appendFieldProvider(doc, provider)
+            serializeFieldProviderIntoDoc(doc, provider)
         }
         return doc
     }
 
-    fun appendFieldProvider(doc: Document, provider: FieldProvider) {
+    fun serializeFieldProviderIntoDoc(doc: Document, provider: FieldProvider) {
         val field = provider.fieldWrapper
         val data = field.getData()
-        appendDataIntoDocumentKey(field.name, data, doc)
+        serializeDataIntoDocumentKey(field.name, data, doc)
     }
 
-    fun appendDataIntoDocumentKey(key: String, data: StoreData<Any>?, doc: Document) {
+    fun serializeDataIntoDocumentKey(key: String, data: StoreData<Any>?, doc: Document) {
         // Case 1 - Data is null -> just store null in the json
         if (data == null) {
             doc[key] = null
@@ -104,7 +96,7 @@ object JacksonUtil {
                 // We have multiple fields to serialize, so handle each by their own provider
                 val innerDoc = Document()
                 for (subProvider in data.getCustomFields()) {
-                    appendFieldProvider(innerDoc, subProvider)
+                    serializeFieldProviderIntoDoc(innerDoc, subProvider)
                 }
 
                 subDocument[StoreData.CONTENT_KEY] = innerDoc

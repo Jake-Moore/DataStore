@@ -126,10 +126,6 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
         return UUID.fromString(key)
     }
 
-    override fun getKeyType(): Class<UUID> {
-        return UUID::class.java
-    }
-
     override val cached: kotlin.collections.Collection<X>
         get() = localStore.localStorage.values
 

@@ -32,7 +32,7 @@ class StoreDataList<T : StoreData<*>>(
 
         // Insert each StoreData element into its index (using JacksonUtil serialization)
         for ((i, data) in internalList.withIndex()) {
-            JacksonUtil.appendDataIntoDocumentKey(i.toString(), data, doc)
+            JacksonUtil.serializeDataIntoDocumentKey(i.toString(), data, doc)
         }
         
         return doc

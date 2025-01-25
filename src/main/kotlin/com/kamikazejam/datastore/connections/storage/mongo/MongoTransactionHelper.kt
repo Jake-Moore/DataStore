@@ -4,12 +4,12 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
+import com.kamikazejam.datastore.base.data.StoreData
 import com.kamikazejam.datastore.connections.storage.exception.TransactionRetryLimitExceededException
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.kamikazejam.datastore.util.JacksonUtil
 import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
 import com.kamikazejam.datastore.util.JacksonUtil.VERSION_FIELD
-import com.kamikazejam.datastore.util.JacksonUtil.serializeValue
 import com.mongodb.MongoCommandException
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoCollection
@@ -101,7 +101,7 @@ object MongoTransactionHelper {
                 workingCopy.readOnly = false
 
                 // Fetch Version prior to updates
-                val currentVersion = workingCopy.versionField.getData().get()
+                val currentVersion: Long = workingCopy.versionField.getData().get()
 
                 // Apply updates to the copy
                 updateFunction.accept(workingCopy)
@@ -111,19 +111,14 @@ object MongoTransactionHelper {
                 val id = collection.keyToString(workingCopy.id)
                 val doc = JacksonUtil.serializeToDocument(workingCopy)
 
-                // Generate the dbStrings that we need to search for, by mirroring the serialization logic
-                // of the FieldWrapper that created the strings
-                val idDbString = serializeValue(id)
-                val verDbString = serializeValue(currentVersion)
-
                 val result = mongoColl.replaceOne(
                     session,
                     Filters.and(
                         // These two filters act as a sort of compare-and-swap mechanic
                         //  inside of this mongo transaction, if these are not met then
                         //  the transaction will fail and we will need to retry.
-                        Filters.eq(ID_FIELD, idDbString),
-                        Filters.eq(VERSION_FIELD, verDbString)
+                        Filters.eq("$ID_FIELD.${StoreData.CONTENT_KEY}", id),
+                        Filters.eq("$VERSION_FIELD.${StoreData.CONTENT_KEY}", currentVersion),
                     ),
                     doc
                 )
@@ -134,7 +129,7 @@ object MongoTransactionHelper {
 
                     // If update failed, fetch current version
                     val currentDoc: Document =
-                        mongoColl.find(session).filter(Filters.eq(ID_FIELD, idDbString))
+                        mongoColl.find(session).filter(Filters.eq("$ID_FIELD.${StoreData.CONTENT_KEY}", id))
                             .first()
                             ?: throw RuntimeException("Entity not found")
 

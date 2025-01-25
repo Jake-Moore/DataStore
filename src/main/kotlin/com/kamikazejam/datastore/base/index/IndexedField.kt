@@ -2,22 +2,17 @@ package com.kamikazejam.datastore.base.index
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
+import com.kamikazejam.datastore.base.data.StoreData
 
 /**
  * All IndexFields are assumed to be unique (only have one Store with that value)
  */
 @Suppress("unused")
-abstract class IndexedField<X : Store<X, *>, T>(
+abstract class IndexedField<X : Store<X, *>, D: StoreData<Any>>(
     private val collection: Collection<*, X>,
     val name: String
 ) {
-    abstract fun equals(a: T?, b: T?): Boolean
+    abstract fun equals(a: D?, b: D?): Boolean
 
-    abstract fun getValue(store: X): T?
-
-    abstract fun toString(value: Any): String
-
-    abstract fun fromString(value: String): T
-
-    abstract fun getValueType(): Class<T>
+    abstract fun getValue(store: X): D?
 }

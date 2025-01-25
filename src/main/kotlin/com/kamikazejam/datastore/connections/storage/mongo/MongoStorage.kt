@@ -5,6 +5,7 @@ import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.StoreCollection
+import com.kamikazejam.datastore.base.data.StoreData
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.connections.config.MongoConfig
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor
@@ -12,8 +13,6 @@ import com.kamikazejam.datastore.connections.storage.StorageService
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.kamikazejam.datastore.util.JacksonUtil
 import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
-import com.kamikazejam.datastore.util.JacksonUtil.deserializeValue
-import com.kamikazejam.datastore.util.JacksonUtil.serializeValue
 import com.mongodb.*
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
@@ -98,12 +97,9 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     override suspend fun <K : Any, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? = withContext(Dispatchers.IO) {
         try {
-            // Serialize the value using Jackson, since the value in the db is also a serialized string
-            //  and we need to compare the serialized strings in our Filter
-            val dbString = serializeValue(collection.keyToString(key))
-
-            // Filter based on this serialized string
-            val doc = getMongoCollection(collection).find().filter(Filters.eq(ID_FIELD, dbString)).first() ?: return@withContext null
+            // Filter based on the dot notation, since we know all ID Fields are SimpleStoreData, where the content is the id string
+            val filter = Filters.eq("$ID_FIELD.${StoreData.CONTENT_KEY}", collection.keyToString(key))
+            val doc = getMongoCollection(collection).find().filter(filter).first() ?: return@withContext null
 
             val o: X = JacksonUtil.deserializeFromDocument(collection.storeClass, doc)
             // Cache Indexes since we are loading from database
@@ -170,11 +166,9 @@ class MongoStorage : StorageService() {
 
     override suspend fun <K : Any, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
-            // Serialize the value using Jackson, since the value in the db is also a serialized string
-            //  and we need to compare the serialized strings in our Filter
-            val dbString = serializeValue(collection.keyToString(key))
-            // Filter based on this serialized string
-            return@withContext getMongoCollection(collection).countDocuments(Filters.eq(ID_FIELD, dbString)) > 0
+            // Filter based on the dot notation, since we know all ID Fields are SimpleStoreData, where the content is the id string
+            val filter = Filters.eq("$ID_FIELD.${StoreData.CONTENT_KEY}", collection.keyToString(key))
+            return@withContext getMongoCollection(collection).countDocuments(filter) > 0
         } catch (ex: MongoException) {
             collection.getLoggerService().info(ex, "MongoDB error check if Store (${collection.getKeyStringIdentifier(key)}) exists in MongoDB Layer")
             return@withContext false
@@ -190,11 +184,9 @@ class MongoStorage : StorageService() {
 
     override suspend fun <K : Any, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
-            // Serialize the value using Jackson, since the value in the db is also a serialized string
-            //  and we need to compare the serialized strings in our Filter
-            val dbString = serializeValue(collection.keyToString(key))
-            // Filter based on this serialized string
-            return@withContext getMongoCollection(collection).deleteMany(Filters.eq(ID_FIELD, dbString)).deletedCount > 0
+            // Filter based on the dot notation, since we know all ID Fields are SimpleStoreData, where the content is the id string
+            val filter = Filters.eq("$ID_FIELD.${StoreData.CONTENT_KEY}", collection.keyToString(key))
+            return@withContext getMongoCollection(collection).deleteMany(filter).deletedCount > 0
         } catch (ex: MongoException) {
             collection.getLoggerService().info(ex, "MongoDB error removing Store (${collection.getKeyStringIdentifier(key)}) from MongoDB Layer")
         } catch (expected: Exception) {
@@ -228,16 +220,13 @@ class MongoStorage : StorageService() {
     override suspend fun <K : Any, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> = channelFlow {
         // Fetch all documents, but use Projection to only retrieve the ID field
         for (doc: Document in getMongoCollection(collection).find().projection(Projections.include(ID_FIELD)).iterator()) {
-            // We know where the id is located, and we can fetch it as a string, there is no need to deserialize the entire object
-            val dbValue = doc.getString(ID_FIELD)
+            // We know where the id is located, and we can fetch it, there is no need to deserialize the entire object
+            val idField = doc[ID_FIELD] as Document
 
-            // Parse the Key from the serialized dbValue
-            val key = dbValue?.let {
-                deserializeValue(dbValue, collection.getKeyType())
-            }
+            // This ID Field will have a CONTENT_KEY field that contains the key string
+            val keyString: String = idField.getString(StoreData.CONTENT_KEY) ?: throw IllegalStateException("ID Field is null")
 
-            // Convert the id field string back into a key
-            key ?: throw IllegalStateException("ID Field is null")
+            val key: K = collection.keyFromString(keyString)
             send(key)
         }
     }.flowOn(Dispatchers.IO)
@@ -343,7 +332,7 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    override suspend fun <K : Any, X : Store<X, K>, T> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, T>) = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>, D : StoreData<Any>> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, D>) = withContext(Dispatchers.IO) {
         getMongoCollection(collection).createIndex(
             Document(index.name, 1),
             IndexOptions().unique(true)
@@ -359,16 +348,16 @@ class MongoStorage : StorageService() {
         // do nothing -> MongoDB handles this
     }
 
-    override suspend fun <K : Any, X : Store<X, K>, T> getStoreIdByIndex(
+    override suspend fun <K : Any, X : Store<X, K>, D : StoreData<Any>> getStoreIdByIndex(
         collection: StoreCollection<K, X>,
-        index: IndexedField<X, T>,
-        value: T
+        index: IndexedField<X, D>,
+        value: D
     ): K? = withContext(Dispatchers.IO) {
-        // Serialize the value using Jackson, since the value in the db is also a serialized string
-        //  and we need to compare the serialized strings in our Filter
-        val dbString = serializeValue(value as Any)
+        // Filter is a serialized BSON Document that should match the serialization and structure of the BSON in MongoDB
+        val filterDoc = Document()
+        JacksonUtil.serializeDataIntoDocumentKey(index.name, value, filterDoc)
+        val query = Filters.eq(filterDoc)
 
-        val query = Filters.eq(index.name, dbString)
         val doc = getMongoCollection(collection).find(query)
             .projection(Projections.include(ID_FIELD, index.name))
             .first()

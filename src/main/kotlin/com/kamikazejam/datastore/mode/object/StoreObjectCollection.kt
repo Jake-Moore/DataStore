@@ -125,10 +125,6 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
         return key
     }
 
-    override fun getKeyType(): Class<String> {
-        return String::class.java
-    }
-
     override suspend fun readAllFromDatabase(cacheStores: Boolean): Flow<X> = flow {
         // Create an Iterable that iterates through all database objects, and updates local objects as necessary
         databaseStore.getAll(this@StoreObjectCollection).map { dbStore: X ->

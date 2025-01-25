@@ -8,6 +8,7 @@ import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncHasKeyHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
+import com.kamikazejam.datastore.base.data.StoreData
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.loader.StoreLoader
@@ -195,11 +196,6 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
     fun keyFromString(key: String): K
 
     /**
-     * Gets the Class type of the key for this Collection.
-     */
-    fun getKeyType(): Class<K>
-
-    /**
      * A non-functional and mostly visual/informative identifier combining the key string and collection name
      *
      * Mostly used for logging purposes
@@ -288,7 +284,7 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
      * Register an index for this Collection.
      * @return The registered index (for chaining)
      */
-    suspend fun <T> registerIndex(field: IndexedField<X, T>): IndexedField<X, T>
+    suspend fun <D : StoreData<Any>> registerIndex(field: IndexedField<X, D>): IndexedField<X, D>
 
     /**
      * Updates the indexes cache with the provided Store object.
@@ -312,11 +308,11 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncReadIdHandler<K>
+    fun <D : StoreData<Any>> readIdByIndex(index: IndexedField<X, D>, value: D): AsyncReadIdHandler<K>
 
     /**
      * Retrieves an object by the provided index field and its value.
      */
-    fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncReadHandler<K, X>
+    fun <D : StoreData<Any>> readByIndex(field: IndexedField<X, D>, value: D): AsyncReadHandler<K, X>
 }
 

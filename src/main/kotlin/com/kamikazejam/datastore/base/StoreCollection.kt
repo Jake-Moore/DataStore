@@ -328,14 +328,14 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         // use our serialization helpers to do this
         // By serializing into a document, then back out of it
         val doc = Document()
-        JacksonUtil.appendFieldProvider(doc, source)
+        JacksonUtil.serializeFieldProviderIntoDoc(doc, source)
         JacksonUtil.deserializeIntoFieldProvider<StoreData<Any>>(target, doc)
     }
 
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    override suspend fun <T> registerIndex(field: IndexedField<X, T>): IndexedField<X, T> {
+    override suspend fun <D : StoreData<Any>> registerIndex(field: IndexedField<X, D>): IndexedField<X, D> {
         getLoggerService().debug("Registering index: " + field.name)
         DataStoreSource.storageService.registerIndex(this, field)
         return field
@@ -353,13 +353,13 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         DataStoreSource.storageService.saveIndexCache(this)
     }
 
-    override fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncReadIdHandler<K> {
+    override fun <D : StoreData<Any>> readIdByIndex(index: IndexedField<X, D>, value: D): AsyncReadIdHandler<K> {
         return AsyncReadIdHandler(this) {
             DataStoreSource.storageService.getStoreIdByIndex(this, index, value)
         }
     }
 
-    override fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncReadHandler<K, X> {
+    override fun <D : StoreData<Any>> readByIndex(field: IndexedField<X, D>, value: D): AsyncReadHandler<K, X> {
         // 1. -> Check local cache (brute force)
         for (store in localStore.getAll()) {
             if (field.equals(field.getValue(store), value)) {

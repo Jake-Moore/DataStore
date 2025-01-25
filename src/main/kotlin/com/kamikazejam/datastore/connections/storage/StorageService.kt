@@ -4,6 +4,7 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Service
 import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.StoreCollection
+import com.kamikazejam.datastore.base.data.StoreData
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
 import kotlinx.coroutines.flow.Flow
@@ -82,13 +83,13 @@ abstract class StorageService : LoggerService(), Service {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    abstract suspend fun <K : Any, X : Store<X, K>, T> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, T>)
+    abstract suspend fun <K : Any, X : Store<X, K>, D : StoreData<Any>> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, D>)
     abstract suspend fun <K : Any, X : Store<X, K>> cacheIndexes(collection: StoreCollection<K, X>, store: X, updateFile: Boolean)
     abstract suspend fun <K : Any, X : Store<X, K>> saveIndexCache(collection: StoreCollection<K, X>)
-    abstract suspend fun <K : Any, X : Store<X, K>, T> getStoreIdByIndex(
+    abstract suspend fun <K : Any, X : Store<X, K>, D : StoreData<Any>> getStoreIdByIndex(
         collection: StoreCollection<K, X>,
-        index: IndexedField<X, T>,
-        value: T
+        index: IndexedField<X, D>,
+        value: D
     ): K?
 
     abstract suspend fun <K : Any, X : Store<X, K>> invalidateIndexes(collection: StoreCollection<K, X>, key: K, updateFile: Boolean)
