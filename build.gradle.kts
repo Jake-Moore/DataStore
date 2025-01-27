@@ -28,7 +28,7 @@ dependencies {
     // Dependencies
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVer")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVer")
-    implementation("org.mongodb:mongodb-driver-sync:5.3.0")
+    implementation("org.mongodb:mongodb-driver-sync:5.3.1")
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
     // Testing Dependencies
