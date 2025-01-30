@@ -1,7 +1,5 @@
 package com.kamikazejam.datastore.util.jackson
 
-import com.fasterxml.jackson.core.Version
-import com.fasterxml.jackson.databind.module.SimpleModule
 import com.kamikazejam.datastore.util.jackson.deserialize.BlockDeserializer
 import com.kamikazejam.datastore.util.jackson.serialize.BlockSerializer
 import org.bukkit.block.Block

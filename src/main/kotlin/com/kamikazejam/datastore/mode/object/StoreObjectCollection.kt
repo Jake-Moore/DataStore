@@ -3,14 +3,13 @@ package com.kamikazejam.datastore.mode.`object`
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
-import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
-import com.kamikazejam.datastore.base.store.StoreInstantiator
-import com.kamikazejam.datastore.mode.`object`.store.ObjectStorageDatabase
-import com.kamikazejam.datastore.mode.`object`.store.ObjectStorageLocal
+import com.kamikazejam.datastore.base.log.LoggerService
+import com.kamikazejam.datastore.mode.`object`.storage.ObjectStorageDatabase
+import com.kamikazejam.datastore.mode.`object`.storage.ObjectStorageLocal
+import com.kamikazejam.datastore.mode.store.StoreObject
 import com.mongodb.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -19,17 +18,16 @@ import org.bukkit.Bukkit
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
-import java.util.function.Consumer
 
 @Suppress("unused")
 abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads constructor(
     module: DataStoreRegistration,
-    instantiator: StoreInstantiator<String, X>,
+    override val instantiator: (String, Long) -> X,
     name: String,
     storeClass: Class<X>,
-    logger: CollectionLoggerInstantiator = CollectionLoggerInstantiator { collection: Collection<*, *> -> CollectionLoggerService(collection) }
+    logger: (StoreCollection<String, X>) -> LoggerService = { store -> CollectionLoggerService(store) },
 ) :
-    StoreCollection<String, X>(instantiator, name, String::class.java, storeClass, module, logger),
+    StoreCollection<String, X>(name, String::class.java, storeClass, module, logger),
     ObjectCollection<X>
 {
     private val loaders: ConcurrentMap<String, StoreObjectLoader<X>> = ConcurrentHashMap()
@@ -47,47 +45,44 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     }
 
     // ------------------------------------------------------ //
-    // Collection Methods                                     //
+    //                  Collection Methods                    //
     // ------------------------------------------------------ //
+
     override fun initialize(): Boolean {
-        // Nothing to do here
-        return true
+        Preconditions.checkNotNull(
+            instantiator,
+            "Instantiator must be set before calling start() for Collection $name"
+        )
+        return super.initialize()
     }
 
     override fun terminate(): Boolean {
-        // Don't save -> Stores are updated in their cache's update methods, they should not need to be saved here
-        val success = true
-
+        // Clear local stores (frees memory)
         loaders.clear()
-        // Clear local store (frees memory)
         localStore.removeAll()
 
         // Don't clear database (can't)
-        return success
+        return true
     }
 
     // ----------------------------------------------------- //
     //                          CRUD                         //
     // ----------------------------------------------------- //
+    @Suppress("DuplicatedCode")
     @Throws(DuplicateKeyException::class)
-    override fun create(key: String, initializer: Consumer<X>): AsyncCreateHandler<String, X> {
+    override fun create(key: String, initializer: (X) -> X): AsyncCreateHandler<String, X> {
         Preconditions.checkNotNull(initializer, "Initializer cannot be null")
 
         return AsyncCreateHandler(this) {
             try {
                 // Create a new instance in modifiable state
-                val store: X = instantiator.instantiate()
-                store.initialize()
-                store.readOnly = false
+                val initial: X = instantiator(key, 0L)
+                initial.initialize(this)
 
-                // Set the id first (allowing the initializer to change it if necessary)
-                store.idField.getData().set(key)
-                // Initialize the store
-                initializer.accept(store)
-                // Enforce Version 0 for creation
-                store.versionField.getData().set(0L)
-
-                store.readOnly = true
+                // Initialize the store (make sure the id and version were not changed)
+                val store: X = initializer(initial)
+                assert(store.id == key) { "Store ID must match key on Creation!" }
+                assert(store.version == 0L) { "Store version must be 0 on Creation!" }
 
                 // Save the store to our database implementation & cache
                 // DO DATABASE SAVE FIRST SO ANY EXCEPTIONS ARE THROWN PRIOR TO MODIFYING LOCAL CACHE
@@ -105,7 +100,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     }
 
     @Throws(DuplicateKeyException::class)
-    override fun create(initializer: Consumer<X>): AsyncCreateHandler<String, X> {
+    override fun create(initializer: (X) -> X): AsyncCreateHandler<String, X> {
         return this.create(UUID.randomUUID().toString(), initializer)
     }
 
@@ -133,8 +128,8 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
             // If we want to cache, and have a local store that's newer -> update the local store
             // Note, if not caching then we won't update any local stores and won't cache the db store
-            val dbVer = dbStore.versionField.getData().get()
-            val localVer = local?.versionField?.getData()?.get() ?: 0
+            val dbVer = dbStore.version
+            val localVer = local?.version ?: 0
             if (cacheStores && local != null && dbVer >= localVer) {
                 this@StoreObjectCollection.updateStoreFromNewer(local, dbStore)
                 this@StoreObjectCollection.cache(dbStore)
@@ -143,12 +138,12 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
             // Find the store object to return
             val ret = local ?: dbStore
             // Verify it has the correct cache and cache it if necessary
-            ret.setCollection(this@StoreObjectCollection)
+            ret.initialize(this@StoreObjectCollection)
             ret
         }
     }
 
-    override val cached: kotlin.collections.Collection<X>
+    override val cached: Collection<X>
         get() = localStore.localStorage.values
 
     override fun readFromCache(key: String): X? {

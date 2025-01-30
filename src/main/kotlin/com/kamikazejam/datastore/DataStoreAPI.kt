@@ -4,7 +4,7 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.exception.DuplicateDatabaseException
-import com.kamikazejam.datastore.database.DatabaseRegistration
+import com.kamikazejam.datastore.base.database.DatabaseRegistration
 import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.*

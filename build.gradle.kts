@@ -7,10 +7,11 @@ plugins {
     id("maven-publish")
     id("com.gradleup.shadow") version "8.3.5"
     kotlin("jvm")
+    kotlin("plugin.serialization")
 }
 
 group = "com.kamikazejam"
-version = "0.1.0.alpha.1-SNAPSHOT"
+version = "0.2.0.alpha.1-SNAPSHOT"
 description = "Simple Data Storage Solution using MongoDB"
 
 
@@ -26,9 +27,7 @@ dependencies {
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
     // Dependencies
-    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVer")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVer")
-    implementation("org.mongodb:mongodb-driver-sync:5.3.0")
+    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.3.0")
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
     // Testing Dependencies
@@ -37,10 +36,12 @@ dependencies {
     // Jetbrains
     compileOnly("org.jetbrains:annotations:26.0.1")
     testCompileOnly("org.jetbrains:annotations:26.0.1")
-    implementation(kotlin("stdlib-jdk8"))
 
     // Kotlin Libraries
+    implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.0")
+    implementation("org.mongodb:bson-kotlinx:5.3.0") // BSON for Serialization (for MongoDB)
 }
 
 // Register a task to delete the jars in the libs folder

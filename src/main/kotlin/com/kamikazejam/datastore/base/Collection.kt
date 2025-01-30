@@ -8,23 +8,21 @@ import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncHasKeyHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
-import com.kamikazejam.datastore.base.data.StoreData
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.storage.StorageDatabase
 import com.kamikazejam.datastore.base.storage.StorageLocal
-import com.kamikazejam.datastore.base.store.StoreInstantiator
 import com.kamikazejam.datastore.mode.`object`.ObjectCollection
 import com.kamikazejam.datastore.mode.profile.ProfileCollection
+import com.kamikazejam.datastore.mode.store.Store
 import com.mongodb.*
 import kotlinx.coroutines.flow.Flow
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Blocking
 import java.util.*
-import java.util.function.Consumer
 
 /**
  * A [Collection] holds Store objects and manages their retrieval, caching, and saving.
@@ -47,7 +45,7 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
      * @return The created Store object. (READ-ONLY)
      */
     @Throws(DuplicateKeyException::class)
-    fun create(key: K, initializer: Consumer<X> = Consumer {}): AsyncCreateHandler<K, X>
+    fun create(key: K, initializer: (X) -> X = { it -> it }): AsyncCreateHandler<K, X>
 
     /**
      * Read a Store from this collection (or the database if it doesn't exist in the cache)
@@ -62,7 +60,7 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
      * @throws NoSuchElementException if the Store (by this key) is not found
      * @return The updated Store object. (READ-ONLY)
      */
-    fun update(key: K, updateFunction: Consumer<X>): AsyncUpdateHandler<K, X>
+    fun update(key: K, updateFunction: (X) -> X): AsyncUpdateHandler<K, X>
 
     /**
      * Deletes a Store by ID (removes from both cache and database collection)
@@ -223,19 +221,19 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
     val dependencyNames: Set<String>
 
     /**
-     * Helper method to use the [.getPlugin] plugin to run an async bukkit task.
+     * Helper method to use the [Collection]'s [Plugin] to run an async bukkit task.
      */
     @ApiStatus.Internal
     fun runAsync(runnable: Runnable)
 
     /**
-     * Helper method to use the [.getPlugin] plugin to run a sync bukkit task.
+     * Helper method to use the [Collection]'s [Plugin] to run a sync bukkit task.
      */
     @ApiStatus.Internal
     fun runSync(runnable: Runnable)
 
     /**
-     * Helper method to use the [.getPlugin] plugin to attempt an Async task
+     * Helper method to use the [Collection]'s [Plugin] to attempt an Async task
      * If the plugin is not allowed to run async tasks (like on disable), a sync task will be run instead.
      */
     @ApiStatus.Internal
@@ -261,11 +259,6 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
     val storeClass: Class<X>
 
     /**
-     * Returns the StoreInstantiator for the Store object in this Collection.
-     */
-    val instantiator: StoreInstantiator<K, X>
-
-    /**
      * Internal method used by DataStore to forcefully update a local instance of a Store object with a newer one,
      * allowing your references to the existing Store to remain intact and up-to-date.
      * Note that this only effects persistent (non-transient) fields.
@@ -284,7 +277,7 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
      * Register an index for this Collection.
      * @return The registered index (for chaining)
      */
-    suspend fun <D : StoreData<Any>> registerIndex(field: IndexedField<X, D>): IndexedField<X, D>
+    suspend fun <T> registerIndex(field: IndexedField<X, T>): IndexedField<X, T>
 
     /**
      * Updates the indexes cache with the provided Store object.
@@ -308,11 +301,11 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    fun <D : StoreData<Any>> readIdByIndex(index: IndexedField<X, D>, value: D): AsyncReadIdHandler<K>
+    fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncReadIdHandler<K>
 
     /**
      * Retrieves an object by the provided index field and its value.
      */
-    fun <D : StoreData<Any>> readByIndex(field: IndexedField<X, D>, value: D): AsyncReadHandler<K, X>
+    fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncReadHandler<K, X>
 }
 

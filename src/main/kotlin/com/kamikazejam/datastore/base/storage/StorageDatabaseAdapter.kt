@@ -1,10 +1,9 @@
 package com.kamikazejam.datastore.base.storage
 
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.base.Store
+import com.kamikazejam.datastore.mode.store.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.util.function.Consumer
 
 /**
  * Middleware class to adapt [StorageDatabase] methods (which include a [Collection] param) to a simpler api (without the [Collection] param).
@@ -17,7 +16,7 @@ abstract class StorageDatabaseAdapter<K : Any, X : Store<X, K>>(protected val co
 
     protected abstract suspend fun save(collection: Collection<K, X>, store: X): Boolean
 
-    protected abstract suspend fun updateSync(collection: Collection<K, X>, store: X, updateFunction: Consumer<X>): Boolean
+    protected abstract suspend fun updateSync(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): Boolean
 
     protected abstract suspend fun has(collection: Collection<K, X>, key: K): Boolean
 
@@ -56,7 +55,7 @@ abstract class StorageDatabaseAdapter<K : Any, X : Store<X, K>>(protected val co
      * @param updateFunction The function to update the Store with.
      * @return If the Store was replaced. (if the db was updated)
      */
-    suspend fun updateSync(store: X, updateFunction: Consumer<X>): Boolean {
+    suspend fun updateSync(store: X, updateFunction: (X) -> X): Boolean {
         return this.updateSync(this.collection, store, updateFunction)
     }
 

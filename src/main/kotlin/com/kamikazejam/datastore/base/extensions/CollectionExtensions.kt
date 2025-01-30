@@ -3,15 +3,14 @@
 package com.kamikazejam.datastore.base.extensions
 
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.async.result.Empty
 import com.kamikazejam.datastore.base.async.result.Failure
 import com.kamikazejam.datastore.base.async.result.Success
+import com.kamikazejam.datastore.mode.store.Store
 import org.jetbrains.annotations.NonBlocking
-import java.util.function.Consumer
 
 /**
  * Get a Store object from the Collection or create a new one if it doesn't exist.<br></br>
@@ -20,7 +19,7 @@ import java.util.function.Consumer
  * @param initializer The initializer for the Store if it doesn't exist.
  * @return The Store object. (READ-ONLY) (fetched or created)
  */
-fun <K : Any, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: Consumer<X> = Consumer {}): AsyncCreateHandler<K, X> {
+fun <K : Any, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer: (X) -> X = { it -> it }): AsyncCreateHandler<K, X> {
     return AsyncCreateHandler(this) {
         when (val readResult = read(key).await()) {
             is Success -> return@AsyncCreateHandler readResult.value
@@ -41,7 +40,7 @@ fun <K : Any, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer
  * @return The updated Store object. (READ-ONLY)
  */
 @NonBlocking
-fun <K : Any, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: Consumer<X>): AsyncUpdateHandler<K, X> {
+fun <K : Any, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: (X) -> X): AsyncUpdateHandler<K, X> {
     return this.update(store.id, updateFunction)
 }
 

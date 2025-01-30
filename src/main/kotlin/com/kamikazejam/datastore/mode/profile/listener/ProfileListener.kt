@@ -6,13 +6,13 @@ import com.kamikazejam.datastore.DataStoreAPI
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.exception.ProfileDenyJoinError
-import com.kamikazejam.datastore.event.profile.StoreProfileLoginEvent
-import com.kamikazejam.datastore.event.profile.StoreProfileLogoutEvent
-import com.kamikazejam.datastore.event.profile.StoreProfilePreLogoutEvent
+import com.kamikazejam.datastore.api.event.StoreProfileLoginEvent
+import com.kamikazejam.datastore.api.event.StoreProfileLogoutEvent
+import com.kamikazejam.datastore.api.event.StoreProfilePreLogoutEvent
 import com.kamikazejam.datastore.mode.profile.ProfileCollection
-import com.kamikazejam.datastore.mode.profile.StoreProfile
 import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.mode.profile.StoreProfileLoader
+import com.kamikazejam.datastore.mode.store.StoreProfile
 import com.kamikazejam.datastore.util.AsyncCollectionsExecutor
 import com.kamikazejam.datastore.util.Color
 import kotlinx.coroutines.Deferred
@@ -30,7 +30,7 @@ import org.bukkit.event.player.PlayerLoginEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import java.time.Duration
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 

@@ -1,4 +1,4 @@
-package com.kamikazejam.datastore.event.profile
+package com.kamikazejam.datastore.api.event
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList

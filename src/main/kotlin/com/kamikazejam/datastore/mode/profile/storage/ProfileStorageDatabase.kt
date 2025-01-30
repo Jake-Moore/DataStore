@@ -1,9 +1,9 @@
-package com.kamikazejam.datastore.mode.profile.store
+package com.kamikazejam.datastore.mode.profile.storage
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.storage.StorageDatabase
-import com.kamikazejam.datastore.mode.profile.StoreProfile
-import java.util.*
+import com.kamikazejam.datastore.mode.store.StoreProfile
+import java.util.UUID
 
 class ProfileStorageDatabase<X : StoreProfile<X>>(collection: Collection<UUID, X>) :
     StorageDatabase<UUID, X>(collection) {

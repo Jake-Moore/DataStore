@@ -2,14 +2,22 @@ package com.kamikazejam.datastore.mode.`object`
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
+import com.kamikazejam.datastore.mode.store.StoreObject
 import com.mongodb.*
-import java.util.function.Consumer
 
 /**
  * Defines Object-specific getters for StoreObjects. They return non-null Optionals.
  */
 @Suppress("unused")
 interface ObjectCollection<X : StoreObject<X>> : Collection<String, X> {
+
+    /**
+     * How we create a new instance of the [StoreObject] for this [Collection].
+     *
+     * Given the ID [String] and the version [Long], return a new instance
+     */
+    val instantiator: (String, Long) -> X
+
     // ----------------------------------------------------- //
     //                 CRUD Helpers (Async)                  //
     // ----------------------------------------------------- //
@@ -20,5 +28,5 @@ interface ObjectCollection<X : StoreObject<X>> : Collection<String, X> {
      * @return The created Store object. (READ-ONLY)
      */
     @Throws(DuplicateKeyException::class)
-    fun create(initializer: Consumer<X> = Consumer {}): AsyncCreateHandler<String, X>
+fun create(initializer: (X) -> X = { it -> it }): AsyncCreateHandler<String, X>
 }

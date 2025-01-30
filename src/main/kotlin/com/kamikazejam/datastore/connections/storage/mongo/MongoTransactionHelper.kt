@@ -3,20 +3,18 @@ package com.kamikazejam.datastore.connections.storage.mongo
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.base.Store
-import com.kamikazejam.datastore.base.data.StoreData
 import com.kamikazejam.datastore.connections.storage.exception.TransactionRetryLimitExceededException
+import com.kamikazejam.datastore.mode.store.Store
 import com.kamikazejam.datastore.util.DataStoreFileLogger
-import com.kamikazejam.datastore.util.JacksonUtil
-import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
-import com.kamikazejam.datastore.util.JacksonUtil.VERSION_FIELD
+import com.kamikazejam.datastore.base.serialization.SerializationUtil
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.ID_FIELD
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.VERSION_FIELD
 import com.mongodb.MongoCommandException
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.Filters
 import org.bson.Document
 import java.util.*
-import java.util.function.Consumer
 
 @Suppress("MemberVisibilityCanBePrivate")
 object MongoTransactionHelper {
@@ -44,7 +42,7 @@ object MongoTransactionHelper {
         mongoColl: MongoCollection<Document>,
         collection: Collection<K, X>,
         originalStore: X,
-        updateFunction: Consumer<X>
+        updateFunction: (X) -> X
     ): Boolean {
         Preconditions.checkNotNull(mongoClient, "MongoClient cannot be null")
         Preconditions.checkNotNull(mongoColl, "MongoDB Collection cannot be null")
@@ -54,7 +52,7 @@ object MongoTransactionHelper {
 
         try {
             // Create working copy that will be updated on each attempt
-            val baseCopy = JacksonUtil.deepCopy(originalStore)
+            val baseCopy = SerializationUtil.deepCopy(originalStore)
             return executeUpdateInternal(
                 mongoClient,
                 mongoColl,
@@ -78,7 +76,7 @@ object MongoTransactionHelper {
         collection: Collection<K, X>,
         originalStore: X,
         baseStore: X,
-        updateFunction: Consumer<X>,
+        updateFunction: (X) -> X,
         currentAttempt: Int
     ): Boolean {
         var baseCopy = baseStore
@@ -97,7 +95,7 @@ object MongoTransactionHelper {
             var committed = false
             try {
                 // Clone the base copy for this attempt
-                val workingCopy = JacksonUtil.deepCopy(baseCopy)
+                val workingCopy = SerializationUtil.deepCopy(baseCopy)
                 workingCopy.readOnly = false
 
                 // Fetch Version prior to updates
@@ -109,7 +107,7 @@ object MongoTransactionHelper {
                 workingCopy.versionField.getData().set(currentVersion + 1)
 
                 val id = collection.keyToString(workingCopy.id)
-                val doc = JacksonUtil.serializeToDocument(workingCopy)
+                val doc = SerializationUtil.serializeToDocument(workingCopy)
 
                 val result = mongoColl.replaceOne(
                     session,
@@ -117,7 +115,7 @@ object MongoTransactionHelper {
                         // These two filters act as a sort of compare-and-swap mechanic
                         //  inside of this mongo transaction, if these are not met then
                         //  the transaction will fail and we will need to retry.
-                        Filters.eq("$ID_FIELD.${StoreData.CONTENT_KEY}", id),
+                        Filters.eq(ID_FIELD, id),
                         Filters.eq("$VERSION_FIELD.${StoreData.CONTENT_KEY}", currentVersion),
                     ),
                     doc
@@ -129,12 +127,12 @@ object MongoTransactionHelper {
 
                     // If update failed, fetch current version
                     val currentDoc: Document =
-                        mongoColl.find(session).filter(Filters.eq("$ID_FIELD.${StoreData.CONTENT_KEY}", id))
+                        mongoColl.find(session).filter(Filters.eq(ID_FIELD, id))
                             .first()
                             ?: throw RuntimeException("Entity not found")
 
                     // Update our working copy with latest version and retry
-                    baseCopy = JacksonUtil.deserializeFromDocument(collection.storeClass, currentDoc)
+                    baseCopy = SerializationUtil.deserializeFromDocument(collection.storeClass, currentDoc)
                     return executeUpdateInternal(
                         mongoClient,
                         mongoColl,

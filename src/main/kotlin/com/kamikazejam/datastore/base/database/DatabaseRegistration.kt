@@ -1,4 +1,4 @@
-package com.kamikazejam.datastore.database
+package com.kamikazejam.datastore.base.database
 
 import org.bukkit.plugin.Plugin
 

@@ -2,17 +2,15 @@ package com.kamikazejam.datastore.mode.profile
 
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.data.impl.StoreDataUUID
-import com.kamikazejam.datastore.base.data.impl.bson.StoreDataString
 import com.kamikazejam.datastore.base.extensions.update
 import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
+import com.kamikazejam.datastore.mode.store.StoreProfile
 import com.kamikazejam.datastore.util.Color
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
 import java.util.*
-import java.util.function.Consumer
 
 
 @Suppress("unused")
@@ -76,7 +74,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
             if (saveToLocalCache) {
                 collection.cache(store)
             } else {
-                store.setCollection(collection)
+                store.initialize(collection)
             }
         }
         return o
@@ -122,9 +120,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
             // Make a new profile if they are logging in
             if (creative) {
                 collection.getLoggerService().debug("Creating a new StoreProfile for: $username")
-                return createStore(
-                    collection, uuid, username
-                ) { store: X -> store.setCollection(collection) }
+                return createStore(collection, uuid, username)
             }
 
             // Assume some other kind of failure:
@@ -150,19 +146,13 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
         collection: ProfileCollection<X>,
         uuid: UUID,
         username: String?,
-        initializer: Consumer<X>
     ): X {
         try {
             // Create a new instance in modifiable state
-            val store: X = collection.instantiator.instantiate()
-            store.initialize()
-            store.readOnly = false
+            val store: X = collection.instantiator(uuid, 0L)
+            store.initialize(collection)
 
-            // Initialize the store
-            initializer.accept(store)
             // Enforce Version 0 for creation
-            store.idField.setData(StoreDataUUID(uuid))
-            store.versionField.getData().set(0L)
             if (username == null) {
                 store.usernameField.setData(null)
             }else {

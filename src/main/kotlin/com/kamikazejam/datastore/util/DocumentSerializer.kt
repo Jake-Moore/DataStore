@@ -1,6 +1,10 @@
 package com.kamikazejam.datastore.util
 
-import org.bson.*
+import org.bson.BsonBinaryReader
+import org.bson.BsonBinaryWriter
+import org.bson.ByteBuf
+import org.bson.ByteBufNIO
+import org.bson.Document
 import org.bson.codecs.DecoderContext
 import org.bson.codecs.DocumentCodec
 import org.bson.codecs.EncoderContext

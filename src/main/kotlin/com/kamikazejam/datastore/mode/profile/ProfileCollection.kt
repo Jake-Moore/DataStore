@@ -1,11 +1,12 @@
 package com.kamikazejam.datastore.mode.profile
 
 import com.kamikazejam.datastore.base.Collection
+import com.kamikazejam.datastore.mode.store.StoreProfile
 import org.bukkit.entity.Player
-import org.jetbrains.annotations.ApiStatus
+import org.jetbrains.annotations.ApiStatus.Internal
 import org.jetbrains.annotations.Blocking
 import org.jetbrains.annotations.NonBlocking
-import java.util.*
+import java.util.UUID
 
 /**
  * Defines Profile-specific getters for StoreObjects. They return non-null Optionals.
@@ -14,6 +15,13 @@ import java.util.*
  */
 @Suppress("unused")
 interface ProfileCollection<X : StoreProfile<X>> : Collection<UUID, X> {
+
+    /**
+     * How we create a new instance of the [StoreProfile] for this [Collection].
+     *
+     * Given the ID [UUID], the version [Long], and the username [String], return a new instance
+     */
+    val instantiator: (UUID, Long, String?) -> X
 
     // ------------------------------------------------------ //
     // Cache Methods                                          //
@@ -40,8 +48,9 @@ interface ProfileCollection<X : StoreProfile<X>> : Collection<UUID, X> {
      */
     suspend fun getOnline(): kotlin.collections.Collection<X>
 
-    @ApiStatus.Internal
+    @Internal
     fun removeLoader(uuid: UUID)
 
+    @Internal
     fun onProfileLeaving(player: Player, profile: X)
 }

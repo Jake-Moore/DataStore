@@ -2,8 +2,15 @@ package com.kamikazejam.datastore.util
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
-import kotlinx.coroutines.*
-import java.util.*
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
 
 /**

@@ -2,10 +2,9 @@ package com.kamikazejam.datastore.base.storage
 
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.base.Store
+import com.kamikazejam.datastore.mode.store.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.util.function.Consumer
 
 /**
  * Wraps up the StorageService with the Collection backing the Stores, and exposes ObjectStore methods
@@ -22,7 +21,7 @@ abstract class StorageDatabase<K : Any, X : Store<X, K>>(collection: Collection<
         // Fetch the Store from the database
         val o = storageService.get(collection, key)
         // Ensure Store knows its Collection
-        o?.setCollection(collection)
+        o?.initialize(collection)
         // Return the Store
         return o
     }
@@ -32,7 +31,7 @@ abstract class StorageDatabase<K : Any, X : Store<X, K>>(collection: Collection<
         return storageService.save(collection, store)
     }
 
-    override suspend fun updateSync(collection: Collection<K, X>, store: X, updateFunction: Consumer<X>): Boolean {
+    override suspend fun updateSync(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): Boolean {
         return storageService.updateSync(collection, store, updateFunction)
     }
 
@@ -52,7 +51,7 @@ abstract class StorageDatabase<K : Any, X : Store<X, K>>(collection: Collection<
         // Fetch the storageService's Iterable
         return storageService.getAll(collection).map { store: X ->
             // Make sure to set the collection as we load the Stores
-            store.also { it.setCollection(collection) }
+            store.also { it.initialize(collection) }
         }
     }
 

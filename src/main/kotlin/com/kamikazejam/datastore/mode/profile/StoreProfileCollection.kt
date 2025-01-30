@@ -3,17 +3,15 @@ package com.kamikazejam.datastore.mode.profile
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
-import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
-import com.kamikazejam.datastore.base.data.impl.StoreDataUUID
 import com.kamikazejam.datastore.base.extensions.read
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
-import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
-import com.kamikazejam.datastore.base.store.StoreInstantiator
-import com.kamikazejam.datastore.event.profile.StoreProfileQuitEvent
-import com.kamikazejam.datastore.mode.profile.store.ProfileStorageDatabase
-import com.kamikazejam.datastore.mode.profile.store.ProfileStorageLocal
+import com.kamikazejam.datastore.base.log.LoggerService
+import com.kamikazejam.datastore.api.event.StoreProfileQuitEvent
+import com.kamikazejam.datastore.mode.profile.storage.ProfileStorageDatabase
+import com.kamikazejam.datastore.mode.profile.storage.ProfileStorageLocal
+import com.kamikazejam.datastore.mode.store.StoreProfile
 import com.kamikazejam.datastore.util.PlayerUtil
 import com.mongodb.DuplicateKeyException
 import kotlinx.coroutines.flow.Flow
@@ -22,19 +20,16 @@ import org.bukkit.entity.Player
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
-import java.util.function.Consumer
 
 @Suppress("unused")
 abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constructor(
     module: DataStoreRegistration,
-    instantiator: StoreInstantiator<UUID, X>,
+    override val instantiator: (UUID, Long, String?) -> X,
     name: String,
     storeClass: Class<X>,
-    logger: CollectionLoggerInstantiator = CollectionLoggerInstantiator { collection: Collection<*, *> ->
-        CollectionLoggerService(collection)
-    }
+    logger: (StoreCollection<UUID, X>) -> LoggerService = { store -> CollectionLoggerService(store) },
 ) :
-    StoreCollection<UUID, X>(instantiator, name, UUID::class.java, storeClass, module, logger),
+    StoreCollection<UUID, X>(name, UUID::class.java, storeClass, module, logger),
     ProfileCollection<X> {
     private val loaders: ConcurrentMap<UUID, StoreProfileLoader<X>> = ConcurrentHashMap()
     override val localStore: ProfileStorageLocal<X> = ProfileStorageLocal()
@@ -52,14 +47,18 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     // ------------------------------------------------------ //
     //                  Collection Methods                    //
     // ------------------------------------------------------ //
+
     override fun initialize(): Boolean {
-        // nothing to do here
-        return true
+        Preconditions.checkNotNull(
+            instantiator,
+            "Instantiator must be set before calling start() for Collection $name"
+        )
+        return super.initialize()
     }
 
     override fun terminate(): Boolean {
+        // Clear local stores (frees memory)
         loaders.clear()
-        // Clear locals store (frees memory)
         localStore.removeAll()
 
         // Don't clear database (can't)
@@ -69,26 +68,21 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     // ----------------------------------------------------- //
     //                          CRUD                         //
     // ----------------------------------------------------- //
-
+    @Suppress("DuplicatedCode")
     @Throws(DuplicateKeyException::class)
-    override fun create(key: UUID, initializer: Consumer<X>): AsyncCreateHandler<UUID, X> {
+    override fun create(key: UUID, initializer: (X) -> X): AsyncCreateHandler<UUID, X> {
         Preconditions.checkNotNull(initializer, "Initializer cannot be null")
 
         return AsyncCreateHandler(this) {
             try {
                 // Create a new instance in modifiable state
-                val store: X = instantiator.instantiate()
-                store.initialize()
-                store.readOnly = false
+                val initial: X = instantiator(key, 0L, null)
+                initial.initialize(this)
 
-                // Set the id first (allowing the initializer to change it if necessary)
-                store.idField.setData(StoreDataUUID(key))
                 // Initialize the store
-                initializer.accept(store)
-                // Enforce Version 0 for creation
-                store.versionField.getData().set(0L)
-
-                store.readOnly = true
+                val store: X = initializer(initial)
+                assert(store.id == key) { "Store ID must match key on Creation!" }
+                assert(store.version == 0L) { "Store version must be 0 on Creation!" }
 
                 // Save the store to our database implementation & cache
                 // DO DATABASE SAVE FIRST SO ANY EXCEPTIONS ARE THROWN PRIOR TO MODIFYING LOCAL CACHE
@@ -126,7 +120,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
         return UUID.fromString(key)
     }
 
-    override val cached: kotlin.collections.Collection<X>
+    override val cached: Collection<X>
         get() = localStore.localStorage.values
 
     override fun readFromCache(key: UUID): X? {
@@ -148,7 +142,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
         return databaseStore.getKeys()
     }
 
-    override suspend fun getOnline(): kotlin.collections.Collection<X> {
+    override suspend fun getOnline(): Collection<X> {
         return Bukkit.getOnlinePlayers()
             .filter { PlayerUtil.isFullyValidPlayer(it) }
             .mapNotNull { player ->
