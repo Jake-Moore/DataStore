@@ -22,12 +22,13 @@ repositories {
 }
 
 val jacksonVer = "2.18.2"
+val mongoVer = "5.3.1"
 dependencies {
     // Spigot
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
     // Dependencies
-    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.3.0")
+    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:$mongoVer")
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
     // Testing Dependencies
@@ -41,7 +42,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.0")
-    implementation("org.mongodb:bson-kotlinx:5.3.0") // BSON for Serialization (for MongoDB)
+    implementation("org.mongodb:bson-kotlinx:$mongoVer") // BSON for Serialization (for MongoDB)
 }
 
 // Register a task to delete the jars in the libs folder
