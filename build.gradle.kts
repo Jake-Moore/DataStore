@@ -42,9 +42,9 @@ dependencies {
     testCompileOnly("org.jetbrains:annotations:26.0.1")
 
     // Kotlin Libraries (may need to be added to projects using DataStore too!)
-    api(kotlin("stdlib-jdk8"))
-    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
-    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.0")
+    shadow(kotlin("stdlib-jdk8"))
+    shadow("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    shadow("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.0")
 }
 
 // Register a task to delete the jars in the libs folder
@@ -64,6 +64,12 @@ tasks {
         relocate("org.bson", "com.kamikazejam.datastore.internal.bson")
         relocate("org.slf4j", "com.kamikazejam.datastore.internal.slf4j")
         relocate("org.reactivestreams", "com.kamikazejam.datastore.internal.reactivestreams")
+        // One of the KotlinX dependencies brings in an outdated jetbrains annotations dependency, exclude it
+        dependencies {
+            exclude {
+                it.moduleGroup == "org.jetbrains" && it.moduleName == "annotations"
+            }
+        }
     }
 
     processResources {
@@ -94,14 +100,19 @@ java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
 
+// Thanks ShadowJar, Great Plugin!
+gradle.projectsEvaluated {
+    tasks.getByName("publishShadowPublicationToMavenRepository").dependsOn(tasks.jar)
+    tasks.getByName("generateMetadataFileForShadowPublication").dependsOn(tasks.jar)
+}
 
 publishing {
     publications {
-        create<MavenPublication>("mavenJava") {
+        create<MavenPublication>("shadow") {
             groupId = rootProject.group.toString()
             artifactId = project.name
             version = rootProject.version.toString()
-            from(components["java"])
+            from(components["shadow"])
         }
     }
 
