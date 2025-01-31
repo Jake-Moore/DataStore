@@ -10,11 +10,10 @@ import java.util.Objects
 
 @Suppress("unused")
 @Serializable
-abstract class StoreObject<X : StoreObject<X>>(
+abstract class StoreObject<X : StoreObject<X>>: Store<X, String> {
     // Pass these up to the StoreObject implementation
-    override val id: String,
-    override val version: Long
-) : Store<X, String> {
+    abstract override val id: String
+    abstract override val version: Long
 
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //

@@ -17,14 +17,12 @@ import java.util.UUID
 
 @Suppress("unused")
 @Serializable
-abstract class StoreProfile<T : StoreProfile<T>>(
-    // Pass these up to the StoreObject implementation
+abstract class StoreProfile<T : StoreProfile<T>> : Store<T, UUID> {
     @Serializable(with = UUIDSerializer::class)
-    override val id: UUID,
-    override val version: Long,
+    abstract override val id: UUID
+    abstract override val version: Long
     @SerialName(USERNAME_FIELD)
-    open val username: String?,
-) : Store<T, UUID> {
+    abstract val username: String?
 
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //
