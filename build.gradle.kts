@@ -38,8 +38,8 @@ dependencies {
     testImplementation("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
     // Jetbrains
-    compileOnly("org.jetbrains:annotations:26.0.1")
-    testCompileOnly("org.jetbrains:annotations:26.0.1")
+    compileOnly("org.jetbrains:annotations:26.0.2")
+    testCompileOnly("org.jetbrains:annotations:26.0.2")
 
     // Kotlin Libraries (may need to be added to projects using DataStore too!)
     shadow(kotlin("stdlib-jdk8"))
