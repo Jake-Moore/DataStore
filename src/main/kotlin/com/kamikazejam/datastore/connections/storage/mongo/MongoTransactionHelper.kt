@@ -162,8 +162,8 @@ object MongoTransactionHelper {
             throw IllegalArgumentException("Updated store failed copy version check! Was: ${updatedStore.version}, Expected: $nextVersion")
         }
 
-        val idField = getSerialName(collection, Store<X, K>::id)
-        val verField = getSerialName(collection, Store<X, K>::version)
+        val idField = getSerialName(Store<X, K>::id)
+        val verField = getSerialName(Store<X, K>::version)
         val result = mongoColl.replaceOne(
             session,
             Filters.and(

@@ -1,17 +1,11 @@
 package com.kamikazejam.datastore.base.serialization
 
-import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.store.Store
-import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlin.reflect.KProperty
+import kotlin.reflect.full.findAnnotation
 
 object SerializationUtil {
-    fun getSerialName(serializer: KSerializer<*>, property: KProperty<*>): String {
-        val propertyIndex = serializer.descriptor.getElementIndex(property.name)
-        return serializer.descriptor.getElementName(propertyIndex)
-    }
-
-    fun <K : Any, X : Store<X, K>> getSerialName(collection: Collection<K, X>, property: KProperty<*>): String {
-        return getSerialName(collection.getKSerializer(), property)
+    fun getSerialName(property: KProperty<*>): String {
+        return property.findAnnotation<SerialName>()?.value ?: property.name
     }
 }

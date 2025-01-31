@@ -45,6 +45,7 @@ dependencies {
     shadow(kotlin("stdlib-jdk8"))
     shadow("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
     shadow("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.0")
+    shadow("org.jetbrains.kotlin:kotlin-reflect:2.1.10")
 }
 
 // Register a task to delete the jars in the libs folder

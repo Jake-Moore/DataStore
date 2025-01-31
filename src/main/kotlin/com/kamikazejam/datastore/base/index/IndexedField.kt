@@ -14,7 +14,7 @@ abstract class IndexedField<X : Store<X, *>, T>(
     private val property: KProperty<*>
 ) {
     val name: String
-        get() = SerializationUtil.getSerialName(collection.getKSerializer(), property)
+        get() = SerializationUtil.getSerialName(property)
 
     abstract fun equals(a: T?, b: T?): Boolean
 
