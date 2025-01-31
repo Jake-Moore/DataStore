@@ -50,5 +50,6 @@ class DataStoreRegistration internal constructor(plugin: JavaPlugin, dbNameShort
     suspend fun shutdown() {
         collections.forEach { coll: Collection<*, *> -> coll.shutdown() }
         collections.clear()
+        DataStoreAPI.registrations.remove(this)
     }
 }

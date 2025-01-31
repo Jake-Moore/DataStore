@@ -10,6 +10,7 @@ import org.bukkit.plugin.java.JavaPlugin
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 import java.util.stream.Collectors
 import kotlin.collections.ArrayList
@@ -19,7 +20,7 @@ import kotlin.collections.ArrayList
  */
 @Suppress("unused")
 object DataStoreAPI {
-    internal val registrations: MutableList<DataStoreRegistration> = ArrayList()
+    internal val registrations: MutableList<DataStoreRegistration> = CopyOnWriteArrayList()
 
     // ------------------------------------------------------ //
     // Prefix Methods                                         //
