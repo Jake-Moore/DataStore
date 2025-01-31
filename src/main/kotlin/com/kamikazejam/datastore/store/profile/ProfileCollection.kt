@@ -31,7 +31,7 @@ interface ProfileCollection<X : StoreProfile<X>> : Collection<UUID, X> {
      */
     val defaultInitializer: (X) -> X
 
-    fun getUsernameKProperty(): KProperty<String>
+    fun getUsernameKProperty(): KProperty<String?>
 
     // ------------------------------------------------------ //
     // Cache Methods                                          //
