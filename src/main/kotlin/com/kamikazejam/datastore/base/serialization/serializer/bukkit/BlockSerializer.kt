@@ -1,4 +1,4 @@
-package com.kamikazejam.datastore.base.serialization.serializer
+package com.kamikazejam.datastore.base.serialization.serializer.bukkit
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable

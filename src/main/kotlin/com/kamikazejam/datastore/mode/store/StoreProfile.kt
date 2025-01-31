@@ -4,7 +4,7 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.serialization.SerializationUtil.USERNAME_FIELD
-import com.kamikazejam.datastore.base.serialization.serializer.UUIDSerializer
+import com.kamikazejam.datastore.base.serialization.serializer.java.UUIDSerializer
 import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
 import com.kamikazejam.datastore.util.PlayerUtil
 import kotlinx.serialization.SerialName

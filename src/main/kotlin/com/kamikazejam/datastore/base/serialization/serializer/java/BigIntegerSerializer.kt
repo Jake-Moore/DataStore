@@ -1,20 +1,21 @@
-package com.kamikazejam.datastore.base.serialization.serializer
+package com.kamikazejam.datastore.base.serialization.serializer.java
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import java.util.UUID
+import java.math.BigInteger
 
-object UUIDSerializer : KSerializer<UUID> {
+@Suppress("unused")
+class BigIntegerSerializer : KSerializer<BigInteger> {
     override val descriptor = PrimitiveSerialDescriptor("UUID", PrimitiveKind.STRING)
 
-    override fun deserialize(decoder: Decoder): UUID {
-        return UUID.fromString(decoder.decodeString())
+    override fun deserialize(decoder: Decoder): BigInteger {
+        return BigInteger(decoder.decodeString())
     }
 
-    override fun serialize(encoder: Encoder, value: UUID) {
+    override fun serialize(encoder: Encoder, value: BigInteger) {
         encoder.encodeString(value.toString())
     }
 }
