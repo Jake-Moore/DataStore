@@ -10,13 +10,12 @@ import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
-import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.storage.StorageDatabase
 import com.kamikazejam.datastore.base.storage.StorageLocal
+import com.kamikazejam.datastore.store.Store
 import com.kamikazejam.datastore.store.`object`.ObjectCollection
 import com.kamikazejam.datastore.store.profile.ProfileCollection
-import com.kamikazejam.datastore.store.Store
 import com.mongodb.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.KSerializer
@@ -255,12 +254,6 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
      * @return True iff this Collection contains a Store with the provided key. (checks database too)
      */
     fun hasKey(key: K): AsyncHasKeyHandler
-
-    /**
-     * Gets the [StoreLoader] for the provided key.
-     */
-    @ApiStatus.Internal
-    fun loader(key: K): StoreLoader<X>
 
     @get:ApiStatus.Internal
     val storeClass: Class<X>

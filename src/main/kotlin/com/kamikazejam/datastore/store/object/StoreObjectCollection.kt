@@ -7,9 +7,9 @@ import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
 import com.kamikazejam.datastore.base.log.LoggerService
+import com.kamikazejam.datastore.store.StoreObject
 import com.kamikazejam.datastore.store.`object`.storage.ObjectStorageDatabase
 import com.kamikazejam.datastore.store.`object`.storage.ObjectStorageLocal
-import com.kamikazejam.datastore.store.StoreObject
 import com.mongodb.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -17,8 +17,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
 
 @Suppress("unused")
 abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads constructor(
@@ -31,7 +29,6 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     StoreCollection<String, X>(name, String::class.java, storeClass, module, logger),
     ObjectCollection<X>
 {
-    private val loaders: ConcurrentMap<String, StoreObjectLoader<X>> = ConcurrentHashMap()
     override val localStore: ObjectStorageLocal<X> = ObjectStorageLocal()
 
     override val databaseStore: ObjectStorageDatabase<X> by lazy { ObjectStorageDatabase(this) }
@@ -60,7 +57,6 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
     override fun terminate(): Boolean {
         // Clear local stores (frees memory)
-        loaders.clear()
         localStore.removeAll()
 
         // Don't clear database (can't)
@@ -109,10 +105,6 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     // ----------------------------------------------------- //
     //                 Misc Collection Methods               //
     // ----------------------------------------------------- //
-    override fun loader(key: String): StoreObjectLoader<X> {
-        Preconditions.checkNotNull(key)
-        return loaders.computeIfAbsent(key) { s: String -> StoreObjectLoader(this, s) }
-    }
 
     override fun keyToString(key: String): String {
         return key

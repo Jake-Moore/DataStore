@@ -2,6 +2,7 @@ package com.kamikazejam.datastore.store.profile
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.store.StoreProfile
+import com.kamikazejam.datastore.util.PlayerJoinDetails
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.ApiStatus.Internal
 import org.jetbrains.annotations.Blocking
@@ -29,7 +30,7 @@ interface ProfileCollection<X : StoreProfile<X>> : Collection<UUID, X> {
      *
      * This property allows you to define a default initializer for new [StoreProfile] objects, to initialize them with default values.
      */
-    val defaultInitializer: (X) -> X
+    val defaultInitializer: (X, PlayerJoinDetails) -> X
 
     fun getUsernameKProperty(): KProperty<String?>
 

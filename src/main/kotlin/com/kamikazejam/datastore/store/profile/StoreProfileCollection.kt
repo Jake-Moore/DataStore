@@ -12,6 +12,7 @@ import com.kamikazejam.datastore.api.event.StoreProfileQuitEvent
 import com.kamikazejam.datastore.store.profile.storage.ProfileStorageDatabase
 import com.kamikazejam.datastore.store.profile.storage.ProfileStorageLocal
 import com.kamikazejam.datastore.store.StoreProfile
+import com.kamikazejam.datastore.util.PlayerJoinDetails
 import com.kamikazejam.datastore.util.PlayerUtil
 import com.mongodb.DuplicateKeyException
 import kotlinx.coroutines.flow.Flow
@@ -35,7 +36,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     private val loaders: ConcurrentMap<UUID, StoreProfileLoader<X>> = ConcurrentHashMap()
     override val localStore: ProfileStorageLocal<X> = ProfileStorageLocal()
     override val databaseStore: ProfileStorageDatabase<X> by lazy { ProfileStorageDatabase(this) }
-    override val defaultInitializer: (X) -> X = { it }
+    override val defaultInitializer: (X, PlayerJoinDetails) -> X = { store, _ -> store }
 
     init {
         // Start this collection
@@ -109,9 +110,9 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     // ----------------------------------------------------- //
     //                         Cache                         //
     // ----------------------------------------------------- //
-    override fun loader(key: UUID): StoreProfileLoader<X> {
+    internal fun loader(key: UUID): StoreProfileLoader<X> {
         Preconditions.checkNotNull(key)
-        return loaders.computeIfAbsent(key) { s: UUID -> StoreProfileLoader(this, s) }
+        return loaders.computeIfAbsent(key) { StoreProfileLoader(this) }
     }
 
     override fun keyToString(key: UUID): String {

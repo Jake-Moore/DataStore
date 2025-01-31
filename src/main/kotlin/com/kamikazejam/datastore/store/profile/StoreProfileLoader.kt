@@ -3,26 +3,24 @@ package com.kamikazejam.datastore.store.profile
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.extensions.update
-import com.kamikazejam.datastore.base.loader.StoreLoader
-import com.kamikazejam.datastore.store.profile.listener.ProfileListener
 import com.kamikazejam.datastore.store.StoreProfile
+import com.kamikazejam.datastore.store.profile.listener.ProfileListener
 import com.kamikazejam.datastore.util.Color
 import com.kamikazejam.datastore.util.DataStoreFileLogger
+import com.kamikazejam.datastore.util.PlayerJoinDetails
 import org.bukkit.ChatColor
 import org.bukkit.entity.Player
-import java.util.*
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent
+import java.util.UUID
 
 
 @Suppress("unused")
-open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileCollection<X>, uuid: UUID) : StoreLoader<X> {
+open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileCollection<X>) {
     protected val collection: StoreProfileCollection<X>
-    protected val uuid: UUID
-    private var username: String? = null
 
     /**
      * Whether this loader is being used during a login operation
      */
-    private var login: Boolean = false
     var denyJoin: Boolean = false
     var joinDenyReason: String? = ChatColor.RED.toString() + "A caching error occurred. Please try again."
     protected var store: X? = null
@@ -30,33 +28,29 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
 
     init {
         Preconditions.checkNotNull(collection)
-        Preconditions.checkNotNull(uuid)
         this.collection = collection
-        this.uuid = uuid
     }
 
-    override suspend fun fetch(saveToLocalCache: Boolean): X? {
+    suspend fun fetchOnLogin(saveToLocalCache: Boolean, uuid: UUID, username: String, event: AsyncPlayerPreLoginEvent): X? {
         // Reset previous state
         denyJoin = false
         store = null
 
-        // If we are fetching (because of a login), check if we can write
-        if (login) {
-            val storageService = DataStoreSource.storageService
-            if (!storageService.canWrite()) {
-                DataStoreSource.colorLogger.warn("StorageService is not ready to write objects, denying join")
-                denyJoin = true
-                joinDenyReason = Color.t(
-                    DataStoreSource.config.getString("profiles.messages.beforeDbConnection")
-                        .replace("{collName}", collection.name)
-                )
-                return null
-            }
+        // We are fetching (because of a login), check if we can write
+        val storageService = DataStoreSource.storageService
+        if (!storageService.canWrite()) {
+            DataStoreSource.colorLogger.warn("StorageService is not ready to write objects, denying join")
+            denyJoin = true
+            joinDenyReason = Color.t(
+                DataStoreSource.config.getString("profiles.messages.beforeDbConnection")
+                    .replace("{collName}", collection.name)
+            )
+            return null
         }
 
         // Load details into this loader class
         try {
-            this.store = loadOrCreateStore(collection, uuid, login, username)
+            this.store = loadOrCreateStore(collection, uuid, username, event)
         } catch (t: Throwable) {
             DataStoreFileLogger.warn("Failed to load or create StoreProfile from Database, denying join", t)
             this.denyJoin = true
@@ -80,11 +74,6 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
         return o
     }
 
-    fun login(username: String) {
-        this.login = true
-        this.username = username
-    }
-
     /**
      * Called in [ProfileListener.onProfileCachingInit]
      */
@@ -105,8 +94,8 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
     private suspend fun <X : StoreProfile<X>> loadOrCreateStore(
         collection: StoreProfileCollection<X>,
         uuid: UUID,
-        creative: Boolean,
-        username: String?
+        username: String,
+        event: AsyncPlayerPreLoginEvent,
     ): X {
         // Try loading from local
         val localStore = collection.localStore.get(uuid)
@@ -118,25 +107,17 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
         val store: X? = collection.databaseStore.get(uuid)
         if (store == null) {
             // Make a new profile if they are logging in
-            if (creative) {
-                collection.getLoggerService().debug("Creating a new StoreProfile for: $username")
-                return createStore(collection, uuid, username)
-            }
-
-            // Assume some other kind of failure:
-            throw RuntimeException("Failed to load or create StoreProfile from Database")
+            collection.getLoggerService().debug("Creating a new StoreProfile for: $username")
+            return createStore(collection, uuid, username, event)
         }
 
         // We have a valid store from Database
         store.initialize(collection)
 
-        // For logins -> mark as loaded
-        if (creative) {
-            // Update their username
-            if (username != null && store.username != username) {
-                // Attempt to save the new username
-                collection.update(store) { x: X -> x.copyHelper(username) }
-            }
+        // Update their username
+        if (store.username != username) {
+            // Attempt to save the new username
+            collection.update(store) { x: X -> x.copyHelper(username) }
         }
         return store
     }
@@ -144,7 +125,8 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
     private suspend fun <X : StoreProfile<X>> createStore(
         collection: ProfileCollection<X>,
         uuid: UUID,
-        username: String?,
+        username: String,
+        event: AsyncPlayerPreLoginEvent,
     ): X {
         try {
             // Create a new instance in modifiable state
@@ -152,7 +134,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
             initial.initialize(collection)
 
             // Initialize the store (make sure the id and version were not changed)
-            val store: X = collection.defaultInitializer(initial)
+            val store: X = collection.defaultInitializer(initial, PlayerJoinDetails(uuid, username, event))
             assert(store.id == uuid) { "StoreProfile ID must match uuid on Creation/Initialization!" }
             assert(store.version == 0L) { "StoreProfile version must be 0 on Creation/Initialization!" }
 

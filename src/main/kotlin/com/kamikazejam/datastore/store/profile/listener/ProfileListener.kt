@@ -48,7 +48,6 @@ class ProfileListener : Listener {
         val ms = System.currentTimeMillis()
         val username: String = event.name
         val uniqueId: UUID = event.uniqueId
-        val ip: String = event.address.hostAddress
 
         val storageService = DataStoreSource.storageService
         if (!storageService.canWrite() || DataStoreSource.onEnableTime <= 0) {
@@ -66,7 +65,7 @@ class ProfileListener : Listener {
             try {
                 withTimeout(Duration.of(timeout + 3, ChronoUnit.SECONDS)) {
                     // Run a special fully parallelized execution for collections based on their depends
-                    cachePlayerProfiles(username, uniqueId, ip, timeout)
+                    cachePlayerProfiles(username, uniqueId, event, timeout)
                 }
             } catch (t: Throwable) {
                 var message: String = ChatColor.RED.toString() + "A caching error occurred.  Please try again."
@@ -84,11 +83,11 @@ class ProfileListener : Listener {
         loginCache.put(uniqueId, System.currentTimeMillis())
     }
 
-    @Suppress("UNCHECKED_CAST", "UNUSED_PARAMETER", "SameParameterValue")
+    @Suppress("UNCHECKED_CAST", "SameParameterValue")
     private fun <X : StoreProfile<X>> cachePlayerProfiles(
         username: String,
         uniqueId: UUID,
-        ip: String,
+        event: AsyncPlayerPreLoginEvent,
         timeoutSec: Long
     ): Deferred<Unit> {
         // Compile all the ProfileCaches
@@ -100,8 +99,7 @@ class ProfileListener : Listener {
         }
         val executor = AsyncCollectionsExecutor(collections, timeoutSec) {
             val loader: StoreProfileLoader<X> = it.loader(uniqueId)
-            loader.login(username)
-            loader.fetch(true)
+            loader.fetchOnLogin(true, uniqueId, username, event)
             if (loader.denyJoin) {
                 // For the first 100 seconds, don't give the nasty loader reason, but a pretty server start error
                 val message = if (System.currentTimeMillis() - DataStoreSource.onEnableTime < 100000L)
