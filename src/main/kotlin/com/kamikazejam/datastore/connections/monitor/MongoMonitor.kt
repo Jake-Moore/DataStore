@@ -2,7 +2,11 @@ package com.kamikazejam.datastore.connections.monitor
 
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.connections.storage.mongo.MongoStorage
-import com.mongodb.event.*
+import com.mongodb.event.ClusterClosedEvent
+import com.mongodb.event.ClusterDescriptionChangedEvent
+import com.mongodb.event.ClusterListener
+import com.mongodb.event.ServerHeartbeatSucceededEvent
+import com.mongodb.event.ServerMonitorListener
 
 // Previously this class had used heartbeat events, but the first heartbeat was sent 10 seconds after initial connection.
 // That was adding 10 seconds to the ttl of the server, which was unacceptable.
@@ -49,7 +53,7 @@ class MongoMonitor(service: MongoStorage) : ClusterListener, ServerMonitorListen
         val client = service.mongoClient
         if (client != null) {
             // Attempt to use the current client's cluster description to make sure the ping is accurate
-            service.setMongoPingNS(client.clusterDescription.serverDescriptions)
+            service.setMongoPingNS(client.getClusterDescription().serverDescriptions)
         }
     }
 }

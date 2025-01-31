@@ -1,6 +1,6 @@
 package com.kamikazejam.datastore.base.exception
 
-import com.kamikazejam.datastore.database.DatabaseRegistration
+import com.kamikazejam.datastore.base.database.DatabaseRegistration
 import org.bukkit.plugin.Plugin
 
 @Suppress("unused")

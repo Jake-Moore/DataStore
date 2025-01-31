@@ -7,10 +7,11 @@ plugins {
     id("maven-publish")
     id("com.gradleup.shadow") version "8.3.5"
     kotlin("jvm")
+    kotlin("plugin.serialization")
 }
 
 group = "com.kamikazejam"
-version = "0.1.0.alpha.1-SNAPSHOT"
+version = "0.2.0.alpha.2-SNAPSHOT"
 description = "Simple Data Storage Solution using MongoDB"
 
 
@@ -21,14 +22,16 @@ repositories {
 }
 
 val jacksonVer = "2.18.2"
+val mongoVer = "5.3.1"
 dependencies {
     // Spigot
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
 
-    // Dependencies
-    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVer")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVer")
-    implementation("org.mongodb:mongodb-driver-sync:5.3.0")
+    // MongoDB (Kotlin Driver)
+    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:$mongoVer")
+    implementation("org.mongodb:bson-kotlinx:$mongoVer") // BSON for Serialization (for MongoDB)
+
+    // MongoDB Supplemental
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
     // Testing Dependencies
@@ -37,10 +40,12 @@ dependencies {
     // Jetbrains
     compileOnly("org.jetbrains:annotations:26.0.2")
     testCompileOnly("org.jetbrains:annotations:26.0.2")
-    implementation(kotlin("stdlib-jdk8"))
 
-    // Kotlin Libraries
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    // Kotlin Libraries (may need to be added to projects using DataStore too!)
+    shadow(kotlin("stdlib-jdk8"))
+    shadow("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    shadow("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.0")
+    shadow("org.jetbrains.kotlin:kotlin-reflect:2.1.10")
 }
 
 // Register a task to delete the jars in the libs folder
@@ -56,10 +61,16 @@ tasks {
     shadowJar {
         archiveClassifier.set("")
         relocate("ch.qos.logback", "com.kamikazejam.datastore.internal.logback")
-        relocate("com.fasterxml.jackson", "com.kamikazejam.datastore.internal.jackson")
         relocate("com.mongodb", "com.kamikazejam.datastore.internal.mongodb")
         relocate("org.bson", "com.kamikazejam.datastore.internal.bson")
         relocate("org.slf4j", "com.kamikazejam.datastore.internal.slf4j")
+        relocate("org.reactivestreams", "com.kamikazejam.datastore.internal.reactivestreams")
+        // One of the KotlinX dependencies brings in an outdated jetbrains annotations dependency, exclude it
+        dependencies {
+            exclude {
+                it.moduleGroup == "org.jetbrains" && it.moduleName == "annotations"
+            }
+        }
     }
 
     processResources {
@@ -90,14 +101,19 @@ java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
 
+// Thanks ShadowJar, Great Plugin!
+gradle.projectsEvaluated {
+    tasks.getByName("publishShadowPublicationToMavenRepository").dependsOn(tasks.jar)
+    tasks.getByName("generateMetadataFileForShadowPublication").dependsOn(tasks.jar)
+}
 
 publishing {
     publications {
-        create<MavenPublication>("mavenJava") {
+        create<MavenPublication>("shadow") {
             groupId = rootProject.group.toString()
             artifactId = project.name
             version = rootProject.version.toString()
-            from(components["java"])
+            from(components["shadow"])
         }
     }
 

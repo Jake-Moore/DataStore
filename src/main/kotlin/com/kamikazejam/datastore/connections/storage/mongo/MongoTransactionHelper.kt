@@ -3,20 +3,19 @@ package com.kamikazejam.datastore.connections.storage.mongo
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.base.Store
-import com.kamikazejam.datastore.base.data.StoreData
-import com.kamikazejam.datastore.connections.storage.exception.TransactionRetryLimitExceededException
+import com.kamikazejam.datastore.base.exception.update.TransactionRetryLimitExceededException
+import com.kamikazejam.datastore.base.exception.update.UpdateException
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialNameForID
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialNameForVersion
+import com.kamikazejam.datastore.store.Store
 import com.kamikazejam.datastore.util.DataStoreFileLogger
-import com.kamikazejam.datastore.util.JacksonUtil
-import com.kamikazejam.datastore.util.JacksonUtil.ID_FIELD
-import com.kamikazejam.datastore.util.JacksonUtil.VERSION_FIELD
 import com.mongodb.MongoCommandException
-import com.mongodb.client.MongoClient
-import com.mongodb.client.MongoCollection
 import com.mongodb.client.model.Filters
-import org.bson.Document
+import com.mongodb.kotlin.client.coroutine.ClientSession
+import com.mongodb.kotlin.client.coroutine.MongoClient
+import com.mongodb.kotlin.client.coroutine.MongoCollection
+import kotlinx.coroutines.flow.firstOrNull
 import java.util.*
-import java.util.function.Consumer
 
 @Suppress("MemberVisibilityCanBePrivate")
 object MongoTransactionHelper {
@@ -32,56 +31,47 @@ object MongoTransactionHelper {
 
     /**
      * Execute a MongoDB document update with retries and version checking
-     * @param mongoClient The MongoDB client
-     * @param mongoColl The MongoDB collection
-     * @param collection The collection containing the document
-     * @param originalStore The original store to update
-     * @param updateFunction The function to apply updates
-     * @return Whether the update was successful
+     * @throws UpdateException for fail states
      */
-    fun <K : Any, X : Store<X, K>> executeUpdate(
+    @Throws(UpdateException::class)
+    suspend fun <K : Any, X : Store<X, K>> executeUpdate(
         mongoClient: MongoClient,
-        mongoColl: MongoCollection<Document>,
+        mongoColl: MongoCollection<X>,
         collection: Collection<K, X>,
-        originalStore: X,
-        updateFunction: Consumer<X>
-    ): Boolean {
+        store: X,
+        updateFunction: (X) -> X
+    ): X {
         Preconditions.checkNotNull(mongoClient, "MongoClient cannot be null")
         Preconditions.checkNotNull(mongoColl, "MongoDB Collection cannot be null")
         Preconditions.checkNotNull(collection, "Collection cannot be null")
-        Preconditions.checkNotNull(originalStore, "Store cannot be null")
+        Preconditions.checkNotNull(store, "Store cannot be null")
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
-        try {
-            // Create working copy that will be updated on each attempt
-            val baseCopy = JacksonUtil.deepCopy(originalStore)
-            return executeUpdateInternal(
-                mongoClient,
-                mongoColl,
-                collection,
-                originalStore,
-                baseCopy,
-                updateFunction,
-                0
-            )
-        } catch (e: TransactionRetryLimitExceededException) {
-            DataStoreFileLogger.warn("Failed to execute MongoDB update in $DEFAULT_MAX_RETRIES attempts")
-            return false
-        }
+        // Will either return the store, or throw an UpdateException
+        val updatedStore: X = retryExecutionHelper(
+            mongoClient,
+            mongoColl,
+            collection,
+            store,
+            updateFunction,
+            0
+        )
+
+        // Ensure our local cache is updated with the new updated store
+        collection.updateStoreFromNewer(store, updatedStore)
+        return updatedStore
     }
 
     // If no error is thrown, this method succeeded
-    @Throws(TransactionRetryLimitExceededException::class)
-    private fun <K : Any, X : Store<X, K>> executeUpdateInternal(
+    @Throws(UpdateException::class)
+    private suspend fun <K : Any, X : Store<X, K>> retryExecutionHelper(
         mongoClient: MongoClient,
-        mongoColl: MongoCollection<Document>,
+        mongoColl: MongoCollection<X>,
         collection: Collection<K, X>,
-        originalStore: X,
-        baseStore: X,
-        updateFunction: Consumer<X>,
+        store: X,
+        updateFunction: (X) -> X,
         currentAttempt: Int
-    ): Boolean {
-        var baseCopy = baseStore
+    ): X {
         // Quit if we've run out of attempts
         if (currentAttempt >= DEFAULT_MAX_RETRIES) {
             throw TransactionRetryLimitExceededException("Failed to execute update after $DEFAULT_MAX_RETRIES attempts.")
@@ -94,96 +84,115 @@ object MongoTransactionHelper {
 
         mongoClient.startSession().use { session ->
             session.startTransaction()
-            var committed = false
+            var sessionResolved = false
             try {
-                // Clone the base copy for this attempt
-                val workingCopy = JacksonUtil.deepCopy(baseCopy)
-                workingCopy.readOnly = false
-
                 // Fetch Version prior to updates
-                val currentVersion: Long = workingCopy.versionField.getData().get()
+                val result = processTransaction(mongoColl, session, collection, store, updateFunction)
 
-                // Apply updates to the copy
-                updateFunction.accept(workingCopy)
-                // Increment version (Optimistic Versioning)
-                workingCopy.versionField.getData().set(currentVersion + 1)
-
-                val id = collection.keyToString(workingCopy.id)
-                val doc = JacksonUtil.serializeToDocument(workingCopy)
-
-                val result = mongoColl.replaceOne(
-                    session,
-                    Filters.and(
-                        // These two filters act as a sort of compare-and-swap mechanic
-                        //  inside of this mongo transaction, if these are not met then
-                        //  the transaction will fail and we will need to retry.
-                        Filters.eq("$ID_FIELD.${StoreData.CONTENT_KEY}", id),
-                        Filters.eq("$VERSION_FIELD.${StoreData.CONTENT_KEY}", currentVersion),
-                    ),
-                    doc
-                )
-
-                // If no documents were modified, then the compare-and-swap failed, we must retry
-                if (result.modifiedCount == 0L) {
-                    DataStoreSource.colorLogger.debug("Failed to update Store in MongoDB Layer (Could not find document with id: '$id' and version: $currentVersion)")
-
-                    // If update failed, fetch current version
-                    val currentDoc: Document =
-                        mongoColl.find(session).filter(Filters.eq("$ID_FIELD.${StoreData.CONTENT_KEY}", id))
-                            .first()
-                            ?: throw RuntimeException("Entity not found")
-
-                    // Update our working copy with latest version and retry
-                    baseCopy = JacksonUtil.deserializeFromDocument(collection.storeClass, currentDoc)
-                    return executeUpdateInternal(
+                // Handle Fail State
+                if (result.dbStore != null) {
+                    session.abortTransaction()
+                    sessionResolved = true
+                    // Retry with the new database store
+                    return retryExecutionHelper(
                         mongoClient,
                         mongoColl,
                         collection,
-                        originalStore,
-                        baseCopy,
+                        result.dbStore,
                         updateFunction,
                         currentAttempt + 1
                     )
                 }
 
-                // Success - update the cached store from our working copy
-                workingCopy.readOnly = true
-                originalStore.readOnly = false
-                collection.updateStoreFromNewer(originalStore, workingCopy)
-                collection.cache(originalStore)
-                originalStore.readOnly = true
-
+                // Success - return true
                 session.commitTransaction()
-                committed = true
-                return true
-            } catch (t: TransactionRetryLimitExceededException) {
-                // re-throw to bubble up
-                throw t
+                sessionResolved = true
+                return checkNotNull(result.store)
+            } catch (uE: UpdateException) {
+                throw uE
             } catch (mE: MongoCommandException) {
                 if (isWriteConflict(mE)) {
                     logWriteConflict(currentAttempt)
                     // For write conflicts, retry with same working copy
-                    return executeUpdateInternal(
+                    return retryExecutionHelper(
                         mongoClient,
                         mongoColl,
                         collection,
-                        originalStore,
-                        baseCopy,
+                        store,
                         updateFunction,
                         currentAttempt + 1
                     )
                 }
-                throw mE
+                throw UpdateException("Failed to execute MongoDB update", mE)
             } catch (e: Exception) {
                 DataStoreFileLogger.warn("Failed to execute MongoDB update", e)
-                // Generic Exceptions are not a cause for retry, we should log and return failure
-                return false
+                throw UpdateException("Failed to execute MongoDB update", e)
             } finally {
-                if (!committed) {
+                if (!sessionResolved) {
                     session.abortTransaction()
                 }
             }
         }
+    }
+
+    private suspend fun <K : Any, X : Store<X, K>> processTransaction(
+        mongoColl: MongoCollection<X>,
+        session: ClientSession,
+        collection: Collection<K, X>,
+        store: X,
+        updateFunction: (X) -> X,
+    ): TransactionResult<K, X> {
+        val currentVersion: Long = store.version
+        val nextVersion = currentVersion + 1
+        val id: String = collection.keyToString(store.id)
+
+        // Apply the Update Function
+        //  which MUST (by convention) return a new instance (like a data class copy)
+        // Also have the Store class create a copy with the desired version
+        val updatedStore: X = updateFunction(store).copyHelper(nextVersion)
+        if (updatedStore === store) {
+            throw IllegalArgumentException("Update function must return a new instance of the store (like a data class copy)")
+        }
+
+        // Validate ID Property
+        if (id != collection.keyToString(updatedStore.id)) {
+            throw IllegalArgumentException("Updated store failed copy id check! Was: ${updatedStore.id}, Expected: ${store.id}")
+        }
+
+        // Validate Incremented Version (Optimistic Versioning)
+        if (updatedStore.version != nextVersion) {
+            throw IllegalArgumentException("Updated store failed copy version check! Was: ${updatedStore.version}, Expected: $nextVersion")
+        }
+
+        val idField = getSerialNameForID(collection)
+        val verField = getSerialNameForVersion(collection)
+        val result = mongoColl.replaceOne(
+            session,
+            Filters.and(
+                // These two filters act as a sort of compare-and-swap mechanic
+                //  inside of this mongo transaction, if these are not met then
+                //  the transaction will fail and we will need to retry.
+                Filters.eq(idField, id),
+                Filters.eq(verField, currentVersion),
+            ),
+            updatedStore
+        )
+
+        // If no documents were modified, then the compare-and-swap failed, we must retry
+        if (result.modifiedCount == 0L) {
+            DataStoreSource.colorLogger.debug("Failed to update Store in MongoDB Layer (Could not find document with id: '$id' and version: $currentVersion)")
+
+            // If update failed, fetch current version
+            val databaseStore: X = mongoColl.find(session).filter(
+                Filters.eq(idField, id)
+            ).firstOrNull() ?: throw RuntimeException("Entity not found")
+
+            // Update our working copy with latest version and retry
+            return TransactionResult(null, databaseStore)
+        }
+
+        // Success! Return a successful result
+        return TransactionResult(updatedStore, null)
     }
 
     // Applies linear backoff to the current thread + some random jitter

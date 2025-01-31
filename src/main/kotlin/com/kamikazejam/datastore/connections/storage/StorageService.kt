@@ -2,13 +2,12 @@ package com.kamikazejam.datastore.connections.storage
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Service
-import com.kamikazejam.datastore.base.Store
 import com.kamikazejam.datastore.base.StoreCollection
-import com.kamikazejam.datastore.base.data.StoreData
+import com.kamikazejam.datastore.base.exception.update.UpdateException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
+import com.kamikazejam.datastore.store.Store
 import kotlinx.coroutines.flow.Flow
-import java.util.function.Consumer
 
 /**
  * Defines the minimum set of methods all Storage services must implement.
@@ -27,7 +26,8 @@ abstract class StorageService : LoggerService(), Service {
      * If found, then the document in the database is replaced using a transaction. (providing atomicity)
      * @return If the Store was replaced. (if the db was updated)
      */
-    abstract suspend fun <K : Any, X : Store<X, K>> updateSync(collection: Collection<K, X>, store: X, updateFunction: Consumer<X>): Boolean
+    @Throws(UpdateException::class)
+    abstract suspend fun <K : Any, X : Store<X, K>> updateSync(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): X
 
     /**
      * Retrieve a Store from this store. Requires the collection to fetch it from.
@@ -83,14 +83,14 @@ abstract class StorageService : LoggerService(), Service {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    abstract suspend fun <K : Any, X : Store<X, K>, D : StoreData<Any>> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, D>)
+    abstract suspend fun <K : Any, X : Store<X, K>, T> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, T>)
     abstract suspend fun <K : Any, X : Store<X, K>> cacheIndexes(collection: StoreCollection<K, X>, store: X, updateFile: Boolean)
     abstract suspend fun <K : Any, X : Store<X, K>> saveIndexCache(collection: StoreCollection<K, X>)
-    abstract suspend fun <K : Any, X : Store<X, K>, D : StoreData<Any>> getStoreIdByIndex(
+    abstract suspend fun <K : Any, X : Store<X, K>, T> getStoreByIndex(
         collection: StoreCollection<K, X>,
-        index: IndexedField<X, D>,
-        value: D
-    ): K?
+        index: IndexedField<X, T>,
+        value: T
+    ): X?
 
     abstract suspend fun <K : Any, X : Store<X, K>> invalidateIndexes(collection: StoreCollection<K, X>, key: K, updateFile: Boolean)
 }

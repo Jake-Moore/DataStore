@@ -10,7 +10,7 @@ import org.bukkit.Bukkit
 enum class StorageMode {
     MONGODB;
 
-    fun enableServices() {
+    suspend fun enableServices() {
         // Enable Storage Service (just fetch storageService)
         when (this) {
             MONGODB -> {
@@ -38,7 +38,7 @@ enum class StorageMode {
         return mongoStorage ?: throw IllegalStateException("MongoStorage is not initialized")
     }
 
-    fun disableServices() {
+    suspend fun disableServices() {
         mongoStorage?.shutdown()
         mongoStorage = null
     }

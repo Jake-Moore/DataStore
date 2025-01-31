@@ -2,9 +2,9 @@ package com.kamikazejam.datastore.base
 
 @Suppress("unused")
 interface Service {
-    fun start(): Boolean
+    suspend fun start(): Boolean
 
-    fun shutdown(): Boolean
+    suspend fun shutdown(): Boolean
 
     val running: Boolean
 }

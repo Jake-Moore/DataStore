@@ -8,7 +8,8 @@ import com.kamikazejam.datastore.util.Color
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
-import java.util.*
+import java.util.Arrays
+import java.util.Locale
 import java.util.stream.Collectors
 
 class DataStoreCommand : TabExecutor {

@@ -4,20 +4,24 @@ import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.exception.DuplicateDatabaseException
-import com.kamikazejam.datastore.database.DatabaseRegistration
+import com.kamikazejam.datastore.base.database.DatabaseRegistration
 import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 import java.util.stream.Collectors
+import kotlin.collections.ArrayList
 
 /**
  * Main class of DataStore. This project does not work as a plugin, only a shade-able library.
  */
 @Suppress("unused")
 object DataStoreAPI {
+    internal val registrations: MutableList<DataStoreRegistration> = CopyOnWriteArrayList()
+
     // ------------------------------------------------------ //
     // Prefix Methods                                         //
     // ------------------------------------------------------ //
@@ -45,7 +49,9 @@ object DataStoreAPI {
         Preconditions.checkNotNull(databaseName)
 
         registerDatabase(plugin, getFullDatabaseName(databaseName))
-        return DataStoreRegistration(plugin, databaseName)
+        return DataStoreRegistration(plugin, databaseName).also {
+            registrations.add(it)
+        }
     }
 
 

@@ -5,12 +5,11 @@ package com.kamikazejam.datastore.base.extensions
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
-import com.kamikazejam.datastore.mode.profile.ProfileCollection
-import com.kamikazejam.datastore.mode.profile.StoreProfile
+import com.kamikazejam.datastore.store.profile.ProfileCollection
+import com.kamikazejam.datastore.store.StoreProfile
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.NonBlocking
-import java.util.*
-import java.util.function.Consumer
+import java.util.UUID
 
 /**
  * Read a StoreProfile (by player) from this collection (will fetch from database, will create if necessary)
@@ -29,7 +28,7 @@ fun <X : StoreProfile<X>> ProfileCollection<X>.read(player: Player, cacheStore: 
  * @return The updated Store object. (READ-ONLY)
  */
 @NonBlocking
-fun <X : StoreProfile<X>> ProfileCollection<X>.update(player: Player, updateFunction: Consumer<X>): AsyncUpdateHandler<UUID, X> {
+fun <X : StoreProfile<X>> ProfileCollection<X>.update(player: Player, updateFunction: (X) -> X): AsyncUpdateHandler<UUID, X> {
     return this.update(player.uniqueId, updateFunction)
 }
 

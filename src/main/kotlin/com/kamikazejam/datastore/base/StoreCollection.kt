@@ -12,38 +12,31 @@ import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
 import com.kamikazejam.datastore.base.async.result.Empty
 import com.kamikazejam.datastore.base.async.result.Failure
 import com.kamikazejam.datastore.base.async.result.Success
-import com.kamikazejam.datastore.base.data.StoreData
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
-import com.kamikazejam.datastore.base.field.FieldWrapper
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
-import com.kamikazejam.datastore.base.store.CollectionLoggerInstantiator
-import com.kamikazejam.datastore.base.store.StoreInstantiator
-import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
-import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
-import com.kamikazejam.datastore.util.JacksonUtil
+import com.kamikazejam.datastore.store.profile.StoreProfileCollection
+import com.kamikazejam.datastore.store.profile.listener.ProfileListener
+import com.kamikazejam.datastore.store.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
-import org.bson.Document
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.IllegalPluginAccessException
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
-import java.util.function.Consumer
 
 /**
  * The abstract backbone of all Store Collection systems.
  * All Caching modes (profile, object, simple) extend this class.
  */
 abstract class StoreCollection<K : Any, X : Store<X, K>>(
-    override var instantiator: StoreInstantiator<K, X>,
     override val name: String,
     protected val keyClass: Class<K>,
     override val storeClass: Class<X>,
     final override val registration: DataStoreRegistration,
-    private val loggerInstantiator: CollectionLoggerInstantiator
+    private val loggerInstantiator: (StoreCollection<K, X>) -> LoggerService
 ) : Comparable<StoreCollection<*, *>>, Collection<K, X> {
     private val dependingCollections: MutableSet<String> = HashSet()
 
@@ -65,7 +58,6 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         // Try Local Cache First
         val localStore = readFromCache(key)
         localStore?.let { store ->
-            store.readOnly = true
             return AsyncReadHandler(this) { store }
         }
 
@@ -73,7 +65,6 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         return AsyncReadHandler(this) {
             val databaseStore = readFromDatabase(key)
             databaseStore?.let { store ->
-                store.readOnly = true
                 if (cacheStore) {
                     cache(store)
                 }
@@ -91,18 +82,14 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         }
     }
 
-    override fun update(key: K, updateFunction: Consumer<X>): AsyncUpdateHandler<K, X> {
+    override fun update(key: K, updateFunction: (X) -> X): AsyncUpdateHandler<K, X> {
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
         return AsyncUpdateHandler(this) {
             when (val readResult = read(key).await()) {
                 is Success -> {
-                    val originalEntity = readResult.value
-                    check(this.databaseStore.updateSync(originalEntity, updateFunction)) {
-                        "[StoreCollection#update] Failed to update store with key: ${this.keyToString(key)}"
-                    }
-
-                    originalEntity
+                    // may throw errors, which will be caught by AsyncUpdateHandler
+                    return@AsyncUpdateHandler this.databaseStore.updateSync(readResult.value, updateFunction)
                 }
                 is Failure -> throw readResult.error
                 is Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
@@ -140,12 +127,8 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
      *
      * @return Boolean successful
      */
-    final override fun start(): Boolean {
+    final override suspend fun start(): Boolean {
         Preconditions.checkState(!running, "Collection $name is already started!")
-        Preconditions.checkNotNull(
-            instantiator,
-            "Instantiator must be set before calling start() for Collection $name"
-        )
         var success = true
         if (!initialize()) {
             success = false
@@ -169,7 +152,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
      *
      * @return Boolean successful
      */
-    override fun shutdown(): Boolean {
+    override suspend fun shutdown(): Boolean {
         Preconditions.checkState(running, "Collection $name is not running!")
         var success = true
 
@@ -200,7 +183,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
      * Prepares everything for a fresh startup, ensures database connections, etc.
      */
     @ApiStatus.Internal
-    protected abstract fun initialize(): Boolean
+    protected open fun initialize(): Boolean = true
 
     /**
      * Shut down the Collection.
@@ -225,7 +208,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
             localStore.save(store)
             getLoggerService().debug("Cached store " + store.id)
         }
-        store.setCollection(this)
+        store.initialize(this)
     }
 
     override fun uncache(key: K) {
@@ -299,43 +282,17 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         Preconditions.checkNotNull(store)
         Preconditions.checkNotNull(update)
 
-        // For this, we will simply go through the store's fields and set them to the update's fields values
-        // This is a simple way to update the store from the update/
-        // This is likely impossible to do in a fully type-safe way, but assuming both stores are the same type, this should work
-        store.readOnly = false
-        val storeFields = store.allFieldsMap
-        val updateFields = update.allFieldsMap
-        
-        // Copy fields using type-safe helper method
-        for ((key, storeProvider) in storeFields) {
-            val updateProvider = updateFields[key]
-            if (updateProvider != null) {
-                copyFieldValue(storeProvider.fieldWrapper, updateProvider.fieldWrapper)
-            }else {
-                // For some reason our update didn't have a value for this field
-                // can't do much, just leave the value as is
-                getLoggerService().warn("Update store didn't have a value for field: ${storeProvider.fieldWrapper.name}, class: ${storeProvider.fieldWrapper.javaClass}")
-            }
-        }
-
-        store.readOnly = true
-    }
-
-    /**
-     * Helper method to safely copy values between field wrappers of the same type
-     */
-    private fun copyFieldValue(target: FieldWrapper<*>, source: FieldWrapper<*>) {
-        // use our serialization helpers to do this
-        // By serializing into a document, then back out of it
-        val doc = Document()
-        JacksonUtil.serializeFieldProviderIntoDoc(doc, source)
-        JacksonUtil.deserializeIntoFieldProvider<StoreData<Any>>(target, doc)
+        // All Store Objects should be read-only with val properties
+        // Thus, to "swap" the active store with the update, we simply need to update our local cache
+        // There is no concept of "hot swapping" stores in this DataStore library
+        this.uncache(store.id)
+        this.cache(update)
     }
 
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    override suspend fun <D : StoreData<Any>> registerIndex(field: IndexedField<X, D>): IndexedField<X, D> {
+    override suspend fun <T> registerIndex(field: IndexedField<X, T>): IndexedField<X, T> {
         getLoggerService().debug("Registering index: " + field.name)
         DataStoreSource.storageService.registerIndex(this, field)
         return field
@@ -353,40 +310,32 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         DataStoreSource.storageService.saveIndexCache(this)
     }
 
-    override fun <D : StoreData<Any>> readIdByIndex(index: IndexedField<X, D>, value: D): AsyncReadIdHandler<K> {
+    override fun <T> readIdByIndex(field: IndexedField<X, T>, value: T): AsyncReadIdHandler<K> {
+        // 1. -> Check local cache (brute force)
+        val localStore = readFromCacheByIndex(field, value)
+        if (localStore != null) return AsyncReadIdHandler(this) { localStore.id }
+
+        // 2. -> Check database (uses storage service like mongodb)
         return AsyncReadIdHandler(this) {
-            DataStoreSource.storageService.getStoreIdByIndex(this, index, value)
+            DataStoreSource.storageService.getStoreByIndex(this, field, value)?.id
         }
     }
 
-    override fun <D : StoreData<Any>> readByIndex(field: IndexedField<X, D>, value: D): AsyncReadHandler<K, X> {
+    override fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncReadHandler<K, X> {
         // 1. -> Check local cache (brute force)
-        for (store in localStore.getAll()) {
-            if (field.equals(field.getValue(store), value)) {
-                return AsyncReadHandler(this) { store }
-            }
-        }
+        val localStore = readFromCacheByIndex(field, value)
+        if (localStore != null) return AsyncReadHandler(this) { localStore }
 
         // 2. -> Check database (uses storage service like mongodb)
         return AsyncReadHandler(this) {
-            val id = DataStoreSource.storageService.getStoreIdByIndex(this, field, value) ?: return@AsyncReadHandler null
-
-            // 3. -> Obtain the Profile by its ID
-            when (val readResult = this.read(id).await()) {
-                is Success -> {
-                    if (!field.equals(value, field.getValue(readResult.value))) {
-                        // This can happen if:
-                        //    The local copy had its field changed
-                        //    and those changes were not saved to DB or Index Cache
-                        // This is not considered an error, but we should return empty
-                        return@AsyncReadHandler null
-                    }
-                    return@AsyncReadHandler readResult.value
-                }
-                is Failure -> throw readResult.error
-                is Empty -> return@AsyncReadHandler null
-            }
+            DataStoreSource.storageService.getStoreByIndex(this, field, value)
         }
+    }
+
+    override fun <T> readFromCacheByIndex(field: IndexedField<X, T>, value: T): X? {
+        return localStore.getAll().stream().filter { field.equals(field.getValue(it), value) }
+            .findFirst()
+            .orElse(null)
     }
 
     private var _loggerService: LoggerService? = null
@@ -395,7 +344,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         if (service != null) {
             return service
         }
-        val s = loggerInstantiator.instantiate(this)
+        val s = loggerInstantiator(this)
         this._loggerService = s
         return s
     }

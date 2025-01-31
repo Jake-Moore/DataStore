@@ -5,7 +5,8 @@ import com.kamikazejam.datastore.base.log.PluginLogger
 import com.kamikazejam.datastore.base.mode.StorageMode
 import com.kamikazejam.datastore.command.DataStoreCommand
 import com.kamikazejam.datastore.connections.storage.StorageService
-import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
+import com.kamikazejam.datastore.store.profile.listener.ProfileListener
+import kotlinx.coroutines.runBlocking
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
@@ -29,7 +30,7 @@ object DataStoreSource {
     /**
      * @return true IFF a plugin source was NEEDED and used for registration
      */
-    fun onEnable(pl: JavaPlugin): Boolean {
+    suspend fun onEnable(pl: JavaPlugin): Boolean {
         if (enabled) {
             return false
         }
@@ -62,13 +63,24 @@ object DataStoreSource {
     /**
      * @return true IFF this call triggered the singleton disable sequence, false it already disabled
      */
-    fun onDisable(): Boolean {
+    suspend fun onDisable(): Boolean {
         if (!enabled) {
             return false
         }
 
         // Shutdown Services
         storageMode.disableServices()
+
+        // Ensure all Collections are shutdown
+        if (DataStoreAPI.registrations.isNotEmpty()) {
+            // This should be safe (although not ideal) since any plugin depending on DataStore should be disabled before this
+            DataStoreAPI.registrations.forEach {
+                colorLogger.warning("DataStoreRegistration for ${it.databaseName} (backed by plugin '${it.plugin.name}') was not shutdown before plugin disable.")
+                colorLogger.warning("Manually shutting it down! (PLEASE CONTACT AUTHORS OF ${it.plugin.name} TO FIX THIS)")
+                runBlocking { it.shutdown() }
+            }
+            DataStoreAPI.registrations.clear()
+        }
 
         // Set to disabled
         val prev = enabled
