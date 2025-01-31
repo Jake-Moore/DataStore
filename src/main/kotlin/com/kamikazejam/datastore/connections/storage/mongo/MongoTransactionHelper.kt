@@ -84,7 +84,7 @@ object MongoTransactionHelper {
 
         mongoClient.startSession().use { session ->
             session.startTransaction()
-            var committed = false
+            var sessionResolved = false
             try {
                 // Fetch Version prior to updates
                 val result = processTransaction(mongoColl, session, collection, store, updateFunction)
@@ -92,6 +92,7 @@ object MongoTransactionHelper {
                 // Handle Fail State
                 if (result.dbStore != null) {
                     session.abortTransaction()
+                    sessionResolved = true
                     // Retry with the new database store
                     return retryExecutionHelper(
                         mongoClient,
@@ -105,7 +106,7 @@ object MongoTransactionHelper {
 
                 // Success - return true
                 session.commitTransaction()
-                committed = true
+                sessionResolved = true
                 return checkNotNull(result.store)
             } catch (uE: UpdateException) {
                 throw uE
@@ -127,7 +128,7 @@ object MongoTransactionHelper {
                 DataStoreFileLogger.warn("Failed to execute MongoDB update", e)
                 throw UpdateException("Failed to execute MongoDB update", e)
             } finally {
-                if (!committed) {
+                if (!sessionResolved) {
                     session.abortTransaction()
                 }
             }

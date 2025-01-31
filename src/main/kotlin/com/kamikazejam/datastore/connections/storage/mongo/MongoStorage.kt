@@ -162,7 +162,6 @@ class MongoStorage : StorageService() {
         } catch (uE: UpdateException) {
             throw uE
         } catch (e: Exception) {
-            DataStoreFileLogger.warn("Failed to update Store in MongoDB Layer after all retries: " + store.id, e)
             throw UpdateException("Failed to update Store in MongoDB Layer after all retries: " + store.id, e)
         }
     }
