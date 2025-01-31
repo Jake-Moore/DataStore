@@ -3,7 +3,7 @@ package com.kamikazejam.datastore.command.sub
 import com.kamikazejam.datastore.DataStoreAPI
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.command.SubCommand
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.Store
 import com.kamikazejam.datastore.util.Color
 import org.bukkit.command.CommandSender
 import java.util.Locale

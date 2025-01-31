@@ -1,19 +1,23 @@
-package com.kamikazejam.datastore.mode.store
+package com.kamikazejam.datastore.store
 
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
-import com.kamikazejam.datastore.mode.`object`.StoreObjectCollection
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.ID_FIELD
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.VERSION_FIELD
+import com.kamikazejam.datastore.store.`object`.StoreObjectCollection
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.util.Objects
+import java.util.UUID
 
 @Suppress("unused")
 @Serializable
 abstract class StoreObject<X : StoreObject<X>>: Store<X, String> {
     // Pass these up to the StoreObject implementation
-    abstract override val id: String
-    abstract override val version: Long
+    @SerialName(ID_FIELD) override val id: String = UUID.randomUUID().toString()
+    @SerialName(VERSION_FIELD) override val version: Long = 0L
 
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //

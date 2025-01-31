@@ -1,7 +1,7 @@
-package com.kamikazejam.datastore.mode.profile
+package com.kamikazejam.datastore.store.profile
 
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.mode.store.StoreProfile
+import com.kamikazejam.datastore.store.StoreProfile
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.ApiStatus.Internal
 import org.jetbrains.annotations.Blocking

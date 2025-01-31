@@ -6,7 +6,7 @@ import com.kamikazejam.datastore.base.async.handler.AsyncHandler
 import com.kamikazejam.datastore.base.async.result.DefiniteResult
 import com.kamikazejam.datastore.base.async.result.Failure
 import com.kamikazejam.datastore.base.async.result.Success
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.Store
 
 @Suppress("unused")
 class AsyncCreateHandler<K : Any, X : Store<X, K>>(

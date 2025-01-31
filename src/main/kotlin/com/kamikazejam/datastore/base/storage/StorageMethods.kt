@@ -1,7 +1,7 @@
 package com.kamikazejam.datastore.base.storage
 
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.Store
 import kotlinx.coroutines.flow.Flow
 import org.jetbrains.annotations.ApiStatus
 

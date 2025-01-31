@@ -1,4 +1,4 @@
-package com.kamikazejam.datastore.mode.profile.listener
+package com.kamikazejam.datastore.store.profile.listener
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
@@ -9,10 +9,10 @@ import com.kamikazejam.datastore.base.exception.ProfileDenyJoinError
 import com.kamikazejam.datastore.api.event.StoreProfileLoginEvent
 import com.kamikazejam.datastore.api.event.StoreProfileLogoutEvent
 import com.kamikazejam.datastore.api.event.StoreProfilePreLogoutEvent
-import com.kamikazejam.datastore.mode.profile.ProfileCollection
-import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
-import com.kamikazejam.datastore.mode.profile.StoreProfileLoader
-import com.kamikazejam.datastore.mode.store.StoreProfile
+import com.kamikazejam.datastore.store.profile.ProfileCollection
+import com.kamikazejam.datastore.store.profile.StoreProfileCollection
+import com.kamikazejam.datastore.store.profile.StoreProfileLoader
+import com.kamikazejam.datastore.store.StoreProfile
 import com.kamikazejam.datastore.util.AsyncCollectionsExecutor
 import com.kamikazejam.datastore.util.Color
 import kotlinx.coroutines.Deferred

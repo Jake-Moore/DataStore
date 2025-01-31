@@ -1,7 +1,7 @@
 package com.kamikazejam.datastore.base.index
 
 import com.kamikazejam.datastore.base.Collection
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.Store
 
 /**
  * All IndexFields are assumed to be unique (only have one Store with that value)

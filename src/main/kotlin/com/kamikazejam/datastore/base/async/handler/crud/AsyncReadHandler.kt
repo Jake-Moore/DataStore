@@ -7,7 +7,7 @@ import com.kamikazejam.datastore.base.async.result.Empty
 import com.kamikazejam.datastore.base.async.result.Failure
 import com.kamikazejam.datastore.base.async.result.OptionalResult
 import com.kamikazejam.datastore.base.async.result.Success
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.Store
 
 @Suppress("unused")
 class AsyncReadHandler<K : Any, X : Store<X, K>>(

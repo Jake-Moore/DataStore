@@ -1,8 +1,8 @@
-package com.kamikazejam.datastore.mode.`object`
+package com.kamikazejam.datastore.store.`object`
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
-import com.kamikazejam.datastore.mode.store.StoreObject
+import com.kamikazejam.datastore.store.StoreObject
 import com.mongodb.*
 
 /**

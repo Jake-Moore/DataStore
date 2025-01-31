@@ -10,7 +10,7 @@ import com.kamikazejam.datastore.base.serialization.SerializationUtil.ID_FIELD
 import com.kamikazejam.datastore.connections.config.MongoConfig
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor
 import com.kamikazejam.datastore.connections.storage.StorageService
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.Store
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.mongodb.ConnectionString
 import com.mongodb.MongoClientSettings
@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
 import org.bson.Document
@@ -211,8 +212,11 @@ class MongoStorage : StorageService() {
     }
 
     override suspend fun <K : Any, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> {
-        return getMongoCollection(collection).find().projection(Projections.include(ID_FIELD)).map { store: X ->
-            store.id
+        val mongoCollection = getMongoCollection(collection).withDocumentClass<Document>()
+        return mongoCollection.find().projection(Projections.include(ID_FIELD)).mapNotNull { doc: Document ->
+            // We know where the id is located, and we can fetch it, there is no need to deserialize the entire object
+            val idString = doc.getString(ID_FIELD) ?: return@mapNotNull null
+            collection.keyFromString(idString)
         }
     }
 
@@ -336,17 +340,16 @@ class MongoStorage : StorageService() {
         // do nothing -> MongoDB handles this
     }
 
-    override suspend fun <K : Any, X : Store<X, K>, T> getStoreIdByIndex(
+    override suspend fun <K : Any, X : Store<X, K>, T> getStoreByIndex(
         collection: StoreCollection<K, X>,
         index: IndexedField<X, T>,
         value: T
-    ): K? = withContext(Dispatchers.IO) {
+    ): X? = withContext(Dispatchers.IO) {
         // Filter by this index name (field name) and value (all indexes are unique)
         val store: X = getMongoCollection(collection)
             .find(
                 Filters.eq(index.name, value)
             )
-            .projection(Projections.include(ID_FIELD, index.name))
             .firstOrNull()
             ?: return@withContext null
 
@@ -354,7 +357,7 @@ class MongoStorage : StorageService() {
         if (!index.equals(index.getValue(store), value)) {
             return@withContext null
         }
-        return@withContext store.id
+        return@withContext store
     }
 
     override suspend fun <K : Any, X : Store<X, K>> invalidateIndexes(collection: StoreCollection<K, X>, key: K, updateFile: Boolean) = withContext(Dispatchers.IO) {

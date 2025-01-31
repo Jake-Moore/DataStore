@@ -1,7 +1,7 @@
-package com.kamikazejam.datastore.mode.profile.storage
+package com.kamikazejam.datastore.store.profile.storage
 
 import com.kamikazejam.datastore.base.storage.StorageLocal
-import com.kamikazejam.datastore.mode.store.StoreProfile
+import com.kamikazejam.datastore.store.StoreProfile
 import java.util.UUID
 
 class ProfileStorageLocal<X : StoreProfile<X>> : StorageLocal<UUID, X>() {

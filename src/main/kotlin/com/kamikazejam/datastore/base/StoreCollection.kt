@@ -15,9 +15,9 @@ import com.kamikazejam.datastore.base.async.result.Success
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
-import com.kamikazejam.datastore.mode.profile.StoreProfileCollection
-import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.profile.StoreProfileCollection
+import com.kamikazejam.datastore.store.profile.listener.ProfileListener
+import com.kamikazejam.datastore.store.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
@@ -310,40 +310,32 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         DataStoreSource.storageService.saveIndexCache(this)
     }
 
-    override fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncReadIdHandler<K> {
+    override fun <T> readIdByIndex(field: IndexedField<X, T>, value: T): AsyncReadIdHandler<K> {
+        // 1. -> Check local cache (brute force)
+        val localStore = readFromCacheByIndex(field, value)
+        if (localStore != null) return AsyncReadIdHandler(this) { localStore.id }
+
+        // 2. -> Check database (uses storage service like mongodb)
         return AsyncReadIdHandler(this) {
-            DataStoreSource.storageService.getStoreIdByIndex(this, index, value)
+            DataStoreSource.storageService.getStoreByIndex(this, field, value)?.id
         }
     }
 
     override fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncReadHandler<K, X> {
         // 1. -> Check local cache (brute force)
-        for (store in localStore.getAll()) {
-            if (field.equals(field.getValue(store), value)) {
-                return AsyncReadHandler(this) { store }
-            }
-        }
+        val localStore = readFromCacheByIndex(field, value)
+        if (localStore != null) return AsyncReadHandler(this) { localStore }
 
         // 2. -> Check database (uses storage service like mongodb)
         return AsyncReadHandler(this) {
-            val id = DataStoreSource.storageService.getStoreIdByIndex(this, field, value) ?: return@AsyncReadHandler null
-
-            // 3. -> Obtain the Profile by its ID
-            when (val readResult = this.read(id).await()) {
-                is Success -> {
-                    if (!field.equals(value, field.getValue(readResult.value))) {
-                        // This can happen if:
-                        //    The local copy had its field changed
-                        //    and those changes were not saved to DB or Index Cache
-                        // This is not considered an error, but we should return empty
-                        return@AsyncReadHandler null
-                    }
-                    return@AsyncReadHandler readResult.value
-                }
-                is Failure -> throw readResult.error
-                is Empty -> return@AsyncReadHandler null
-            }
+            DataStoreSource.storageService.getStoreByIndex(this, field, value)
         }
+    }
+
+    override fun <T> readFromCacheByIndex(field: IndexedField<X, T>, value: T): X? {
+        return localStore.getAll().stream().filter { field.equals(field.getValue(it), value) }
+            .findFirst()
+            .orElse(null)
     }
 
     private var _loggerService: LoggerService? = null

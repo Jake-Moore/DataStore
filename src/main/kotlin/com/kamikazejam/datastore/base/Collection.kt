@@ -14,9 +14,9 @@ import com.kamikazejam.datastore.base.loader.StoreLoader
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.storage.StorageDatabase
 import com.kamikazejam.datastore.base.storage.StorageLocal
-import com.kamikazejam.datastore.mode.`object`.ObjectCollection
-import com.kamikazejam.datastore.mode.profile.ProfileCollection
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.`object`.ObjectCollection
+import com.kamikazejam.datastore.store.profile.ProfileCollection
+import com.kamikazejam.datastore.store.Store
 import com.mongodb.*
 import kotlinx.coroutines.flow.Flow
 import org.bukkit.plugin.Plugin
@@ -301,11 +301,19 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
     // ------------------------------------------------- //
     //                     Indexing                      //
     // ------------------------------------------------- //
-    fun <T> readIdByIndex(index: IndexedField<X, T>, value: T): AsyncReadIdHandler<K>
+    /**
+     * Retrieves a [Store] ([X]) by the provided index field and its value.
+     */
+    fun <T> readIdByIndex(field: IndexedField<X, T>, value: T): AsyncReadIdHandler<K>
 
     /**
-     * Retrieves an object by the provided index field and its value.
+     * Retrieves a [Store] ([X]) by the provided index field and its value.
      */
     fun <T> readByIndex(field: IndexedField<X, T>, value: T): AsyncReadHandler<K, X>
+
+    /**
+     * Retrieves a [Store] ([X]) by the provided index field and its value. (only checks cache)
+     */
+    fun <T> readFromCacheByIndex(field: IndexedField<X, T>, value: T): X?
 }
 

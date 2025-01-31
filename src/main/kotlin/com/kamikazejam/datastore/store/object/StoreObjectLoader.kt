@@ -1,8 +1,8 @@
-package com.kamikazejam.datastore.mode.`object`
+package com.kamikazejam.datastore.store.`object`
 
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.loader.StoreLoader
-import com.kamikazejam.datastore.mode.store.StoreObject
+import com.kamikazejam.datastore.store.StoreObject
 import java.lang.ref.WeakReference
 
 class StoreObjectLoader<X : StoreObject<X>> internal constructor(collection: StoreObjectCollection<X>, identifier: String) : StoreLoader<X> {

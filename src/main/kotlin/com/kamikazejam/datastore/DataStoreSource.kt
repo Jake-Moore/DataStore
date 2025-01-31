@@ -5,7 +5,7 @@ import com.kamikazejam.datastore.base.log.PluginLogger
 import com.kamikazejam.datastore.base.mode.StorageMode
 import com.kamikazejam.datastore.command.DataStoreCommand
 import com.kamikazejam.datastore.connections.storage.StorageService
-import com.kamikazejam.datastore.mode.profile.listener.ProfileListener
+import com.kamikazejam.datastore.store.profile.listener.ProfileListener
 import kotlinx.coroutines.runBlocking
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration

@@ -7,7 +7,7 @@ import com.kamikazejam.datastore.base.exception.update.TransactionRetryLimitExce
 import com.kamikazejam.datastore.base.exception.update.UpdateException
 import com.kamikazejam.datastore.base.serialization.SerializationUtil.ID_FIELD
 import com.kamikazejam.datastore.base.serialization.SerializationUtil.VERSION_FIELD
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.Store
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.mongodb.MongoCommandException
 import com.mongodb.client.model.Filters

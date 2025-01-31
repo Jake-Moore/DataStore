@@ -1,10 +1,9 @@
-package com.kamikazejam.datastore.mode.store
+package com.kamikazejam.datastore.store
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.ID_FIELD
 import com.kamikazejam.datastore.base.serialization.SerializationUtil.VERSION_FIELD
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -27,7 +26,6 @@ sealed interface Store<X : Store<X, K>, K : Any> : DataStoreScope {
      * The unique identifier of our [Store]. This is some [K] (like a [String] or [UUID]).
      * It just needs to be unique and able to be used as a key in a HashMap.
      */
-    @SerialName(ID_FIELD)
     val id: K
 
     /**

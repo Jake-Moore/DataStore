@@ -2,7 +2,7 @@ package com.kamikazejam.datastore.base.storage
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.exception.update.UpdateException
-import com.kamikazejam.datastore.mode.store.Store
+import com.kamikazejam.datastore.store.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

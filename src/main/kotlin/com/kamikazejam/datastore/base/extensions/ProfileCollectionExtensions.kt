@@ -5,8 +5,8 @@ package com.kamikazejam.datastore.base.extensions
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
-import com.kamikazejam.datastore.mode.profile.ProfileCollection
-import com.kamikazejam.datastore.mode.store.StoreProfile
+import com.kamikazejam.datastore.store.profile.ProfileCollection
+import com.kamikazejam.datastore.store.StoreProfile
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.NonBlocking
 import java.util.UUID
