@@ -135,7 +135,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
             // Update their username
             if (username != null && store.username != username) {
                 // Attempt to save the new username
-                collection.update(store) { x: X -> x.copy(username) }
+                collection.update(store) { x: X -> x.copyHelper(username) }
             }
         }
         return store

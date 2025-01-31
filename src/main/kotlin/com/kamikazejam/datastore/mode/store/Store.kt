@@ -76,7 +76,7 @@ sealed interface Store<X : Store<X, K>, K : Any> : DataStoreScope {
     // ----------------------------------------------------- //
     //                   Data Class Methods                  //
     // ----------------------------------------------------- //
-    fun copy(version: Long): X
+    fun copyHelper(version: Long): X
 
 
     // ----------------------------------------------------- //

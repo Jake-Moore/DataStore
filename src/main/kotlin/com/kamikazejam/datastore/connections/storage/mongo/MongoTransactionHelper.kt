@@ -148,7 +148,7 @@ object MongoTransactionHelper {
         // Apply the Update Function
         //  which MUST (by convention) return a new instance (like a data class copy)
         // Also have the Store class create a copy with the desired version
-        val updatedStore: X = updateFunction(store).copy(nextVersion)
+        val updatedStore: X = updateFunction(store).copyHelper(nextVersion)
         if (updatedStore === store) {
             throw IllegalArgumentException("Update function must return a new instance of the store (like a data class copy)")
         }

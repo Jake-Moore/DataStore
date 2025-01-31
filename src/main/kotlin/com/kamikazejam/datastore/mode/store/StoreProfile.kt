@@ -56,7 +56,7 @@ abstract class StoreProfile<T : StoreProfile<T>>(
     // ----------------------------------------------------- //
     //                   Data Class Methods                  //
     // ----------------------------------------------------- //
-    abstract fun copy(username: String?): T
+    abstract fun copyHelper(username: String?): T
 
 
 
