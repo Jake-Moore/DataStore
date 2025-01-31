@@ -19,6 +19,7 @@ import com.kamikazejam.datastore.store.profile.ProfileCollection
 import com.kamikazejam.datastore.store.Store
 import com.mongodb.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.KSerializer
 import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Blocking
@@ -31,6 +32,8 @@ import java.util.*
  */
 @Suppress("unused")
 interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
+
+    fun getKSerializer(): KSerializer<X>
 
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //

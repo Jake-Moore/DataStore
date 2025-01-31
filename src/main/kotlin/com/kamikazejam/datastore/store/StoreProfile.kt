@@ -3,13 +3,9 @@ package com.kamikazejam.datastore.store
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.ID_FIELD
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.USERNAME_FIELD
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.VERSION_FIELD
 import com.kamikazejam.datastore.base.serialization.serializer.java.UUIDSerializer
 import com.kamikazejam.datastore.store.profile.StoreProfileCollection
 import com.kamikazejam.datastore.util.PlayerUtil
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
@@ -21,9 +17,9 @@ import java.util.UUID
 @Serializable
 abstract class StoreProfile<T : StoreProfile<T>> : Store<T, UUID> {
     @Serializable(with = UUIDSerializer::class)
-    @SerialName(ID_FIELD) override val id: UUID = UUID.randomUUID()
-    @SerialName(VERSION_FIELD) override val version: Long = 0L
-    @SerialName(USERNAME_FIELD) abstract val username: String?
+    abstract override val id: UUID
+    abstract override val version: Long
+    abstract val username: String?
 
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //

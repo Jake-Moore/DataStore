@@ -4,7 +4,7 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.VERSION_FIELD
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.jetbrains.annotations.ApiStatus.Internal
@@ -31,7 +31,6 @@ sealed interface Store<X : Store<X, K>, K : Any> : DataStoreScope {
     /**
      * The version of this [Store]. This is used for optimistic versioning & cas operations.
      */
-    @SerialName(VERSION_FIELD)
     val version: Long
 
 
@@ -75,7 +74,6 @@ sealed interface Store<X : Store<X, K>, K : Any> : DataStoreScope {
     //                   Data Class Methods                  //
     // ----------------------------------------------------- //
     fun copyHelper(version: Long): X
-
 
     // ----------------------------------------------------- //
     //                    Internal Methods                   //

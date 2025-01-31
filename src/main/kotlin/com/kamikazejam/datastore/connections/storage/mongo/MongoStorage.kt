@@ -6,7 +6,7 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.exception.update.UpdateException
 import com.kamikazejam.datastore.base.index.IndexedField
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.ID_FIELD
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialName
 import com.kamikazejam.datastore.connections.config.MongoConfig
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor
 import com.kamikazejam.datastore.connections.storage.StorageService
@@ -98,9 +98,10 @@ class MongoStorage : StorageService() {
     override suspend fun <K : Any, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? = withContext(Dispatchers.IO) {
         try {
             // MongoDB! Kotlin Driver w/ Serialization! We already have the Store Class we want.
+            val idField = getSerialName(collection, Store<X, K>::id)
             val store = getMongoCollection(collection).find(
                 // Find the id field, where the content is the id string
-                Filters.eq(ID_FIELD, collection.keyToString(key))
+                Filters.eq(idField, collection.keyToString(key))
             ).firstOrNull() ?: return@withContext null
 
             // Cache Indexes since we are loading from database
@@ -164,7 +165,8 @@ class MongoStorage : StorageService() {
     override suspend fun <K : Any, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Filter based on the dot notation, since we know all ID Fields are SimpleStoreData, where the content is the id string
-            val filter = Filters.eq(ID_FIELD, collection.keyToString(key))
+            val idField = getSerialName(collection, Store<X, K>::id)
+            val filter = Filters.eq(idField, collection.keyToString(key))
             return@withContext getMongoCollection(collection).countDocuments(filter) > 0
         } catch (ex: MongoException) {
             collection.getLoggerService().info(ex, "MongoDB error check if Store (${collection.getKeyStringIdentifier(key)}) exists in MongoDB Layer")
@@ -182,7 +184,8 @@ class MongoStorage : StorageService() {
     override suspend fun <K : Any, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Filter based on the dot notation, since we know all ID Fields are SimpleStoreData, where the content is the id string
-            val filter = Filters.eq(ID_FIELD, collection.keyToString(key))
+            val idField = getSerialName(collection, Store<X, K>::id)
+            val filter = Filters.eq(idField, collection.keyToString(key))
             return@withContext getMongoCollection(collection).deleteMany(filter).deletedCount > 0
         } catch (ex: MongoException) {
             collection.getLoggerService().info(ex, "MongoDB error removing Store (${collection.getKeyStringIdentifier(key)}) from MongoDB Layer")
@@ -213,9 +216,10 @@ class MongoStorage : StorageService() {
 
     override suspend fun <K : Any, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> {
         val mongoCollection = getMongoCollection(collection).withDocumentClass<Document>()
-        return mongoCollection.find().projection(Projections.include(ID_FIELD)).mapNotNull { doc: Document ->
+        val idField = getSerialName(collection, Store<X, K>::id)
+        return mongoCollection.find().projection(Projections.include(idField)).mapNotNull { doc: Document ->
             // We know where the id is located, and we can fetch it, there is no need to deserialize the entire object
-            val idString = doc.getString(ID_FIELD) ?: return@mapNotNull null
+            val idString = doc.getString(idField) ?: return@mapNotNull null
             collection.keyFromString(idString)
         }
     }

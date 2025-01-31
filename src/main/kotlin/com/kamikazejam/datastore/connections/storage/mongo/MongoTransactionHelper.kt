@@ -5,8 +5,7 @@ import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.exception.update.TransactionRetryLimitExceededException
 import com.kamikazejam.datastore.base.exception.update.UpdateException
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.ID_FIELD
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.VERSION_FIELD
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialName
 import com.kamikazejam.datastore.store.Store
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.mongodb.MongoCommandException
@@ -163,14 +162,16 @@ object MongoTransactionHelper {
             throw IllegalArgumentException("Updated store failed copy version check! Was: ${updatedStore.version}, Expected: $nextVersion")
         }
 
+        val idField = getSerialName(collection, Store<X, K>::id)
+        val verField = getSerialName(collection, Store<X, K>::version)
         val result = mongoColl.replaceOne(
             session,
             Filters.and(
                 // These two filters act as a sort of compare-and-swap mechanic
                 //  inside of this mongo transaction, if these are not met then
                 //  the transaction will fail and we will need to retry.
-                Filters.eq(ID_FIELD, id),
-                Filters.eq(VERSION_FIELD, currentVersion),
+                Filters.eq(idField, id),
+                Filters.eq(verField, currentVersion),
             ),
             updatedStore
         )
@@ -180,9 +181,9 @@ object MongoTransactionHelper {
             DataStoreSource.colorLogger.debug("Failed to update Store in MongoDB Layer (Could not find document with id: '$id' and version: $currentVersion)")
 
             // If update failed, fetch current version
-            val databaseStore: X = mongoColl.find(session).filter(Filters.eq(ID_FIELD, id))
-                .firstOrNull()
-                ?: throw RuntimeException("Entity not found")
+            val databaseStore: X = mongoColl.find(session).filter(
+                Filters.eq(idField, id)
+            ).firstOrNull() ?: throw RuntimeException("Entity not found")
 
             // Update our working copy with latest version and retry
             return TransactionResult(null, databaseStore)
