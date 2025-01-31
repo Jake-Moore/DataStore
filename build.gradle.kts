@@ -41,10 +41,10 @@ dependencies {
     compileOnly("org.jetbrains:annotations:26.0.1")
     testCompileOnly("org.jetbrains:annotations:26.0.1")
 
-    // Kotlin Libraries
-    implementation(kotlin("stdlib-jdk8"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.0")
+    // Kotlin Libraries (may need to be added to projects using DataStore too!)
+    api(kotlin("stdlib-jdk8"))
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.0")
 }
 
 // Register a task to delete the jars in the libs folder
@@ -60,10 +60,10 @@ tasks {
     shadowJar {
         archiveClassifier.set("")
         relocate("ch.qos.logback", "com.kamikazejam.datastore.internal.logback")
-        relocate("com.fasterxml.jackson", "com.kamikazejam.datastore.internal.jackson")
         relocate("com.mongodb", "com.kamikazejam.datastore.internal.mongodb")
         relocate("org.bson", "com.kamikazejam.datastore.internal.bson")
         relocate("org.slf4j", "com.kamikazejam.datastore.internal.slf4j")
+        relocate("org.reactivestreams", "com.kamikazejam.datastore.internal.reactivestreams")
     }
 
     processResources {
