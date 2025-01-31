@@ -2,6 +2,7 @@ package com.kamikazejam.datastore.base.storage
 
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
+import com.kamikazejam.datastore.base.exception.update.UpdateException
 import com.kamikazejam.datastore.mode.store.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -31,7 +32,8 @@ abstract class StorageDatabase<K : Any, X : Store<X, K>>(collection: Collection<
         return storageService.save(collection, store)
     }
 
-    override suspend fun updateSync(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): Boolean {
+    @Throws(UpdateException::class)
+    override suspend fun updateSync(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): X {
         return storageService.updateSync(collection, store, updateFunction)
     }
 

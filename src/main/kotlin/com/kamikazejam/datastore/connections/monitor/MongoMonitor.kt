@@ -53,7 +53,7 @@ class MongoMonitor(service: MongoStorage) : ClusterListener, ServerMonitorListen
         val client = service.mongoClient
         if (client != null) {
             // Attempt to use the current client's cluster description to make sure the ping is accurate
-            service.setMongoPingNS(client.clusterDescription.serverDescriptions)
+            service.setMongoPingNS(client.getClusterDescription().serverDescriptions)
         }
     }
 }

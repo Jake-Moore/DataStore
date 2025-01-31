@@ -12,12 +12,15 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.atomic.AtomicReference
 import java.util.stream.Collectors
+import kotlin.collections.ArrayList
 
 /**
  * Main class of DataStore. This project does not work as a plugin, only a shade-able library.
  */
 @Suppress("unused")
 object DataStoreAPI {
+    internal val registrations: MutableList<DataStoreRegistration> = ArrayList()
+
     // ------------------------------------------------------ //
     // Prefix Methods                                         //
     // ------------------------------------------------------ //
@@ -45,7 +48,9 @@ object DataStoreAPI {
         Preconditions.checkNotNull(databaseName)
 
         registerDatabase(plugin, getFullDatabaseName(databaseName))
-        return DataStoreRegistration(plugin, databaseName)
+        return DataStoreRegistration(plugin, databaseName).also {
+            registrations.add(it)
+        }
     }
 
 

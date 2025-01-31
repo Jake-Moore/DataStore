@@ -10,7 +10,6 @@ import com.kamikazejam.datastore.util.PlayerUtil
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.bukkit.Bukkit
-import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.ApiStatus.Internal
 import java.util.Objects
@@ -51,6 +50,13 @@ abstract class StoreProfile<T : StoreProfile<T>>(
     override fun getCollection(): Collection<UUID, T> {
         return collection ?: throw IllegalStateException("Collection is not set")
     }
+
+
+
+    // ----------------------------------------------------- //
+    //                   Data Class Methods                  //
+    // ----------------------------------------------------- //
+    abstract fun copy(username: String?): T
 
 
 
@@ -105,22 +111,6 @@ abstract class StoreProfile<T : StoreProfile<T>>(
             this.player = null
         }
         return this.player
-    }
-
-    /**
-     * Get the Name of the Player
-     */
-    fun getUsername(): String? {
-        if (username == null) {
-            // Try to get the name from our IdUtil, and update the object if possible
-            val oPlayer: OfflinePlayer? = Bukkit.getOfflinePlayer(this.uniqueId)
-            if (oPlayer?.name != null) {
-                // TODO
-                // getCollection().update(this.id) { profile: T -> profile.usernameField.setData(StoreDataString(oPlayer.name)) }
-                return oPlayer.name
-            }
-        }
-        return username
     }
 
     /**

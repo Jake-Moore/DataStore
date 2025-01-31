@@ -3,6 +3,7 @@ package com.kamikazejam.datastore.connections.storage
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.Service
 import com.kamikazejam.datastore.base.StoreCollection
+import com.kamikazejam.datastore.base.exception.update.UpdateException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.mode.store.Store
@@ -25,7 +26,8 @@ abstract class StorageService : LoggerService(), Service {
      * If found, then the document in the database is replaced using a transaction. (providing atomicity)
      * @return If the Store was replaced. (if the db was updated)
      */
-    abstract suspend fun <K : Any, X : Store<X, K>> updateSync(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): Boolean
+    @Throws(UpdateException::class)
+    abstract suspend fun <K : Any, X : Store<X, K>> updateSync(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): X
 
     /**
      * Retrieve a Store from this store. Requires the collection to fetch it from.

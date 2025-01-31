@@ -14,6 +14,7 @@ import com.mongodb.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -37,7 +38,8 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
     init {
         // Start this collection
-        if (!start()) {
+        val success = runBlocking { start() }
+        if (!success) {
             // Data loss is not tolerated in DataStore, shutdown to prevent issues
             DataStoreSource.get().logger.severe("Failed to start Object Cache: $name")
             Bukkit.shutdown()
@@ -132,7 +134,6 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
             val localVer = local?.version ?: 0
             if (cacheStores && local != null && dbVer >= localVer) {
                 this@StoreObjectCollection.updateStoreFromNewer(local, dbStore)
-                this@StoreObjectCollection.cache(dbStore)
             }
 
             // Find the store object to return

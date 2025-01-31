@@ -88,12 +88,8 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         return AsyncUpdateHandler(this) {
             when (val readResult = read(key).await()) {
                 is Success -> {
-                    val originalEntity = readResult.value
-                    check(this.databaseStore.updateSync(originalEntity, updateFunction)) {
-                        "[StoreCollection#update] Failed to update store with key: ${this.keyToString(key)}"
-                    }
-
-                    originalEntity
+                    // may throw errors, which will be caught by AsyncUpdateHandler
+                    return@AsyncUpdateHandler this.databaseStore.updateSync(readResult.value, updateFunction)
                 }
                 is Failure -> throw readResult.error
                 is Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")

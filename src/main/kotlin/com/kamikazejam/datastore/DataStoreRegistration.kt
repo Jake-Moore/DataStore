@@ -47,8 +47,8 @@ class DataStoreRegistration internal constructor(plugin: JavaPlugin, dbNameShort
         }
     }
 
-    fun shutdown() {
-        collections.forEach { obj: Collection<*, *> -> obj.shutdown() }
+    suspend fun shutdown() {
+        collections.forEach { coll: Collection<*, *> -> coll.shutdown() }
         collections.clear()
     }
 }

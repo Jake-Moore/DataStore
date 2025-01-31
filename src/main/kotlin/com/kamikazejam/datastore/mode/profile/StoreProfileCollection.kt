@@ -15,6 +15,7 @@ import com.kamikazejam.datastore.mode.store.StoreProfile
 import com.kamikazejam.datastore.util.PlayerUtil
 import com.mongodb.DuplicateKeyException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.*
@@ -34,10 +35,12 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     private val loaders: ConcurrentMap<UUID, StoreProfileLoader<X>> = ConcurrentHashMap()
     override val localStore: ProfileStorageLocal<X> = ProfileStorageLocal()
     override val databaseStore: ProfileStorageDatabase<X> by lazy { ProfileStorageDatabase(this) }
+    override val defaultInitializer: (X) -> X = { it }
 
     init {
         // Start this collection
-        if (!start()) {
+        val success = runBlocking { start() }
+        if (!success) {
             // Data loss is not tolerated in DataStore, shutdown to prevent issues
             DataStoreSource.get().logger.severe("Failed to start Profile Collection: $name")
             Bukkit.shutdown()

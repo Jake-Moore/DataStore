@@ -23,6 +23,13 @@ interface ProfileCollection<X : StoreProfile<X>> : Collection<UUID, X> {
      */
     val instantiator: (UUID, Long, String?) -> X
 
+    /**
+     * [StoreProfile] objects are often created by DataStore (for example, when a player joins the server).
+     *
+     * This property allows you to define a default initializer for new [StoreProfile] objects, to initialize them with default values.
+     */
+    val defaultInitializer: (X) -> X
+
     // ------------------------------------------------------ //
     // Cache Methods                                          //
     // ------------------------------------------------------ //

@@ -11,12 +11,4 @@ class DuplicateCollectionException : CollectionException {
     constructor(message: String, cause: Throwable?, collection: Collection<*, *>) : super(message, cause, collection)
 
     constructor(cause: Throwable?, collection: Collection<*, *>) : super(cause, collection)
-
-    constructor(
-        message: String,
-        cause: Throwable?,
-        enableSuppression: Boolean,
-        writableStackTrace: Boolean,
-        collection: Collection<*, *>
-    ) : super(message, cause, enableSuppression, writableStackTrace, collection)
 }

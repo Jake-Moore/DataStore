@@ -115,8 +115,8 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
         }
 
         // Try loading from database
-        val o = collection.databaseStore.get(uuid)
-        if (o == null) {
+        val store: X? = collection.databaseStore.get(uuid)
+        if (store == null) {
             // Make a new profile if they are logging in
             if (creative) {
                 collection.getLoggerService().debug("Creating a new StoreProfile for: $username")
@@ -128,15 +128,14 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
         }
 
         // We have a valid store from Database
-        val store: X = o
-        store.setCollection(collection)
+        store.initialize(collection)
 
         // For logins -> mark as loaded
         if (creative) {
             // Update their username
-            if (username != null && store.getUsername() != username) {
+            if (username != null && store.username != username) {
                 // Attempt to save the new username
-                collection.update(store) { x: X -> x.usernameField.setData(StoreDataString(username)) }
+                collection.update(store) { x: X -> x.copy(username) }
             }
         }
         return store
@@ -149,16 +148,13 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
     ): X {
         try {
             // Create a new instance in modifiable state
-            val store: X = collection.instantiator(uuid, 0L)
-            store.initialize(collection)
+            val initial: X = collection.instantiator(uuid, 0L, username)
+            initial.initialize(collection)
 
-            // Enforce Version 0 for creation
-            if (username == null) {
-                store.usernameField.setData(null)
-            }else {
-                store.usernameField.setData(StoreDataString(username))
-            }
-            store.readOnly = true
+            // Initialize the store (make sure the id and version were not changed)
+            val store: X = collection.defaultInitializer(initial)
+            assert(store.id == uuid) { "StoreProfile ID must match uuid on Creation/Initialization!" }
+            assert(store.version == 0L) { "StoreProfile version must be 0 on Creation/Initialization!" }
 
             // Save the store to our database implementation & cache
             // DO DATABASE SAVE FIRST SO ANY EXCEPTIONS ARE THROWN PRIOR TO MODIFYING LOCAL CACHE

@@ -1,5 +1,6 @@
 package com.kamikazejam.datastore
 
+import kotlinx.coroutines.runBlocking
 import org.bukkit.plugin.java.JavaPlugin
 
 /**
@@ -11,11 +12,10 @@ import org.bukkit.plugin.java.JavaPlugin
 @Suppress("unused")
 class DataStorePlugin : JavaPlugin() {
     override fun onEnable() {
-        
-        DataStoreSource.onEnable(this)
+        runBlocking { DataStoreSource.onEnable(this@DataStorePlugin) }
     }
 
     override fun onDisable() {
-        DataStoreSource.onDisable()
+        runBlocking { DataStoreSource.onDisable() }
     }
 }
