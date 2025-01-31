@@ -7,6 +7,7 @@ import org.jetbrains.annotations.ApiStatus.Internal
 import org.jetbrains.annotations.Blocking
 import org.jetbrains.annotations.NonBlocking
 import java.util.UUID
+import kotlin.reflect.KProperty
 
 /**
  * Defines Profile-specific getters for StoreObjects. They return non-null Optionals.
@@ -29,6 +30,8 @@ interface ProfileCollection<X : StoreProfile<X>> : Collection<UUID, X> {
      * This property allows you to define a default initializer for new [StoreProfile] objects, to initialize them with default values.
      */
     val defaultInitializer: (X) -> X
+
+    fun getUsernameKProperty(): KProperty<String>
 
     // ------------------------------------------------------ //
     // Cache Methods                                          //

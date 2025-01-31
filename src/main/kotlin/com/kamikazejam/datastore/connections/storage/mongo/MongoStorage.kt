@@ -6,7 +6,7 @@ import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.exception.update.UpdateException
 import com.kamikazejam.datastore.base.index.IndexedField
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialName
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialNameForID
 import com.kamikazejam.datastore.connections.config.MongoConfig
 import com.kamikazejam.datastore.connections.monitor.MongoMonitor
 import com.kamikazejam.datastore.connections.storage.StorageService
@@ -98,7 +98,7 @@ class MongoStorage : StorageService() {
     override suspend fun <K : Any, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? = withContext(Dispatchers.IO) {
         try {
             // MongoDB! Kotlin Driver w/ Serialization! We already have the Store Class we want.
-            val idField = getSerialName(Store<X, K>::id)
+            val idField = getSerialNameForID(collection)
             val store = getMongoCollection(collection).find(
                 // Find the id field, where the content is the id string
                 Filters.eq(idField, collection.keyToString(key))
@@ -118,7 +118,7 @@ class MongoStorage : StorageService() {
 
     override suspend fun <K : Any, X : Store<X, K>> save(collection: Collection<K, X>, store: X): Boolean = withContext(Dispatchers.IO) {
         // Sanity Check, our "id" field should be serializing as "_id" in MongoDB (otherwise ERROR!)
-        if (getSerialName(Store<X, K>::id) != "_id") {
+        if (getSerialNameForID(collection) != "_id") {
             throw IllegalStateException("MongoDB requires the ID field to be serialized as '_id'! Ensure your Store.id property is annotated with @SerialName(\"_id\")")
         }
 
@@ -170,7 +170,7 @@ class MongoStorage : StorageService() {
     override suspend fun <K : Any, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Filter based on the dot notation, since we know all ID Fields are SimpleStoreData, where the content is the id string
-            val idField = getSerialName(Store<X, K>::id)
+            val idField = getSerialNameForID(collection)
             val filter = Filters.eq(idField, collection.keyToString(key))
             return@withContext getMongoCollection(collection).countDocuments(filter) > 0
         } catch (ex: MongoException) {
@@ -189,7 +189,7 @@ class MongoStorage : StorageService() {
     override suspend fun <K : Any, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Filter based on the dot notation, since we know all ID Fields are SimpleStoreData, where the content is the id string
-            val idField = getSerialName(Store<X, K>::id)
+            val idField = getSerialNameForID(collection)
             val filter = Filters.eq(idField, collection.keyToString(key))
             return@withContext getMongoCollection(collection).deleteMany(filter).deletedCount > 0
         } catch (ex: MongoException) {
@@ -221,7 +221,7 @@ class MongoStorage : StorageService() {
 
     override suspend fun <K : Any, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> {
         val mongoCollection = getMongoCollection(collection).withDocumentClass<Document>()
-        val idField = getSerialName(Store<X, K>::id)
+        val idField = getSerialNameForID(collection)
         return mongoCollection.find().projection(Projections.include(idField)).mapNotNull { doc: Document ->
             // We know where the id is located, and we can fetch it, there is no need to deserialize the entire object
             val idString = doc.getString(idField) ?: return@mapNotNull null

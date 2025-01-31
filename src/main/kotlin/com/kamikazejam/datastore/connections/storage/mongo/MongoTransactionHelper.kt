@@ -5,7 +5,8 @@ import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.exception.update.TransactionRetryLimitExceededException
 import com.kamikazejam.datastore.base.exception.update.UpdateException
-import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialName
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialNameForID
+import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialNameForVersion
 import com.kamikazejam.datastore.store.Store
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.mongodb.MongoCommandException
@@ -162,8 +163,8 @@ object MongoTransactionHelper {
             throw IllegalArgumentException("Updated store failed copy version check! Was: ${updatedStore.version}, Expected: $nextVersion")
         }
 
-        val idField = getSerialName(Store<X, K>::id)
-        val verField = getSerialName(Store<X, K>::version)
+        val idField = getSerialNameForID(collection)
+        val verField = getSerialNameForVersion(collection)
         val result = mongoColl.replaceOne(
             session,
             Filters.and(

@@ -24,6 +24,7 @@ import org.bukkit.plugin.Plugin
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.annotations.Blocking
 import java.util.*
+import kotlin.reflect.KProperty
 
 /**
  * A [Collection] holds Store objects and manages their retrieval, caching, and saving.
@@ -34,6 +35,9 @@ import java.util.*
 interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
 
     fun getKSerializer(): KSerializer<X>
+
+    fun getIdKProperty(): KProperty<K>
+    fun getVersionKProperty(): KProperty<Long>
 
     // ----------------------------------------------------- //
     //                     CRUD Helpers                      //
