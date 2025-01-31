@@ -117,6 +117,11 @@ class MongoStorage : StorageService() {
     }
 
     override suspend fun <K : Any, X : Store<X, K>> save(collection: Collection<K, X>, store: X): Boolean = withContext(Dispatchers.IO) {
+        // Sanity Check, our "id" field should be serializing as "_id" in MongoDB (otherwise ERROR!)
+        if (getSerialName(collection, Store<X, K>::id) != "_id") {
+            throw IllegalStateException("MongoDB requires the ID field to be serialized as '_id'! Ensure your Store.id property is annotated with @SerialName(\"_id\")")
+        }
+
         // Save to database with a transaction & only 1 attempt
         val client = mongoClient ?: throw IllegalStateException("MongoClient is not initialized!")
         client.startSession().use { session ->
