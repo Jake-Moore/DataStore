@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 */
 @Suppress("unused")
 abstract class AsyncHandler<T, R : BaseResult<T>>(
-    protected val collection: Collection<*, *>,
+    val collection: Collection<*, *>,
     protected val block: suspend () -> T?
 ) : DataStoreScope {
     private val deferred = async { runCatching { block() } }
