@@ -229,20 +229,17 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
     /**
      * Helper method to use the [Collection]'s [Plugin] to run an async bukkit task.
      */
-    @ApiStatus.Internal
     fun runAsync(runnable: Runnable)
 
     /**
      * Helper method to use the [Collection]'s [Plugin] to run a sync bukkit task.
      */
-    @ApiStatus.Internal
     fun runSync(runnable: Runnable)
 
     /**
      * Helper method to use the [Collection]'s [Plugin] to attempt an Async task
      * If the plugin is not allowed to run async tasks (like on disable), a sync task will be run instead.
      */
-    @ApiStatus.Internal
     fun tryAsync(runnable: Runnable)
 
     /**
