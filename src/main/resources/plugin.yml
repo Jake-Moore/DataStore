@@ -9,3 +9,5 @@ commands:
   datastore:
     description: Core DataStore Command
     permission: datastore.command
+depend:
+  - KamiCommon
