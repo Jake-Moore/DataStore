@@ -104,9 +104,9 @@ object MongoTransactionHelper {
                     )
                 }
 
+                sessionResolved = true // resolve before call, in case it fails partial
                 // Success - return true
                 session.commitTransaction()
-                sessionResolved = true
                 return checkNotNull(result.store)
             } catch (uE: UpdateException) {
                 throw uE

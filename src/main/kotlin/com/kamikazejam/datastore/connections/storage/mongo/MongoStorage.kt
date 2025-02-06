@@ -129,8 +129,8 @@ class MongoStorage : StorageService() {
             var committed = false
             try {
                 getMongoCollection(collection).insertOne(session, store)
+                committed = true  // resolve before call, in case it fails partial
                 session.commitTransaction()
-                committed = true
 
                 // Convert to read-only and cache
                 collection.cache(store)
