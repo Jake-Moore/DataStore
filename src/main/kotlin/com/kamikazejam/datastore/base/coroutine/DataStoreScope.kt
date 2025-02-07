@@ -41,7 +41,8 @@ object GlobalDataStoreScope : CoroutineScope {
         supervisorJob.cancel()
     }
 
-    fun awaitAllChildrenCompletion(logger: LoggerService) {
+    fun awaitAllChildrenCompletion(logger: LoggerService, maxWaitMS: Long = 60_000L): Boolean {
+        var totalWait = 0L
         val delayMS = 100L
 
         var loop = 0
@@ -62,8 +63,13 @@ object GlobalDataStoreScope : CoroutineScope {
 
             // Delay before checking again
             Thread.sleep(delayMS)
+            totalWait += delayMS
+            if (totalWait >= maxWaitMS) {
+                return false
+            }
             loop++
         }
+        return true
     }
 
     fun logActiveCoroutines() {

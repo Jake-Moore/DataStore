@@ -8,13 +8,10 @@ import com.kamikazejam.datastore.command.DataStoreCommand
 import com.kamikazejam.datastore.connections.storage.StorageService
 import com.kamikazejam.datastore.store.profile.listener.ProfileListener
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.configuration.file.YamlConfiguration
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 object DataStoreSource {
@@ -78,12 +75,7 @@ object DataStoreSource {
         // Wait for all Coroutines to Finish
         colorLogger.info("&aWaiting for all coroutines to finish...")
         runBlocking {
-            try {
-                withTimeout(60.toDuration(DurationUnit.SECONDS)) {
-                    GlobalDataStoreScope.awaitAllChildrenCompletion(colorLogger)
-                }
-            } catch (t: Throwable) {
-                t.printStackTrace()
+            if (!GlobalDataStoreScope.awaitAllChildrenCompletion(colorLogger))  {
                 colorLogger.severe("&cFailed to wait for all coroutines to finish!")
                 GlobalDataStoreScope.logActiveCoroutines()
             }
