@@ -16,6 +16,7 @@ import com.mongodb.kotlin.client.coroutine.MongoClient
 import com.mongodb.kotlin.client.coroutine.MongoCollection
 import kotlinx.coroutines.flow.firstOrNull
 import java.util.*
+import java.util.logging.Level
 
 @Suppress("MemberVisibilityCanBePrivate")
 object MongoTransactionHelper {
@@ -112,7 +113,7 @@ object MongoTransactionHelper {
                 throw uE
             } catch (mE: MongoCommandException) {
                 if (isWriteConflict(mE)) {
-                    logWriteConflict(currentAttempt)
+                    logWriteConflict(currentAttempt, mE)
                     // For write conflicts, retry with same working copy
                     return retryExecutionHelper(
                         mongoClient,
@@ -227,9 +228,12 @@ object MongoTransactionHelper {
         return e.errorCode == WRITE_CONFLICT_ERROR
     }
 
-    private fun logWriteConflict(currentAttempt: Int) {
-        DataStoreSource.colorLogger.debug(
-            "Write conflict detected, attempt " + (currentAttempt + 1) + " of " + DEFAULT_MAX_RETRIES
+    private fun logWriteConflict(currentAttempt: Int, mE: MongoCommandException) {
+        DataStoreFileLogger.log(
+            "Write conflict detected, attempt " + (currentAttempt + 1) + " of " + DEFAULT_MAX_RETRIES,
+            mE,
+            DataStoreFileLogger.randomWriteExceptionFile,
+            Level.INFO
         )
     }
 }

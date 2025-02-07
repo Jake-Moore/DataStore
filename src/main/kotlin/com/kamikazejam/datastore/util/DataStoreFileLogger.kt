@@ -18,7 +18,7 @@ import java.util.logging.Level
 object DataStoreFileLogger {
     fun logToFile(msg: String, level: Level, file: File): File? {
         if (appendToFile(createStackTrace(msg), file)) {
-            DataStoreSource.colorLogger.logToConsole(msg + " (Logged to " + "/logs/" + file.name + ")", level)
+            DataStoreSource.colorLogger.logToConsole(msg + " (Logged to " + file.absolutePath + ")", level)
             return file
         }
         return null
@@ -71,24 +71,36 @@ object DataStoreFileLogger {
      * @return The file written, if successful
      */
     fun warn(msg: String, trace: Throwable): File? {
-        val file = logToFile(
-            msg, Level.WARNING,
-            randomFile
-        )
-        if (file == null) {
-            return null
-        }
+        return warn(msg, trace, randomFile)
+    }
+
+    /**
+     * Logs a warning message to the console, and saves the current stack trace to a log file
+     * Also appends the given trace to the file
+     * @return The file written, if successful
+     */
+    fun warn(msg: String, trace: Throwable, file: File): File? {
+        return log(msg, trace, file, Level.WARNING)
+    }
+
+    /**
+     * Logs a warning message to the console, and saves the current stack trace to a log file
+     * Also appends the given trace to the file
+     * @return The file written, if successful
+     */
+    fun log(msg: String, trace: Throwable, file: File, level: Level): File? {
+        val outputFile = logToFile(msg, level, file) ?: return null
 
         // Add some empty lines for separation
-        if (!appendToFile(listOf("", "", "Extra Trace (if necessary)", ""), file)) {
+        if (!appendToFile(listOf("", "", "Extra Trace (if necessary)", ""), outputFile)) {
             return null
         }
 
         // Save the original trace after
-        if (!appendToFile(trace, file)) {
+        if (!appendToFile(trace, outputFile)) {
             return null
         }
-        return file
+        return outputFile
     }
 
     fun createStackTrace(msg: String): Throwable {
@@ -153,8 +165,24 @@ object DataStoreFileLogger {
             val fileName =
                 "log_" + System.currentTimeMillis() + "_" + UUID.randomUUID() + ".log"
             return File(
-                DataStoreSource.get().dataFolder
-                    .toString() + File.separator + "logs" + File.separator + "datastore", fileName
+                DataStoreSource.get().dataFolder.absolutePath
+                        + File.separator
+                        + "logs"
+                        + File.separator + "datastore"
+                , fileName
+            )
+        }
+
+    internal val randomWriteExceptionFile: File
+        get() {
+            val fileName =
+                "log_" + System.currentTimeMillis() + "_" + UUID.randomUUID() + ".log"
+            return File(
+                DataStoreSource.get().dataFolder.absolutePath
+                        + File.separator + "logs"
+                        + File.separator + "datastore"
+                        + File.separator + "mongo-write-exception"
+                , fileName
             )
         }
 }
