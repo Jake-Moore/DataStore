@@ -203,26 +203,21 @@ object MongoTransactionHelper {
     private suspend fun applyBackoff(attempt: Long) {
         // Divide by 2 since this method fetches the round trip time
         val pingNanos = DataStoreSource.storageService.averagePingNanos / 2
-        try {
-            // Convert ping from nanos to ms and apply base multiplier
-            val basePingMs = (pingNanos / 1000000) * PING_MULTIPLIER.toLong()
+        // Convert ping from nanos to ms and apply base multiplier
+        val basePingMs = (pingNanos / 1000000) * PING_MULTIPLIER.toLong()
 
 
-            // Calculate backoff with attempt scaling
-            var backoffMs = basePingMs + (basePingMs * ATTEMPT_MULTIPLIER * attempt).toLong()
+        // Calculate backoff with attempt scaling
+        var backoffMs = basePingMs + (basePingMs * ATTEMPT_MULTIPLIER * attempt).toLong()
 
-            // Clamp the value between min and max
-            backoffMs = backoffMs.coerceAtLeast(MIN_BACKOFF_MS).coerceAtMost(MAX_BACKOFF_MS)
+        // Clamp the value between min and max
+        backoffMs = backoffMs.coerceAtLeast(MIN_BACKOFF_MS).coerceAtMost(MAX_BACKOFF_MS)
 
-            // Add jitter (±25%)
-            val half = backoffMs / 4 // 25% of total
-            val jitter = RANDOM.nextLong(-half, half)
+        // Add jitter (±25%)
+        val half = backoffMs / 4 // 25% of total
+        val jitter = RANDOM.nextLong(-half, half)
 
-            delay(backoffMs + jitter)
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            throw RuntimeException("Operation interrupted during backoff", e)
-        }
+        delay(backoffMs + jitter)
     }
 
     private fun isWriteConflict(e: MongoCommandException): Boolean {
