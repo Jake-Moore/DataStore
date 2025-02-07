@@ -14,6 +14,7 @@ import com.mongodb.client.model.Filters
 import com.mongodb.kotlin.client.coroutine.ClientSession
 import com.mongodb.kotlin.client.coroutine.MongoClient
 import com.mongodb.kotlin.client.coroutine.MongoCollection
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import java.util.*
 import java.util.logging.Level
@@ -199,7 +200,7 @@ object MongoTransactionHelper {
     // Applies linear backoff to the current thread + some random jitter
     // Exponential backoff was way too slow, increasing the milliseconds far too fast
     // Linear backoff was selected to be more predictable and less extreme
-    private fun applyBackoff(attempt: Long) {
+    private suspend fun applyBackoff(attempt: Long) {
         // Divide by 2 since this method fetches the round trip time
         val pingNanos = DataStoreSource.storageService.averagePingNanos / 2
         try {
@@ -217,7 +218,7 @@ object MongoTransactionHelper {
             val half = backoffMs / 4 // 25% of total
             val jitter = RANDOM.nextLong(-half, half)
 
-            Thread.sleep(backoffMs + jitter)
+            delay(backoffMs + jitter)
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
             throw RuntimeException("Operation interrupted during backoff", e)
