@@ -186,7 +186,7 @@ object MongoTransactionHelper {
             // If update failed, fetch current version
             val databaseStore: X = mongoColl.find(session).filter(
                 Filters.eq(idField, id)
-            ).firstOrNull() ?: throw RuntimeException("Entity not found")
+            ).firstOrNull() ?: throw RuntimeException("Entity not found for collection: ${collection.name}, id: $idField -> $id")
 
             // Update our working copy with latest version and retry
             return TransactionResult(null, databaseStore)
