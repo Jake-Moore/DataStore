@@ -4,24 +4,41 @@ package com.kamikazejam.datastore.base.coroutine
 
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.log.LoggerService
+import com.kamikazejam.datastore.util.ErrorConsumer
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
+@Suppress("MemberVisibilityCanBePrivate")
 object GlobalDataStoreScope : CoroutineScope {
-    // Shared Job for all DataStoreScope instances
-    private val job = Job()
+    var CUSTOM_ERROR_CONSUMERS: MutableList<ErrorConsumer> = mutableListOf()
+
+    // Shared SupervisorJob ensures that a child coroutine failure
+    // doesn't cancel the parent job or other child coroutines.
+    private val supervisorJob = SupervisorJob()
+
+    // CoroutineExceptionHandler to log errors
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        if (CUSTOM_ERROR_CONSUMERS.isEmpty()) {
+            DataStoreSource.get().logger.severe("Unhandled coroutine error: $throwable")
+            throwable.printStackTrace()
+        } else {
+            CUSTOM_ERROR_CONSUMERS.forEach { it.accept(throwable) }
+        }
+    }
 
     override val coroutineContext: CoroutineContext
-        get() = Dispatchers.IO + job
+        get() = Dispatchers.IO + supervisorJob + exceptionHandler
 
     // Cancels ALL DataStoreScope instances and ALL Coroutines
     fun cancelAll() {
-        job.cancel()
+        supervisorJob.cancel()
     }
 
     fun awaitAllChildrenCompletion(logger: LoggerService) {
@@ -30,7 +47,7 @@ object GlobalDataStoreScope : CoroutineScope {
         var loop = 0
         while (true) {
             // Get the list of active child jobs
-            val activeChildren = job.children.toList()
+            val activeChildren = supervisorJob.children.toList()
 
             // Log the number of active children (every 1 second roughly)
             if (delayMS * loop >= 1000L) {
