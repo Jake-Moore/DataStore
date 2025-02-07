@@ -87,6 +87,7 @@ object DataStoreSource {
                 colorLogger.severe("&cFailed to wait for all coroutines to finish!")
                 GlobalDataStoreScope.logActiveCoroutines()
             }
+            GlobalDataStoreScope.cancelAll()
         }
         colorLogger.info("&aAll coroutines finished!")
 
