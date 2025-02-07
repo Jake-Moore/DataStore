@@ -23,6 +23,7 @@ import java.util.logging.Level
 object MongoTransactionHelper {
     private val RANDOM = Random()
     var DEFAULT_MAX_RETRIES: Int = 50 // very gracious amount of retries (since we have backoff)
+    var LOG_WRITE_CONFLICT_AFTER_ATTEMPT: Int = 10 // only log after this many attempts
     private const val WRITE_CONFLICT_ERROR = 112
 
     // Minimum and maximum backoff values to prevent extremes
@@ -114,7 +115,7 @@ object MongoTransactionHelper {
                 throw uE
             } catch (mE: MongoCommandException) {
                 if (isWriteConflict(mE)) {
-                    logWriteConflict(currentAttempt, mE)
+                    logWriteConflict(currentAttempt, mE, collection, store)
                     // For write conflicts, retry with same working copy
                     return retryExecutionHelper(
                         mongoClient,
@@ -224,9 +225,18 @@ object MongoTransactionHelper {
         return e.errorCode == WRITE_CONFLICT_ERROR
     }
 
-    private fun logWriteConflict(currentAttempt: Int, mE: MongoCommandException) {
+
+    private fun <K : Any, X : Store<X, K>> logWriteConflict(
+        currentAttempt: Int,
+        mE: MongoCommandException,
+        collection: Collection<K, X>,
+        store: X,
+    ) {
+        if (currentAttempt < LOG_WRITE_CONFLICT_AFTER_ATTEMPT) return
+
+        val msg = "Write Conflict, attempt " + (currentAttempt + 1) + " of " + DEFAULT_MAX_RETRIES + " for coll " + collection.name + " with id " + collection.keyToString(store.id)
         DataStoreFileLogger.log(
-            "Write conflict detected, attempt " + (currentAttempt + 1) + " of " + DEFAULT_MAX_RETRIES,
+            msg,
             mE,
             DataStoreFileLogger.randomWriteExceptionFile,
             Level.INFO
