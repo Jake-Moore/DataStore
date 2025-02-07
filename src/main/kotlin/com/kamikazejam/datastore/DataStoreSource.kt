@@ -69,9 +69,6 @@ object DataStoreSource {
             return false
         }
 
-        // Shutdown Services
-        storageMode.disableServices()
-
         // Wait for all Coroutines to Finish
         colorLogger.info("&aWaiting for all coroutines to finish...")
         runBlocking {
@@ -93,6 +90,10 @@ object DataStoreSource {
             }
             DataStoreAPI.registrations.clear()
         }
+
+        // Shutdown Services (Like the DB)
+        // DO THIS AS CLOSE TO LAST AS POSSIBLE
+        storageMode.disableServices()
 
         // Set to disabled
         val prev = enabled
