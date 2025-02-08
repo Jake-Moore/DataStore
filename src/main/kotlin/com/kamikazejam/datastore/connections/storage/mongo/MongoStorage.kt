@@ -95,7 +95,7 @@ class MongoStorage : StorageService() {
     // ------------------------------------------------- //
     //                StorageService                     //
     // ------------------------------------------------- //
-    override suspend fun <K : Any, X : Store<X, K>> get(collection: Collection<K, X>, key: K): X? = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> readFromStorage(collection: Collection<K, X>, key: K): X? = withContext(Dispatchers.IO) {
         try {
             // MongoDB! Kotlin Driver w/ Serialization! We already have the Store Class we want.
             val idField = getSerialNameForID(collection)
@@ -116,7 +116,7 @@ class MongoStorage : StorageService() {
         }
     }
 
-    override suspend fun <K : Any, X : Store<X, K>> save(collection: Collection<K, X>, store: X): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> saveToStorage(collection: Collection<K, X>, store: X): Boolean = withContext(Dispatchers.IO) {
         // Sanity Check, our "id" field should be serializing as "_id" in MongoDB (otherwise ERROR!)
         if (getSerialNameForID(collection) != "_id") {
             throw IllegalStateException("MongoDB requires the ID field to be serialized as '_id'! Ensure your Store.id property is annotated with @SerialName(\"_id\")")
@@ -149,7 +149,7 @@ class MongoStorage : StorageService() {
     //  and the other will have its query fail and will automatically retry.
     // (MongoDB provides the document-level locking already)
     @Throws(UpdateException::class)
-    override suspend fun <K : Any, X : Store<X, K>> updateSync(
+    override suspend fun <K : Any, X : Store<X, K>> updateToStorage(
         collection: Collection<K, X>,
         store: X,
         updateFunction: (X) -> X
@@ -166,7 +166,7 @@ class MongoStorage : StorageService() {
         }
     }
 
-    override suspend fun <K : Any, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> hasInStorage(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Filter based on the dot notation, since we know all ID Fields are SimpleStoreData, where the content is the id string
             val idField = getSerialNameForID(collection)
@@ -181,11 +181,11 @@ class MongoStorage : StorageService() {
         }
     }
 
-    override suspend fun <K : Any, X : Store<X, K>> size(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> sizeOfStorage(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
         return@withContext getMongoCollection(collection).countDocuments()
     }
 
-    override suspend fun <K : Any, X : Store<X, K>> remove(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> removeFromStorage(collection: Collection<K, X>, key: K): Boolean = withContext(Dispatchers.IO) {
         try {
             // Filter based on the dot notation, since we know all ID Fields are SimpleStoreData, where the content is the id string
             val idField = getSerialNameForID(collection)
@@ -199,7 +199,7 @@ class MongoStorage : StorageService() {
         return@withContext false
     }
 
-    override suspend fun <K : Any, X : Store<X, K>> removeAll(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
+    override suspend fun <K : Any, X : Store<X, K>> removeAllFromStorage(collection: Collection<K, X>): Long = withContext(Dispatchers.IO) {
         try {
             // Delete All Documents in Mongo
             return@withContext getMongoCollection(collection).deleteMany(Filters.empty()).deletedCount
@@ -211,14 +211,14 @@ class MongoStorage : StorageService() {
         return@withContext 0
     }
 
-    override suspend fun <K : Any, X : Store<X, K>> getAll(collection: Collection<K, X>): Flow<X> {
+    override suspend fun <K : Any, X : Store<X, K>> readAllFromStorage(collection: Collection<K, X>): Flow<X> {
         return getMongoCollection(collection).find().map { store: X ->
             collection.cacheIndexes(store, true)
             store
         }
     }
 
-    override suspend fun <K : Any, X : Store<X, K>> getKeys(collection: Collection<K, X>): Flow<K> {
+    override suspend fun <K : Any, X : Store<X, K>> readKeysFromStorage(collection: Collection<K, X>): Flow<K> {
         val mongoCollection = getMongoCollection(collection).withDocumentClass<Document>()
         val idField = getSerialNameForID(collection)
         return mongoCollection.find().projection(Projections.include(idField)).mapNotNull { doc: Document ->
@@ -228,7 +228,7 @@ class MongoStorage : StorageService() {
         }
     }
 
-    override fun canWrite(): Boolean {
+    override fun canWriteToStorage(): Boolean {
         // just check that MongoDB is connected
         return mongoConnected
     }

@@ -116,7 +116,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
 
     override suspend fun readAllFromDatabase(cacheStores: Boolean): Flow<X> = flow {
         // Create an Iterable that iterates through all database objects, and updates local objects as necessary
-        databaseStore.getAll(this@StoreObjectCollection).map { dbStore: X ->
+        databaseStore.readAll(this@StoreObjectCollection).map { dbStore: X ->
             // Load the local object
             val local: X? = localStore.get(dbStore.id)
 
@@ -144,7 +144,7 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
     }
 
     override suspend fun readFromDatabase(key: String, cacheStore: Boolean): X? {
-        val o: X? = databaseStore.get(key)
+        val o: X? = databaseStore.read(key)
         if (cacheStore) {
             o?.let { this.cache(it) }
         }
@@ -155,6 +155,6 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
         get() = localStore.size()
 
     override suspend fun getIDs(): Flow<String> {
-        return databaseStore.getKeys()
+        return databaseStore.readKeys()
     }
 }

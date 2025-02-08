@@ -76,7 +76,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
     override fun delete(key: K): AsyncDeleteHandler {
         return AsyncDeleteHandler(this) {
             localStore.remove(key)
-            val removedFromDb = databaseStore.remove(key)
+            val removedFromDb = databaseStore.delete(key)
             invalidateIndexes(key, true)
             removedFromDb
         }
@@ -89,7 +89,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
             when (val readResult = read(key).await()) {
                 is Success -> {
                     // may throw errors, which will be caught by AsyncUpdateHandler
-                    return@AsyncUpdateHandler this.databaseStore.updateSync(readResult.value, updateFunction)
+                    return@AsyncUpdateHandler this.databaseStore.update(readResult.value, updateFunction)
                 }
                 is Failure -> throw readResult.error
                 is Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
@@ -107,7 +107,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
             }
 
             // 2. We don't have the object in the cache -> load it from the database
-            val db = databaseStore.get(key)
+            val db = databaseStore.read(key)
             if (db != null) {
                 // Optionally cache this loaded Store
                 if (cacheStores) {

@@ -21,7 +21,7 @@ class CmdDatabases : SubCommand() {
     override fun execute(sender: CommandSender, args: Array<String>) {
         sender.sendMessage(Color.t("&7***** &6Store Database &7*****"))
         val store = DataStoreSource.storageService
-        sender.sendMessage(Color.t("&7Storage Service: " + (if (store.canWrite()) "&aConnected" else "&cDisconnected")))
+        sender.sendMessage(Color.t("&7Storage Service: " + (if (store.canWriteToStorage()) "&aConnected" else "&cDisconnected")))
         sender.sendMessage(Color.t("&7Databases:"))
         DataStoreAPI.databases.values.stream()
             .filter { obj: DatabaseRegistration? -> Objects.nonNull(obj) }

@@ -50,7 +50,7 @@ class ProfileListener : Listener {
         val uniqueId: UUID = event.uniqueId
 
         val storageService = DataStoreSource.storageService
-        if (!storageService.canWrite() || DataStoreSource.onEnableTime <= 0) {
+        if (!storageService.canWriteToStorage() || DataStoreSource.onEnableTime <= 0) {
             DataStoreSource.colorLogger.warn("StorageService is not ready to write objects, denying join")
             event.disallow(
                 AsyncPlayerPreLoginEvent.Result.KICK_OTHER,

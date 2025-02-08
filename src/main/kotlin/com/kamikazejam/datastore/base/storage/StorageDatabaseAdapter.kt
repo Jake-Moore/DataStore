@@ -13,22 +13,22 @@ abstract class StorageDatabaseAdapter<K : Any, X : Store<X, K>>(protected val co
     // ---------------------------------------------------------------- //
     //                     Abstraction Conversion                       //
     // ---------------------------------------------------------------- //
-    protected abstract suspend fun get(collection: Collection<K, X>, key: K): X?
+    protected abstract suspend fun read(collection: Collection<K, X>, key: K): X?
+
+    protected abstract suspend fun readAll(collection: Collection<K, X>): Flow<X>
 
     protected abstract suspend fun save(collection: Collection<K, X>, store: X): Boolean
 
     @Throws(UpdateException::class)
-    protected abstract suspend fun updateSync(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): X
+    protected abstract suspend fun update(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): X
 
     protected abstract suspend fun has(collection: Collection<K, X>, key: K): Boolean
 
-    protected abstract suspend fun remove(collection: Collection<K, X>, key: K): Boolean
+    protected abstract suspend fun delete(collection: Collection<K, X>, key: K): Boolean
 
-    protected abstract suspend fun removeAll(collection: Collection<K, X>): Long
+    protected abstract suspend fun deleteAll(collection: Collection<K, X>): Long
 
-    protected abstract suspend fun getAll(collection: Collection<K, X>): Flow<X>
-
-    protected abstract suspend fun getKeys(collection: Collection<K, X>): Flow<K>
+    protected abstract suspend fun readKeys(collection: Collection<K, X>): Flow<K>
 
     protected abstract suspend fun size(collection: Collection<K, X>): Long
 
@@ -39,8 +39,8 @@ abstract class StorageDatabaseAdapter<K : Any, X : Store<X, K>>(protected val co
     /**
      * Retrieve a Store from this database.
      */
-    suspend fun get(key: K): X? {
-        return this.get(this.collection, key)
+    suspend fun read(key: K): X? {
+        return this.read(this.collection, key)
     }
 
     /**
@@ -58,8 +58,8 @@ abstract class StorageDatabaseAdapter<K : Any, X : Store<X, K>>(protected val co
      * @return If the Store was replaced. (if the db was updated)
      */
     @Throws(UpdateException::class)
-    suspend fun updateSync(store: X, updateFunction: (X) -> X): X {
-        return this.updateSync(this.collection, store, updateFunction)
+    suspend fun update(store: X, updateFunction: (X) -> X): X {
+        return this.update(this.collection, store, updateFunction)
     }
 
     /**
@@ -80,16 +80,16 @@ abstract class StorageDatabaseAdapter<K : Any, X : Store<X, K>>(protected val co
      * Remove a Store from this database.
      * @return If the Store existed, and was removed.
      */
-    suspend fun remove(key: K): Boolean {
-        return this.remove(this.collection, key)
+    suspend fun delete(key: K): Boolean {
+        return this.delete(this.collection, key)
     }
 
     /**
      * Remove a Store from this database.
      * @return If the Store existed, and was removed.
      */
-    suspend fun remove(store: X): Boolean {
-        return this.remove(this.collection, store.id)
+    suspend fun delete(store: X): Boolean {
+        return this.delete(this.collection, store.id)
     }
 
     /**
@@ -97,21 +97,21 @@ abstract class StorageDatabaseAdapter<K : Any, X : Store<X, K>>(protected val co
      * @return How many objects were removed.
      */
     suspend fun removeAll(): Long {
-        return this.removeAll(this.collection)
+        return this.deleteAll(this.collection)
     }
 
     /**
      * Retrieve all Stores from this database.
      */
-    suspend fun getAll(): Flow<X> {
-        return this.getAll(this.collection)
+    suspend fun readAll(): Flow<X> {
+        return this.readAll(this.collection)
     }
 
     /**
      * Retrieve all Store keys from this database.
      */
-    suspend fun getKeys(): Flow<K> {
-        return this.getKeys(this.collection)
+    suspend fun readKeys(): Flow<K> {
+        return this.readKeys(this.collection)
     }
 
     /**
@@ -119,7 +119,7 @@ abstract class StorageDatabaseAdapter<K : Any, X : Store<X, K>>(protected val co
      * Uses [Collection.keyToString] to convert keys to strings.
      */
     suspend fun getKeyStrings(): Flow<String> {
-        return this.getKeys(collection).map { collection.keyToString(it) }
+        return this.readKeys(collection).map { collection.keyToString(it) }
     }
 
     /**

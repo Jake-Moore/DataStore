@@ -18,9 +18,9 @@ abstract class StorageDatabase<K : Any, X : Store<X, K>>(collection: Collection<
     // ---------------------------------------------------------------- //
     //               Map StoreStorage to StorageService                 //
     // ---------------------------------------------------------------- //
-    override suspend fun get(collection: Collection<K, X>, key: K): X? {
+    override suspend fun read(collection: Collection<K, X>, key: K): X? {
         // Fetch the Store from the database
-        val o = storageService.get(collection, key)
+        val o = storageService.read(collection, key)
         // Ensure Store knows its Collection
         o?.initialize(collection)
         // Return the Store
@@ -33,32 +33,32 @@ abstract class StorageDatabase<K : Any, X : Store<X, K>>(collection: Collection<
     }
 
     @Throws(UpdateException::class)
-    override suspend fun updateSync(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): X {
-        return storageService.updateSync(collection, store, updateFunction)
+    override suspend fun update(collection: Collection<K, X>, store: X, updateFunction: (X) -> X): X {
+        return storageService.update(collection, store, updateFunction)
     }
 
     override suspend fun has(collection: Collection<K, X>, key: K): Boolean {
         return storageService.has(collection, key)
     }
 
-    override suspend fun remove(collection: Collection<K, X>, key: K): Boolean {
-        return storageService.remove(collection, key)
+    override suspend fun delete(collection: Collection<K, X>, key: K): Boolean {
+        return storageService.delete(collection, key)
     }
 
-    override suspend fun removeAll(collection: Collection<K, X>): Long {
-        return storageService.removeAll(collection)
+    override suspend fun deleteAll(collection: Collection<K, X>): Long {
+        return storageService.deleteAll(collection)
     }
 
-    public override suspend fun getAll(collection: Collection<K, X>): Flow<X> {
+    public override suspend fun readAll(collection: Collection<K, X>): Flow<X> {
         // Fetch the storageService's Iterable
-        return storageService.getAll(collection).map { store: X ->
+        return storageService.readAll(collection).map { store: X ->
             // Make sure to set the collection as we load the Stores
             store.also { it.initialize(collection) }
         }
     }
 
-    override suspend fun getKeys(collection: Collection<K, X>): Flow<K> {
-        return storageService.getKeys(collection)
+    override suspend fun readKeys(collection: Collection<K, X>): Flow<K> {
+        return storageService.readKeys(collection)
     }
 
     override suspend fun size(collection: Collection<K, X>): Long {

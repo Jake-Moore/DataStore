@@ -38,7 +38,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
 
         // We are fetching (because of a login), check if we can write
         val storageService = DataStoreSource.storageService
-        if (!storageService.canWrite()) {
+        if (!storageService.canWriteToStorage()) {
             DataStoreSource.colorLogger.warn("StorageService is not ready to write objects, denying join")
             denyJoin = true
             joinDenyReason = Color.t(
@@ -104,7 +104,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
         }
 
         // Try loading from database
-        val store: X? = collection.databaseStore.get(uuid)
+        val store: X? = collection.databaseStore.read(uuid)
         if (store == null) {
             // Make a new profile if they are logging in
             collection.getLoggerService().debug("Creating a new StoreProfile for: $username")

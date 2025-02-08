@@ -104,7 +104,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     }
 
     override suspend fun readAllFromDatabase(cacheStores: Boolean): Flow<X> {
-        return databaseStore.getAll()
+        return databaseStore.readAll()
     }
 
     // ----------------------------------------------------- //
@@ -132,7 +132,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
     }
 
     override suspend fun readFromDatabase(key: UUID, cacheStore: Boolean): X? {
-        val o: X? = databaseStore.get(key)
+        val o: X? = databaseStore.read(key)
         if (cacheStore) {
             o?.let { store -> this.cache(store) }
         }
@@ -143,7 +143,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
         get() = localStore.size()
 
     override suspend fun getIDs(): Flow<UUID> {
-        return databaseStore.getKeys()
+        return databaseStore.readKeys()
     }
 
     override suspend fun getOnline(): Collection<X> {
@@ -161,7 +161,7 @@ abstract class StoreProfileCollection<X : StoreProfile<X>> @JvmOverloads constru
 
     override suspend fun readFromDatabase(player: Player, cacheStore: Boolean): X? {
         Preconditions.checkNotNull(player)
-        val o: X? = databaseStore.get(player.uniqueId)
+        val o: X? = databaseStore.read(player.uniqueId)
         if (cacheStore) {
             o?.let { store -> this.cache(store) }
         }

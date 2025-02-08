@@ -3,6 +3,7 @@ package com.kamikazejam.datastore
 import com.kamikazejam.datastore.base.coroutine.GlobalDataStoreScope
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.log.PluginLogger
+import com.kamikazejam.datastore.base.metrics.MetricsListener
 import com.kamikazejam.datastore.base.mode.StorageMode
 import com.kamikazejam.datastore.command.DataStoreCommand
 import com.kamikazejam.datastore.connections.storage.StorageService
@@ -19,6 +20,7 @@ object DataStoreSource {
     val colorLogger: LoggerService = PluginLogger()
     private var pluginSource: JavaPlugin? = null
     private var enabled = false
+    val metricsListeners: MutableList<MetricsListener> = mutableListOf()
 
     var onEnableTime: Long = 0
 

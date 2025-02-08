@@ -21,7 +21,7 @@ class CmdInfo : SubCommand() {
         sender.sendMessage(Color.t("  &6" + DataStoreSource.storeDbPrefix))
         sender.sendMessage(Color.t("&7Storage Service:"))
         sender.sendMessage(Color.t("  &6Name: " + DataStoreSource.storageMode.name))
-        val r = if (DataStoreSource.storageService.canWrite()) "&aYes" else "&cNo"
+        val r = if (DataStoreSource.storageService.canWriteToStorage()) "&aYes" else "&cNo"
         sender.sendMessage(Color.t("  &6Ready: $r"))
     }
 }
