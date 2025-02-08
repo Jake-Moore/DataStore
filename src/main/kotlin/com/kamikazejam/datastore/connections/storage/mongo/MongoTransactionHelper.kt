@@ -78,6 +78,7 @@ object MongoTransactionHelper {
     ): X {
         // Quit if we've run out of attempts
         if (currentAttempt >= DEFAULT_MAX_RETRIES) {
+            DataStoreSource.metricsListeners.forEach(MetricsListener::onUpdateTransactionLimitReached)
             throw TransactionRetryLimitExceededException("Failed to execute update after $DEFAULT_MAX_RETRIES attempts.")
         }
 

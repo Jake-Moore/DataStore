@@ -65,7 +65,7 @@ abstract class StorageService : LoggerService(), Service {
      * Check if a Store is stored in a given collection.
      */
     suspend fun <K : Any, X : Store<X, K>> has(collection: Collection<K, X>, key: K): Boolean {
-        DataStoreSource.metricsListeners.forEach(MetricsListener::onHas)
+        DataStoreSource.metricsListeners.forEach(MetricsListener::onHasKey)
         return hasInStorage(collection, key)
     }
 
@@ -133,7 +133,16 @@ abstract class StorageService : LoggerService(), Service {
     abstract suspend fun <K : Any, X : Store<X, K>, T> registerIndex(collection: StoreCollection<K, X>, index: IndexedField<X, T>)
     abstract suspend fun <K : Any, X : Store<X, K>> cacheIndexes(collection: StoreCollection<K, X>, store: X, updateFile: Boolean)
     abstract suspend fun <K : Any, X : Store<X, K>> saveIndexCache(collection: StoreCollection<K, X>)
-    abstract suspend fun <K : Any, X : Store<X, K>, T> getStoreByIndex(
+
+    suspend fun <K : Any, X : Store<X, K>, T> readStoreByIndex(
+        collection: StoreCollection<K, X>,
+        index: IndexedField<X, T>,
+        value: T
+    ): X? {
+        DataStoreSource.metricsListeners.forEach(MetricsListener::onReadByIndex)
+        return readStoreByIndexFromStorage(collection, index, value)
+    }
+    protected abstract suspend fun <K : Any, X : Store<X, K>, T> readStoreByIndexFromStorage(
         collection: StoreCollection<K, X>,
         index: IndexedField<X, T>,
         value: T

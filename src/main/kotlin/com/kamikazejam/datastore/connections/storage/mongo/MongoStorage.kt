@@ -348,7 +348,7 @@ class MongoStorage : StorageService() {
         // do nothing -> MongoDB handles this
     }
 
-    override suspend fun <K : Any, X : Store<X, K>, T> getStoreByIndex(
+    override suspend fun <K : Any, X : Store<X, K>, T> readStoreByIndexFromStorage(
         collection: StoreCollection<K, X>,
         index: IndexedField<X, T>,
         value: T

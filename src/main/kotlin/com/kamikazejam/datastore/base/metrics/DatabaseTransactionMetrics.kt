@@ -1,5 +1,6 @@
 package com.kamikazejam.datastore.base.metrics
 
 sealed interface DatabaseTransactionMetrics {
-    fun onTryUpdateTransaction() {}
+    fun onTryUpdateTransaction()
+    fun onUpdateTransactionLimitReached()
 }

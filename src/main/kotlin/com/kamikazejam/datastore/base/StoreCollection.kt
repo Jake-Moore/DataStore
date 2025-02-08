@@ -15,6 +15,7 @@ import com.kamikazejam.datastore.base.async.result.Success
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
+import com.kamikazejam.datastore.base.metrics.MetricsListener
 import com.kamikazejam.datastore.store.profile.StoreProfileCollection
 import com.kamikazejam.datastore.store.profile.listener.ProfileListener
 import com.kamikazejam.datastore.store.Store
@@ -92,7 +93,10 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
                     return@AsyncUpdateHandler this.databaseStore.update(readResult.value, updateFunction)
                 }
                 is Failure -> throw readResult.error
-                is Empty -> throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
+                is Empty -> {
+                    DataStoreSource.metricsListeners.forEach(MetricsListener::onUpdateFailNotFound)
+                    throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
+                }
             }
         }
     }
@@ -317,7 +321,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
 
         // 2. -> Check database (uses storage service like mongodb)
         return AsyncReadIdHandler(this) {
-            DataStoreSource.storageService.getStoreByIndex(this, field, value)?.id
+            DataStoreSource.storageService.readStoreByIndex(this, field, value)?.id
         }
     }
 
@@ -328,7 +332,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
 
         // 2. -> Check database (uses storage service like mongodb)
         return AsyncReadHandler(this) {
-            DataStoreSource.storageService.getStoreByIndex(this, field, value)
+            DataStoreSource.storageService.readStoreByIndex(this, field, value)
         }
     }
 

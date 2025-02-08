@@ -1,11 +1,13 @@
 package com.kamikazejam.datastore.base.async.handler.impl
 
+import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.exception.AsyncHandlerException
 import com.kamikazejam.datastore.base.async.handler.AsyncHandler
 import com.kamikazejam.datastore.base.async.result.DefiniteResult
 import com.kamikazejam.datastore.base.async.result.Failure
 import com.kamikazejam.datastore.base.async.result.Success
+import com.kamikazejam.datastore.base.metrics.MetricsListener
 
 @Suppress("unused")
 class AsyncHasKeyHandler(
@@ -17,6 +19,9 @@ class AsyncHasKeyHandler(
         onSuccess = { b ->
             return Success(b ?: false)
         },
-        onFailure = { ex -> Failure(AsyncHandlerException("hasKey operation failed", ex)) }
+        onFailure = { ex ->
+            DataStoreSource.metricsListeners.forEach(MetricsListener::onHasKeyFail)
+            Failure(AsyncHandlerException("hasKey operation failed", ex))
+        }
     )
 }
