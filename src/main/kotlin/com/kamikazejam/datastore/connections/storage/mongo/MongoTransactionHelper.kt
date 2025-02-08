@@ -5,6 +5,7 @@ import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.exception.update.TransactionRetryLimitExceededException
 import com.kamikazejam.datastore.base.exception.update.UpdateException
+import com.kamikazejam.datastore.base.metrics.MetricsListener
 import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialNameForID
 import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialNameForVersion
 import com.kamikazejam.datastore.store.Store
@@ -84,6 +85,9 @@ object MongoTransactionHelper {
         if (currentAttempt > 0) {
             applyBackoff(currentAttempt.toLong())
         }
+
+        // Log the Metric
+        DataStoreSource.metricsListeners.forEach(MetricsListener::onTryUpdateTransaction)
 
         mongoClient.startSession().use { session ->
             session.startTransaction()
