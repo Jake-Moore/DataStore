@@ -8,6 +8,7 @@ import com.kamikazejam.datastore.base.exception.update.UpdateException
 import com.kamikazejam.datastore.base.metrics.MetricsListener
 import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialNameForID
 import com.kamikazejam.datastore.base.serialization.SerializationUtil.getSerialNameForVersion
+import com.kamikazejam.datastore.connections.storage.mongo.MongoTransactionHelper.Test.logWriteConflict
 import com.kamikazejam.datastore.store.Store
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.mongodb.MongoCommandException
@@ -15,10 +16,14 @@ import com.mongodb.client.model.Filters
 import com.mongodb.kotlin.client.coroutine.ClientSession
 import com.mongodb.kotlin.client.coroutine.MongoClient
 import com.mongodb.kotlin.client.coroutine.MongoCollection
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
 import java.util.*
 import java.util.logging.Level
+import kotlin.coroutines.CoroutineContext
 
 @Suppress("MemberVisibilityCanBePrivate")
 object MongoTransactionHelper {
@@ -231,20 +236,31 @@ object MongoTransactionHelper {
     }
 
 
-    private fun <K : Any, X : Store<X, K>> logWriteConflict(
-        currentAttempt: Int,
-        mE: MongoCommandException,
-        collection: Collection<K, X>,
-        store: X,
-    ) {
-        if (currentAttempt < LOG_WRITE_CONFLICT_AFTER_ATTEMPT) return
+    object Test : CoroutineScope {
+        override val coroutineContext: CoroutineContext
+            get() = Dispatchers.IO
 
-        val msg = "Write Conflict, attempt " + (currentAttempt + 1) + " of " + DEFAULT_MAX_RETRIES + " for coll " + collection.name + " with id " + collection.keyToString(store.id)
-        DataStoreFileLogger.log(
-            msg,
-            mE,
-            DataStoreFileLogger.randomWriteExceptionFile,
-            Level.INFO
-        )
+        internal fun <K : Any, X : Store<X, K>> logWriteConflict(
+            currentAttempt: Int,
+            mE: MongoCommandException,
+            collection: Collection<K, X>,
+            store: X,
+        ) {
+            launch {
+                if (currentAttempt < LOG_WRITE_CONFLICT_AFTER_ATTEMPT) return@launch
+
+                val msg = "Write Conflict, attempt " + (currentAttempt + 1) + " of " + DEFAULT_MAX_RETRIES + " for coll " + collection.name + " with id " + collection.keyToString(store.id)
+                if ((currentAttempt+1) % 25 == 0) {
+                    DataStoreFileLogger.log(
+                        msg,
+                        mE,
+                        DataStoreFileLogger.randomWriteExceptionFile,
+                        Level.INFO
+                    )
+                } else {
+                    DataStoreSource.colorLogger.info(msg)
+                }
+            }
+        }
     }
 }
