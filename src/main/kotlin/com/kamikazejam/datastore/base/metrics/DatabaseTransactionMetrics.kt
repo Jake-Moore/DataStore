@@ -6,4 +6,6 @@ sealed interface DatabaseTransactionMetrics {
 
     fun onTimerUpdateTransaction(milliseconds: Long)
     fun onTimerUpdatesSuccess(milliseconds: Long)
+
+    fun onTransactionAttemptsRequired(attempts: Int)
 }

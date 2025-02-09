@@ -109,8 +109,10 @@ object MongoTransactionHelper {
 
                 // Handle Fail State
                 if (result.dbStore != null) {
-                    session.abortTransaction()
                     sessionResolved = true
+                    session.abortTransaction()
+                    logTransactionTimeTaken(msStart)
+
                     // Retry with the new database store
                     return retryExecutionHelper(
                         mongoClient,
@@ -123,8 +125,12 @@ object MongoTransactionHelper {
                 }
 
                 sessionResolved = true // resolve before call, in case it fails partial
-                // Success - return true
                 session.commitTransaction()
+                // log the time taken & how many attempts it took to succeed
+                logTransactionTimeTaken(msStart)
+                DataStoreSource.metricsListeners.forEach { it.onTransactionAttemptsRequired(currentAttempt + 1) }
+
+                // Success - return true
                 return checkNotNull(result.store)
             } catch (uE: UpdateException) {
                 throw uE
@@ -149,8 +155,6 @@ object MongoTransactionHelper {
                 if (!sessionResolved) {
                     session.abortTransaction()
                 }
-                val msTaken = System.currentTimeMillis() - msStart
-                DataStoreSource.metricsListeners.forEach { it.onTimerUpdateTransaction(msTaken) }
             }
         }
     }
@@ -242,6 +246,10 @@ object MongoTransactionHelper {
         return e.errorCode == WRITE_CONFLICT_ERROR
     }
 
+    private fun logTransactionTimeTaken(msStart: Long) {
+        val msTaken = System.currentTimeMillis() - msStart
+        DataStoreSource.metricsListeners.forEach { it.onTimerUpdateTransaction(msTaken) }
+    }
 
     object Test : CoroutineScope {
         override val coroutineContext: CoroutineContext

@@ -28,4 +28,5 @@ open class MetricsListenerPartial : MetricsListener {
     override fun onUpdateTransactionLimitReached() {}
     override fun onTimerUpdateTransaction(milliseconds: Long) {}
     override fun onTimerUpdatesSuccess(milliseconds: Long) {}
+    override fun onTransactionAttemptsRequired(attempts: Int) {}
 }
