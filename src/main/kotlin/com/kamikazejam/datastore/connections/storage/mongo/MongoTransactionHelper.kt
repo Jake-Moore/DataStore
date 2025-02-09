@@ -57,6 +57,7 @@ object MongoTransactionHelper {
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
         // Will either return the store, or throw an UpdateException
+        val msStart = System.currentTimeMillis()
         val updatedStore: X = retryExecutionHelper(
             mongoClient,
             mongoColl,
@@ -65,6 +66,8 @@ object MongoTransactionHelper {
             updateFunction,
             0
         )
+        val msTaken = System.currentTimeMillis() - msStart
+        DataStoreSource.metricsListeners.forEach { it.onTimerUpdatesSuccess(msTaken) }
 
         // Ensure our local cache is updated with the new updated store
         collection.updateStoreFromNewer(store, updatedStore)
@@ -96,6 +99,8 @@ object MongoTransactionHelper {
         DataStoreSource.metricsListeners.forEach(MetricsListener::onTryUpdateTransaction)
 
         mongoClient.startSession().use { session ->
+            val msStart = System.currentTimeMillis()
+
             session.startTransaction()
             var sessionResolved = false
             try {
@@ -144,6 +149,8 @@ object MongoTransactionHelper {
                 if (!sessionResolved) {
                     session.abortTransaction()
                 }
+                val msTaken = System.currentTimeMillis() - msStart
+                DataStoreSource.metricsListeners.forEach { it.onTimerUpdateTransaction(msTaken) }
             }
         }
     }

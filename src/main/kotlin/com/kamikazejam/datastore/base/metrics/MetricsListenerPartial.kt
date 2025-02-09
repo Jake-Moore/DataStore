@@ -26,4 +26,6 @@ open class MetricsListenerPartial : MetricsListener {
     // DatabaseTransactionMetrics
     override fun onTryUpdateTransaction() {}
     override fun onUpdateTransactionLimitReached() {}
+    override fun onTimerUpdateTransaction(milliseconds: Long) {}
+    override fun onTimerUpdatesSuccess(milliseconds: Long) {}
 }
