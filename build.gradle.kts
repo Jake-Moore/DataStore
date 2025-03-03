@@ -32,7 +32,7 @@ dependencies {
     implementation("org.mongodb:bson-kotlinx:$mongoVer") // BSON for Serialization (for MongoDB)
 
     // MongoDB Supplemental
-    implementation("ch.qos.logback:logback-classic:1.5.16")
+    implementation("ch.qos.logback:logback-classic:1.5.17")
 
     // Testing Dependencies
     testImplementation("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
