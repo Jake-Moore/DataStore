@@ -22,7 +22,7 @@ repositories {
 }
 
 val jacksonVer = "2.18.2"
-val mongoVer = "5.3.1"
+val mongoVer = "5.4.0"
 dependencies {
     // Spigot
     compileOnly("net.techcable.tacospigot:server:1.8.8-R0.2-REDUCED")
