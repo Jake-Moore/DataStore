@@ -147,10 +147,9 @@ object MongoTransactionHelper {
                         currentAttempt + 1
                     )
                 }
-                throw UpdateException("Failed to execute MongoDB update", mE)
-            } catch (e: Exception) {
-                DataStoreFileLogger.warn("Failed to execute MongoDB update", e)
-                throw UpdateException("Failed to execute MongoDB update", e)
+                throw UpdateException("Failed to execute MongoDB update (1)", mE)
+            } catch (t: Throwable) {
+                throw UpdateException("Failed to execute MongoDB update (2.1)", t)
             } finally {
                 if (!sessionResolved) {
                     session.abortTransaction()

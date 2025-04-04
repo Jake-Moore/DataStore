@@ -161,8 +161,8 @@ class MongoStorage : StorageService() {
             return@withContext MongoTransactionHelper.executeUpdate(client, mongoColl, collection, store, updateFunction)
         } catch (uE: UpdateException) {
             throw uE
-        } catch (e: Exception) {
-            throw UpdateException("Failed to update Store in MongoDB Layer after all retries: " + store.id, e)
+        } catch (t: Throwable) {
+            throw UpdateException("Failed to update Store in MongoDB Layer after all retries: " + store.id, t)
         }
     }
 

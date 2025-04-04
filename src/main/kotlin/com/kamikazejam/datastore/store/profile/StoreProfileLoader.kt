@@ -143,9 +143,9 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
             collection.databaseStore.save(store)
             collection.cache(store)
             return store
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             // promote error upwards for proper error handling
-            throw e
+            throw t
         }
     }
 }

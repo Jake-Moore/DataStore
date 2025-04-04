@@ -89,7 +89,7 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
         return AsyncUpdateHandler(this) {
             when (val readResult = read(key).await()) {
                 is Success -> {
-                    // may throw errors, which will be caught by AsyncUpdateHandler
+                    // may throw UpdateException, which will be caught by AsyncUpdateHandler
                     return@AsyncUpdateHandler this.databaseStore.update(readResult.value, updateFunction)
                 }
                 is Failure -> throw readResult.error

@@ -2,6 +2,8 @@
 
 package com.kamikazejam.datastore.base.async.result
 
+import com.kamikazejam.datastore.base.exception.update.RejectUpdateException
+
 // Base interface with common functionality
 sealed interface BaseResult<T> {
     fun isSuccess(): Boolean
@@ -12,6 +14,14 @@ sealed interface BaseResult<T> {
 
 // For operations that cannot return Empty
 sealed interface DefiniteResult<T> : BaseResult<T>
+
+/**
+ * For update operations (cannot return empty)
+ * Update operations may be rejected by throwing an instance of [RejectUpdateException] in the update function
+ */
+sealed interface UpdateResult<T> : BaseResult<T> {
+    fun isRejected(): Boolean
+}
 
 // For operations that can return Empty
 sealed interface OptionalResult<T> : BaseResult<T> {
