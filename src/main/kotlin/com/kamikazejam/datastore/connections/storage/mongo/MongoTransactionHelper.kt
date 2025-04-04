@@ -57,6 +57,7 @@ object MongoTransactionHelper {
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
         // Will either return the store, or throw an UpdateException
+        val msStart = System.currentTimeMillis()
         val updatedStore: X = retryExecutionHelper(
             mongoClient,
             mongoColl,
@@ -65,6 +66,8 @@ object MongoTransactionHelper {
             updateFunction,
             0
         )
+        val msTaken = System.currentTimeMillis() - msStart
+        DataStoreSource.metricsListeners.forEach { it.onTimerUpdatesSuccess(msTaken) }
 
         // Ensure our local cache is updated with the new updated store
         collection.updateStoreFromNewer(store, updatedStore)
@@ -96,6 +99,8 @@ object MongoTransactionHelper {
         DataStoreSource.metricsListeners.forEach(MetricsListener::onTryUpdateTransaction)
 
         mongoClient.startSession().use { session ->
+            val msStart = System.currentTimeMillis()
+
             session.startTransaction()
             var sessionResolved = false
             try {
@@ -104,8 +109,10 @@ object MongoTransactionHelper {
 
                 // Handle Fail State
                 if (result.dbStore != null) {
-                    session.abortTransaction()
                     sessionResolved = true
+                    session.abortTransaction()
+                    logTransactionTimeTaken(msStart)
+
                     // Retry with the new database store
                     return retryExecutionHelper(
                         mongoClient,
@@ -118,8 +125,12 @@ object MongoTransactionHelper {
                 }
 
                 sessionResolved = true // resolve before call, in case it fails partial
-                // Success - return true
                 session.commitTransaction()
+                // log the time taken & how many attempts it took to succeed
+                logTransactionTimeTaken(msStart)
+                DataStoreSource.metricsListeners.forEach { it.onTransactionAttemptsRequired(currentAttempt + 1) }
+
+                // Success - return true
                 return checkNotNull(result.store)
             } catch (uE: UpdateException) {
                 throw uE
@@ -136,10 +147,9 @@ object MongoTransactionHelper {
                         currentAttempt + 1
                     )
                 }
-                throw UpdateException("Failed to execute MongoDB update", mE)
-            } catch (e: Exception) {
-                DataStoreFileLogger.warn("Failed to execute MongoDB update", e)
-                throw UpdateException("Failed to execute MongoDB update", e)
+                throw UpdateException("Failed to execute MongoDB update (1)", mE)
+            } catch (t: Throwable) {
+                throw UpdateException("Failed to execute MongoDB update (2.1)", t)
             } finally {
                 if (!sessionResolved) {
                     session.abortTransaction()
@@ -235,6 +245,10 @@ object MongoTransactionHelper {
         return e.errorCode == WRITE_CONFLICT_ERROR
     }
 
+    private fun logTransactionTimeTaken(msStart: Long) {
+        val msTaken = System.currentTimeMillis() - msStart
+        DataStoreSource.metricsListeners.forEach { it.onTimerUpdateTransaction(msTaken) }
+    }
 
     object Test : CoroutineScope {
         override val coroutineContext: CoroutineContext

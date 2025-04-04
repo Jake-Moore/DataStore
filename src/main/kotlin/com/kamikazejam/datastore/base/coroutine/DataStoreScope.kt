@@ -100,8 +100,8 @@ suspend fun DataStoreScope.runSyncBlocking(block: () -> Unit) {
             try {
                 block()
                 continuation.resume(Unit)
-            } catch (e: Exception) {
-                continuation.resumeWithException(e)
+            } catch (t: Throwable) {
+                continuation.resumeWithException(t)
             }
         }
     }

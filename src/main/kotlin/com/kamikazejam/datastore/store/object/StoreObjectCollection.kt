@@ -90,9 +90,9 @@ abstract class StoreObjectCollection<X : StoreObject<X>> @JvmOverloads construct
             } catch (d: DuplicateKeyException) {
                 getLoggerService().severe("Failed to create Store: Duplicate Key...")
                 throw d
-            } catch (e: Exception) {
+            } catch (t: Throwable) {
                 // promote upwards, it will catch the errors
-                throw e
+                throw t
             }
         }
     }

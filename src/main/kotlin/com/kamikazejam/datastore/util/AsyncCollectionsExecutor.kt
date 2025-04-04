@@ -54,9 +54,9 @@ class AsyncCollectionsExecutor<T : Collection<*, *>>(
                 activeJobs.joinAll()
                 activeJobs.clear()
             }
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             activeJobs.forEach { it.cancel() }
-            throw e
+            throw t
         }
     }
 
@@ -79,9 +79,9 @@ class AsyncCollectionsExecutor<T : Collection<*, *>>(
                         }
                         queue.remove(c.name)
                         completed.add(c.name)
-                    } catch (e: Exception) {
-                        cancel("Failed to execute collection ${c.name}", e)
-                        throw e
+                    } catch (t: Throwable) {
+                        cancel("Failed to execute collection ${c.name}", t)
+                        throw t
                     }
                 }
                 executed.add(c.name)
