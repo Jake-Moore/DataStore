@@ -5,7 +5,7 @@ plugins {
     id("java")
     id("java-library")
     id("maven-publish")
-    id("com.gradleup.shadow") version "8.3.5"
+    id("com.gradleup.shadow") version "8.3.6"
     kotlin("jvm")
     kotlin("plugin.serialization")
 }
