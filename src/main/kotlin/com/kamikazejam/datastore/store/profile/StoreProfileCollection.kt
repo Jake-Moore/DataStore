@@ -3,15 +3,15 @@ package com.kamikazejam.datastore.store.profile
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
+import com.kamikazejam.datastore.api.event.StoreProfileQuitEvent
 import com.kamikazejam.datastore.base.StoreCollection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.extensions.read
 import com.kamikazejam.datastore.base.log.CollectionLoggerService
 import com.kamikazejam.datastore.base.log.LoggerService
-import com.kamikazejam.datastore.api.event.StoreProfileQuitEvent
+import com.kamikazejam.datastore.store.StoreProfile
 import com.kamikazejam.datastore.store.profile.storage.ProfileStorageDatabase
 import com.kamikazejam.datastore.store.profile.storage.ProfileStorageLocal
-import com.kamikazejam.datastore.store.StoreProfile
 import com.kamikazejam.datastore.util.PlayerJoinDetails
 import com.kamikazejam.datastore.util.PlayerUtil
 import com.mongodb.DuplicateKeyException

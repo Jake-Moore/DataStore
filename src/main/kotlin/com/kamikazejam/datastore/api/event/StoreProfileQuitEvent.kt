@@ -1,7 +1,7 @@
 package com.kamikazejam.datastore.api.event
 
-import com.kamikazejam.datastore.store.profile.StoreProfileCollection
 import com.kamikazejam.datastore.store.StoreProfile
+import com.kamikazejam.datastore.store.profile.StoreProfileCollection
 import org.bukkit.entity.Player
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList

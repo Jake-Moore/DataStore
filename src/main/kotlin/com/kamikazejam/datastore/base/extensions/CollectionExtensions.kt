@@ -5,10 +5,12 @@ package com.kamikazejam.datastore.base.extensions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncRejectableUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.async.result.Empty
 import com.kamikazejam.datastore.base.async.result.Failure
 import com.kamikazejam.datastore.base.async.result.Success
+import com.kamikazejam.datastore.base.exception.update.RejectUpdateException
 import com.kamikazejam.datastore.store.Store
 import org.jetbrains.annotations.NonBlocking
 
@@ -42,6 +44,17 @@ fun <K : Any, X : Store<X, K>> Collection<K, X>.readOrCreate(key: K, initializer
 @NonBlocking
 fun <K : Any, X : Store<X, K>> Collection<K, X>.update(store: X, updateFunction: (X) -> X): AsyncUpdateHandler<K, X> {
     return this.update(store.id, updateFunction)
+}
+
+/**
+ * Modifies a Store in a controlled environment where modifications are allowed
+ * The updateFunction can choose to reject the update by throwing a [RejectUpdateException]
+ * @throws NoSuchElementException if the Store (by this key) is not found
+ * @return The updated Store object. (READ-ONLY)
+ */
+@NonBlocking
+fun <K : Any, X : Store<X, K>> Collection<K, X>.updateRejectable(store: X, updateFunction: (X) -> X): AsyncRejectableUpdateHandler<K, X> {
+    return this.updateRejectable(store.id, updateFunction)
 }
 
 /**

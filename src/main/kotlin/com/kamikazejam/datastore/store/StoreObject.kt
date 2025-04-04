@@ -3,6 +3,7 @@ package com.kamikazejam.datastore.store
 import com.google.common.base.Preconditions
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncRejectableUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.store.`object`.StoreObjectCollection
 import kotlinx.serialization.Serializable
@@ -20,6 +21,10 @@ abstract class StoreObject<X : StoreObject<X>>: Store<X, String> {
     // ----------------------------------------------------- //
     override fun update(updateFunction: (X) -> X): AsyncUpdateHandler<String, X> {
         return getCollection().update(this.id, updateFunction)
+    }
+
+    override fun updateRejectable(updateFunction: (X) -> X): AsyncRejectableUpdateHandler<String, X> {
+        return getCollection().updateRejectable(this.id, updateFunction)
     }
 
     override fun delete(): AsyncDeleteHandler {

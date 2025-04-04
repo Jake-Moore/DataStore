@@ -6,6 +6,7 @@ import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.DataStoreSource
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncRejectableUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncHasKeyHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
@@ -16,9 +17,9 @@ import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.metrics.MetricsListener
+import com.kamikazejam.datastore.store.Store
 import com.kamikazejam.datastore.store.profile.StoreProfileCollection
 import com.kamikazejam.datastore.store.profile.listener.ProfileListener
-import com.kamikazejam.datastore.store.Store
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
@@ -86,17 +87,31 @@ abstract class StoreCollection<K : Any, X : Store<X, K>>(
     override fun update(key: K, updateFunction: (X) -> X): AsyncUpdateHandler<K, X> {
         Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
 
+        // Use the Success/Failure wrapper for the update
         return AsyncUpdateHandler(this) {
-            when (val readResult = read(key).await()) {
-                is Success -> {
-                    // may throw UpdateException, which will be caught by AsyncUpdateHandler
-                    return@AsyncUpdateHandler this.databaseStore.update(readResult.value, updateFunction)
-                }
-                is Failure -> throw readResult.error
-                is Empty -> {
-                    DataStoreSource.metricsListeners.forEach(MetricsListener::onUpdateFailNotFound)
-                    throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
-                }
+            return@AsyncUpdateHandler updateInner(key, updateFunction)
+        }
+    }
+
+    override fun updateRejectable(key: K, updateFunction: (X) -> X): AsyncRejectableUpdateHandler<K, X> {
+        Preconditions.checkNotNull(updateFunction, "Update function cannot be null")
+
+        // Use the Success/Failure/Reject wrapper for the update
+        return AsyncRejectableUpdateHandler(this) {
+            return@AsyncRejectableUpdateHandler updateInner(key, updateFunction)
+        }
+    }
+
+    private suspend fun updateInner(key: K, updateFunction: (X) -> X): X {
+        when (val readResult = read(key).await()) {
+            is Success -> {
+                // may throw UpdateException, which will be caught by AsyncUpdateHandler
+                return this.databaseStore.update(readResult.value, updateFunction)
+            }
+            is Failure -> throw readResult.error
+            is Empty -> {
+                DataStoreSource.metricsListeners.forEach(MetricsListener::onUpdateFailNotFound)
+                throw NoSuchElementException("[StoreCollection#update] Store not found with key: ${this.keyToString(key)}")
             }
         }
     }

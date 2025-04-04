@@ -2,10 +2,10 @@ package com.kamikazejam.datastore.store
 
 import com.kamikazejam.datastore.base.Collection
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncRejectableUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerialName
+import com.kamikazejam.datastore.base.exception.update.RejectUpdateException
 import kotlinx.serialization.Serializable
 import org.jetbrains.annotations.ApiStatus.Internal
 import org.jetbrains.annotations.NonBlocking
@@ -44,6 +44,16 @@ sealed interface Store<X : Store<X, K>, K : Any> : DataStoreScope {
     @NonBlocking
     fun update(updateFunction: (X) -> X): AsyncUpdateHandler<K, X> {
         return getCollection().update(id, updateFunction)
+    }
+
+    /**
+     * Modifies a Store in a controlled environment where modifications are allowed
+     * The updateFunction can choose to reject the update by throwing a [RejectUpdateException]
+     * @return The updated Store object. (READ-ONLY)
+     */
+    @NonBlocking
+    fun updateRejectable(updateFunction: (X) -> X): AsyncRejectableUpdateHandler<K, X> {
+        return getCollection().updateRejectable(id, updateFunction)
     }
 
     /**

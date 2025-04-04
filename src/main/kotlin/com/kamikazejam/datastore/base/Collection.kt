@@ -4,11 +4,13 @@ import com.kamikazejam.datastore.DataStoreRegistration
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncCreateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncDeleteHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncReadHandler
+import com.kamikazejam.datastore.base.async.handler.crud.AsyncRejectableUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.crud.AsyncUpdateHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncHasKeyHandler
 import com.kamikazejam.datastore.base.async.handler.impl.AsyncReadIdHandler
 import com.kamikazejam.datastore.base.coroutine.DataStoreScope
 import com.kamikazejam.datastore.base.exception.DuplicateCollectionException
+import com.kamikazejam.datastore.base.exception.update.RejectUpdateException
 import com.kamikazejam.datastore.base.index.IndexedField
 import com.kamikazejam.datastore.base.log.LoggerService
 import com.kamikazejam.datastore.base.storage.StorageDatabase
@@ -67,6 +69,14 @@ interface Collection<K : Any, X : Store<X, K>> : Service, DataStoreScope {
      * @return The updated Store object. (READ-ONLY)
      */
     fun update(key: K, updateFunction: (X) -> X): AsyncUpdateHandler<K, X>
+
+    /**
+     * Modifies a Store in a controlled environment where modifications are allowed
+     * The updateFunction can choose to reject the update by throwing a [RejectUpdateException]
+     * @throws NoSuchElementException if the Store (by this key) is not found
+     * @return The updated Store object. (READ-ONLY)
+     */
+    fun updateRejectable(key: K, updateFunction: (X) -> X): AsyncRejectableUpdateHandler<K, X>
 
     /**
      * Deletes a Store by ID (removes from both cache and database collection)
