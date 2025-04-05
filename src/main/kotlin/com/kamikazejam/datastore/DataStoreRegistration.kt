@@ -39,7 +39,7 @@ class DataStoreRegistration internal constructor(plugin: JavaPlugin, dbNameShort
             val collection = constructor.newInstance(this)
             collections.add(collection)
             DataStoreSource.storageService.onRegisteredCollection(collection)
-            collection.getLoggerService().info("Collection Registered.")
+            collection.getLoggerService().info("'" + collection.name + "' Collection Registered.")
         } catch (ex1: NoSuchMethodException) {
             DataStoreSource.error("Failed to register collection " + clazz.name + " - No constructor that takes a DataStoreRegistration")
         } catch (t: Throwable) {
