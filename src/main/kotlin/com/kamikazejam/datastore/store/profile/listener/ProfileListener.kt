@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit
 @Suppress("unused", "UnstableApiUsage", "UNUSED_VARIABLE")
 class ProfileListener : Listener {
     private val loginCache: Cache<UUID, Long> =
-        CacheBuilder.newBuilder().expireAfterWrite(100, TimeUnit.MILLISECONDS).build()
+        CacheBuilder.newBuilder().expireAfterWrite(15, TimeUnit.SECONDS).build()
 
     @EventHandler(priority = EventPriority.LOW)
     fun onProfileCachingStart(event: AsyncPlayerPreLoginEvent) {
@@ -126,6 +126,7 @@ class ProfileListener : Listener {
                 ChatColor.RED.toString() + "Server is starting, please wait."
             )
         }
+        loginCache.invalidate(event.player.uniqueId)
     }
 
     @EventHandler(priority = EventPriority.LOW)
