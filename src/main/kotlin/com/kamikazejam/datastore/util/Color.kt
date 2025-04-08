@@ -11,4 +11,7 @@ object Color {
         }
         return ChatColor.translateAlternateColorCodes('&', msg)
     }
+    fun tNotNull(msg: String): String {
+        return ChatColor.translateAlternateColorCodes('&', msg)
+    }
 }

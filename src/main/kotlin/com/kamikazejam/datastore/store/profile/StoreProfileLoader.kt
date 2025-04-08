@@ -8,7 +8,6 @@ import com.kamikazejam.datastore.store.profile.listener.ProfileListener
 import com.kamikazejam.datastore.util.Color
 import com.kamikazejam.datastore.util.DataStoreFileLogger
 import com.kamikazejam.datastore.util.PlayerJoinDetails
-import org.bukkit.ChatColor
 import org.bukkit.entity.Player
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent
 import java.util.UUID
@@ -21,8 +20,7 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
     /**
      * Whether this loader is being used during a login operation
      */
-    var denyJoin: Boolean = false
-    var joinDenyReason: String? = ChatColor.RED.toString() + "A caching error occurred. Please try again."
+    var joinDenyReason: String? = null // nullability is used as a flag here (non-null = deny join)
     protected var store: X? = null
     protected var player: Player? = null
 
@@ -33,15 +31,14 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
 
     suspend fun fetchOnLogin(saveToLocalCache: Boolean, uuid: UUID, username: String, event: AsyncPlayerPreLoginEvent): X? {
         // Reset previous state
-        denyJoin = false
-        store = null
+        this.joinDenyReason = null
+        this.store = null
 
         // We are fetching (because of a login), check if we can write
         val storageService = DataStoreSource.storageService
         if (!storageService.canWriteToStorage()) {
             DataStoreSource.colorLogger.warn("StorageService is not ready to write objects, denying join")
-            denyJoin = true
-            joinDenyReason = Color.t(
+            this.joinDenyReason = Color.t(
                 DataStoreSource.config.getString("profiles.messages.beforeDbConnection")
                     .replace("{collName}", collection.name)
             )
@@ -53,7 +50,6 @@ open class StoreProfileLoader<X : StoreProfile<X>>(collection: StoreProfileColle
             this.store = loadOrCreateStore(collection, uuid, username, event)
         } catch (t: Throwable) {
             DataStoreFileLogger.warn("Failed to load or create StoreProfile from Database, denying join", t)
-            this.denyJoin = true
             this.joinDenyReason = Color.t(
                 DataStoreSource.config.getString("profiles.messages.beforeDbConnection")
                     .replace("{collName}", collection.name)

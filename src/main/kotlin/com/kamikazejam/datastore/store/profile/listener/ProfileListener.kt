@@ -68,9 +68,10 @@ class ProfileListener : Listener {
                     cachePlayerProfiles(username, uniqueId, event, timeout)
                 }
             } catch (t: Throwable) {
-                var message: String = ChatColor.RED.toString() + "A caching error occurred.  Please try again."
-                if (t is ExecutionException && t.cause is ProfileDenyJoinError) {
-                    (t.cause as ProfileDenyJoinError).message?.let { message = it }
+                var message: String = ChatColor.RED.toString() + "A caching error occurred. Please try again."
+                val cause = t.cause
+                if (t is ExecutionException && cause is ProfileDenyJoinError) {
+                    message = cause.msg
                 }
 
                 t.printStackTrace()
@@ -100,15 +101,10 @@ class ProfileListener : Listener {
         val executor = AsyncCollectionsExecutor(collections, timeoutSec) {
             val loader: StoreProfileLoader<X> = it.loader(uniqueId)
             loader.fetchOnLogin(true, uniqueId, username, event)
-            if (loader.denyJoin) {
-                // For the first 100 seconds, don't give the nasty loader reason, but a pretty server start error
-                val message = if (System.currentTimeMillis() - DataStoreSource.onEnableTime < 100000L)
-                    Color.t("&cServer is starting, please wait.")
-                else
-                    loader.joinDenyReason
-
+            val reason = loader.joinDenyReason
+            if (reason != null) {
                 // If denied, throw an exception (will be caught by original join event)
-                throw ProfileDenyJoinError(message)
+                throw ProfileDenyJoinError(Color.tNotNull(reason))
             }
         }
 

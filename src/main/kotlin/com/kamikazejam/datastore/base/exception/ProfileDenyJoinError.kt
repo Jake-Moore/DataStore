@@ -1,3 +1,3 @@
 package com.kamikazejam.datastore.base.exception
 
-class ProfileDenyJoinError(message: String?) : Error(message)
+class ProfileDenyJoinError(val msg: String) : Error(msg)
