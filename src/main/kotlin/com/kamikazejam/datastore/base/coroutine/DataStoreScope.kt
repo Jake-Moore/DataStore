@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import org.bukkit.Bukkit
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -95,8 +96,7 @@ fun DataStoreScope.runSync(runnable: Runnable) {
 
 suspend fun DataStoreScope.runSyncBlocking(block: () -> Unit) {
     return suspendCoroutine { continuation ->
-        val plugin = DataStoreSource.get()
-        plugin.server.scheduler.runTask(plugin) {
+        Bukkit.getScheduler().runTask(DataStoreSource.get()) {
             try {
                 block()
                 continuation.resume(Unit)
@@ -107,3 +107,15 @@ suspend fun DataStoreScope.runSyncBlocking(block: () -> Unit) {
     }
 }
 
+suspend fun <T> DataStoreScope.runSyncFetching(block: () -> T): T {
+    return suspendCoroutine { continuation ->
+        Bukkit.getScheduler().runTask(DataStoreSource.get()) {
+            try {
+                val result: T = block()
+                continuation.resume(result)
+            } catch (t: Throwable) {
+                continuation.resumeWithException(t)
+            }
+        }
+    }
+}
